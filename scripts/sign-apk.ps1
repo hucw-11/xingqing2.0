@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)][string]$UnsignedApk,
     [Parameter(Mandatory = $true)][string]$ApkSignerJar,
     [string]$KeyPath = '',
