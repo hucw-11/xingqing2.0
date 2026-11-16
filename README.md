@@ -33,7 +33,7 @@ CI 产出的 APK 是 **未签名** 的，不能直接安装。下载 artifact �
 powershell -ExecutionPolicy Bypass -File .\scripts\sign-apk.ps1 -UnsignedApk <APK绝对路径> -ApkSignerJar <apksigner.jar绝对路径>
 ```
 
-脚本默认复用相邻旧版仓库的固定密钥 `../xinqing/.local/xinqing-signing.p12`，并校验证书指纹；密钥不在本仓库、不复制、不上传。签名结果输出到 `.local/xinqing2-signed.apk`。
+脚本默认复用相邻旧版仓库的固定密钥 `../xinqing/.local/xinqing-signing.p12`，并校验证书指纹；密钥不在本仓库、不复制、不上传。签名结果默认输出到 `.local/xinqing2-<versionName>-signed.apk`，例如 `.local/xinqing2-0.1.0-p1-signed.apk`。升版本后文件名会跟着变，避免新旧安装包混淆。
 
 ## P1 自检路径
 

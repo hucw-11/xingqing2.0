@@ -23,9 +23,19 @@ if (-not $Java) {
 }
 
 if (-not $OutputApk) {
+    $gradleFile = Join-Path $repoRoot 'androidApp/build.gradle.kts'
+    $versionName = 'unknown'
+    if (Test-Path -LiteralPath $gradleFile) {
+        $gradleContent = Get-Content -LiteralPath $gradleFile -Raw
+        $versionMatch = [regex]::Match($gradleContent, 'versionName\s*=\s*"([^"]+)"')
+        if ($versionMatch.Success) {
+            $versionName = $versionMatch.Groups[1].Value
+        }
+    }
+    $safeVersion = $versionName -replace '[^0-9A-Za-z._-]', '-'
     $localDir = Join-Path $repoRoot '.local'
     New-Item -ItemType Directory -Force -Path $localDir | Out-Null
-    $OutputApk = Join-Path $localDir 'xinqing2-signed.apk'
+    $OutputApk = Join-Path $localDir "xinqing2-$safeVersion-signed.apk"
 }
 
 $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($KeyPath, 'android')
