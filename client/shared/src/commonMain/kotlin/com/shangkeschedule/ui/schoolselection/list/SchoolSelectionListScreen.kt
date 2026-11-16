@@ -1,0 +1,529 @@
+package com.shangkeschedule.ui.schoolselection.list
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
+import com.shangkeschedule.Destination
+import com.shangkeschedule.WebPagePurpose
+import com.shangkeschedule.data.model.SchoolCategoryTab
+import com.shangkeschedule.data.model.SchoolHistoryModel
+import com.shangkeschedule.tool.AppExternalLinks
+import com.shangkeschedule.tool.copyToClipboard
+import com.shangkeschedule.ui.components.AlphabetIndexerList
+import com.shangkeschedule.ui.components.AppCard
+import com.shangkeschedule.ui.components.AppEmptyState
+import com.shangkeschedule.ui.components.AppErrorState
+import com.shangkeschedule.ui.components.AppLoading
+import com.shangkeschedule.ui.components.AppSegmentedControl
+import com.shangkeschedule.ui.components.AppTextField
+import com.shangkeschedule.ui.components.ToastManager
+import com.shangkeschedule.ui.theme.appColors
+import com.shangkeschedule.ui.theme.appSpacing
+import kotlin.time.Clock
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
+import org.koin.compose.viewmodel.koinViewModel
+import school_index.School
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.action_request_adapter
+import shangkeschedule.shared.generated.resources.adapter_request_form_unavailable
+import shangkeschedule.shared.generated.resources.adapter_request_no_school_copied
+import shangkeschedule.shared.generated.resources.adapter_request_school_copied
+import shangkeschedule.shared.generated.resources.error_load_failed
+import shangkeschedule.shared.generated.resources.a11y_back
+import shangkeschedule.shared.generated.resources.a11y_clear_search
+import shangkeschedule.shared.generated.resources.a11y_delete
+import shangkeschedule.shared.generated.resources.a11y_school_icon
+import shangkeschedule.shared.generated.resources.a11y_search
+import shangkeschedule.shared.generated.resources.arrow_back_24px
+import shangkeschedule.shared.generated.resources.category_academic_system
+import shangkeschedule.shared.generated.resources.category_general_tool
+import shangkeschedule.shared.generated.resources.close_24px
+import shangkeschedule.shared.generated.resources.label_recent_visit
+import shangkeschedule.shared.generated.resources.school_24px
+import shangkeschedule.shared.generated.resources.search_24px
+import shangkeschedule.shared.generated.resources.search_hint_school
+import shangkeschedule.shared.generated.resources.text_no_adapter_for_category
+import shangkeschedule.shared.generated.resources.text_no_school_found
+import shangkeschedule.shared.generated.resources.title_select_school
+
+/**
+ * 主学校选择屏幕，现在通过 ViewModel 管理状态和数据获取。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SchoolSelectionListScreen(
+    onNavigate: (Destination) -> Unit,
+    onBack: () -> Unit,
+    /** 用途（COURSE = 导入课表 / GRADE = 抓取成绩 / EMPTY_CLASSROOM = 查询空教室），透传给适配方案选择与内嵌 WebView。 */
+    purpose: String = WebPagePurpose.COURSE,
+    viewModel: SchoolSelectionViewModel = koinViewModel()
+) {
+    // 观察 ViewModel 状态
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
+    val filteredEntries by viewModel.filteredEntries.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val schoolHistory by viewModel.schoolHistory.collectAsStateWithLifecycle()
+
+    val lazyListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    var isSearchActive by remember { mutableStateOf(false) }
+    val loadFailed by viewModel.loadFailed.collectAsStateWithLifecycle()
+
+    // 搜索态接管系统返回（v3.54.0）：手势/返回键先清搜索词与激活态，而非直接退出本页
+    val searchBackState = rememberNavigationEventState(currentInfo = NavigationEventInfo.None)
+    NavigationBackHandler(
+        state = searchBackState,
+        isBackEnabled = isSearchActive,
+        onBackCompleted = {
+            isSearchActive = false
+            viewModel.updateSearchQuery("")
+        }
+    )
+
+    val titleText = stringResource(Res.string.title_select_school)
+    val placeholderText = stringResource(Res.string.search_hint_school)
+
+    Scaffold(
+        topBar = {
+            SearchBarWithTitle(
+                onBack = onBack,
+                searchQuery = searchQuery,
+                onQueryChange = viewModel::updateSearchQuery,
+                searchActive = isSearchActive,
+                onSearchActiveChange = { active ->
+                    isSearchActive = active
+                    if (!active) {
+                        viewModel.updateSearchQuery("")
+                    }
+                },
+                placeholderText = placeholderText,
+                titleText = titleText,
+                filteredEntries = filteredEntries,
+                onEntrySelected = { entry ->
+                    viewModel.saveLastSchool(entry)
+                    onNavigate(
+                        Destination.AdapterSelection(
+                            // 传**全部**索引记录 id：同校本科/研究生两条要一起带到二级页
+                            schoolIds = entry.entries.map { it.id },
+                            schoolName = entry.name,
+                            tabNumber = selectedTab.ordinal,
+                            purpose = purpose,
+                        )
+                    )
+                    isSearchActive = false
+                    viewModel.updateSearchQuery("")
+                }
+            )
+        }
+    ) { paddingValues ->
+        if (!isSearchActive) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                CategoryTabs(
+                    selectedTab = selectedTab,
+                    onTabSelected = { tab ->
+                        viewModel.updateSelectedTab(tab)
+                        coroutineScope.launch { lazyListState.scrollToItem(0) }
+                    },
+                    displayTabs = viewModel.displayTabs
+                )
+
+                SchoolContent(
+                    isLoading = isLoading,
+                    loadFailed = loadFailed,
+                    onRetry = viewModel::retryLoad,
+                    filteredEntries = filteredEntries,
+                    allEntries = viewModel.allEntriesSnapshot,
+                    lazyListState = lazyListState,
+                    selectedTab = selectedTab,
+                    schoolHistory = schoolHistory,
+                    onClearHistory = { viewModel.clearHistory(it) },
+                    resolveEntryById = viewModel::resolveEntryById,
+                    onEntrySelected = { entry, tab ->
+                        viewModel.saveLastSchool(entry)
+                        // 列表点击跳转
+                        onNavigate(
+                            Destination.AdapterSelection(
+                                schoolIds = entry.entries.map { it.id },
+                                schoolName = entry.name,
+                                tabNumber = tab.ordinal,
+                                purpose = purpose,
+                                )
+                        )
+                    }
+                )
+            }
+        } else {
+            Box(modifier = Modifier.padding(paddingValues))
+        }
+    }
+}
+
+/**
+ * 「申请适配教务系统」动作（v4.65.0 新增）。
+ *
+ * 学校列表没命中时（分类下没有学校 / 搜索无结果）此前只能退回主页或反复换关键词，
+ * 这里给一条直达通道：**先复制学校名到剪贴板再打开表单** —— WPS 表单不支持 URL 预填，
+ * 复制是唯一能替用户少打一次字的办法。
+ *
+ * 表单地址在 [AppExternalLinks.ADAPTER_REQUEST_FORM] 置空即视为下线：只提示、不跳转。
+ * 返回的 lambda 参数为学校名（无则传 null，仅提示「正在打开表单」）。
+ */
+@Composable
+private fun rememberAdapterRequestAction(): (String?) -> Unit {
+    val uriHandler = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
+    val unavailableText = stringResource(Res.string.adapter_request_form_unavailable)
+    val openingText = stringResource(Res.string.adapter_request_no_school_copied)
+    return { schoolName ->
+        if (AppExternalLinks.ADAPTER_REQUEST_FORM.isBlank()) {
+            ToastManager.show(unavailableText)
+        } else {
+            val name = schoolName?.trim().orEmpty()
+            if (name.isEmpty()) {
+                ToastManager.show(openingText)
+            } else {
+                copyToClipboard(name)
+                // 带占位符的文案只能在挂起上下文里取（与「更多选项」里的同步结果提示同一写法）
+                scope.launch {
+                    ToastManager.show(getString(Res.string.adapter_request_school_copied, name))
+                }
+            }
+            uriHandler.openUri(AppExternalLinks.ADAPTER_REQUEST_FORM)
+        }
+    }
+}
+
+/**
+ * 集中管理加载状态和列表显示。
+ */
+@Composable
+private fun SchoolContent(
+    isLoading: Boolean,
+    loadFailed: Boolean,
+    onRetry: () -> Unit,
+    filteredEntries: List<SchoolListEntry>,
+    allEntries: List<SchoolListEntry>,
+    lazyListState: LazyListState,
+    selectedTab: SchoolCategoryTab,
+    schoolHistory: SchoolHistoryModel,
+    onClearHistory: (SchoolCategoryTab) -> Unit,
+    resolveEntryById: (String) -> SchoolListEntry?,
+    onEntrySelected: (SchoolListEntry, SchoolCategoryTab) -> Unit
+) {
+    // 「教务系统」是本科/专科与研究生合并后的口径，最近访问取两者中有效的那条
+    val recentRecord = when (selectedTab) {
+        SchoolCategoryTab.ACADEMIC_SYSTEM -> schoolHistory.academic
+        SchoolCategoryTab.GENERAL_TOOL -> schoolHistory.general
+    }
+
+    when {
+        isLoading -> {
+            AppLoading()
+        }
+        // 索引加载失败：与「无结果」空态区分，提供重试（v3.54.0）
+        loadFailed -> {
+            AppErrorState(
+                hint = stringResource(Res.string.error_load_failed),
+                fillScreen = true,
+                onRetry = onRetry
+            )
+        }
+        filteredEntries.isEmpty() && !isLoading -> {
+            // 统一空状态：淡灰胶囊 + 辅助文案（v4.65.0 起附「申请适配」入口）
+            val requestAdapter = rememberAdapterRequestAction()
+            AppEmptyState(
+                hint = stringResource(Res.string.text_no_adapter_for_category),
+                fillScreen = true,
+                actionLabel = stringResource(Res.string.action_request_adapter),
+                onAction = { requestAdapter(null) }
+            )
+        }
+        else -> {
+            AlphabetIndexerList(
+                data = filteredEntries,
+                getInitial = { it.initial.firstOrNull()?.uppercase() ?: "#" },
+                lazyListState = lazyListState,
+                headerContent = {
+                    // 历史记录可能保存了旧的 resource_folder（学校适配更新后旧值会失效，
+                    // 如沈阳农业 urp→syau），若沿用旧值会把脚本路径拼错并提示“导入脚本文件不存在”。
+                    // 这里优先用当前索引中同 id 学校的最新数据；索引中已无该校时回退到历史记录。
+                    //
+                    // v4.73.0：回查必须跨**整份列表**而非只看当前分类的过滤结果 ——
+                    // 历史里存的可能是合并前的研究生记录 id，且该校正不在 filteredEntries 里
+                    // （例如切到「通用工具」分类时），故用 allEntries。
+                    val recentEntry = if (!recentRecord.isEmpty) {
+                        resolveEntryById(recentRecord.id)
+                            ?: recentRecord.toSchool().let { SchoolListEntry(listOf(it)) }
+                    } else {
+                        null
+                    }
+                    if (recentEntry != null) {
+                        Column(modifier = Modifier.padding(start = appSpacing().cardInner, end = appSpacing().cardInner, bottom = appSpacing().listGap)) {
+                            Text(
+                                text = stringResource(Res.string.label_recent_visit),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(start = appSpacing().cardInner, top = appSpacing().listGap, bottom = 4.dp)
+                            )
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                SchoolItem(
+                                    entry = recentEntry,
+                                    onClick = { onEntrySelected(it, selectedTab) }
+                                )
+                                IconButton(
+                                    onClick = { onClearHistory(selectedTab) },
+                                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = vectorResource(Res.drawable.close_24px),
+                                        contentDescription = stringResource(Res.string.a11y_delete),
+                                        modifier = Modifier.size(20.dp),
+                                        tint = appColors().divider
+                                    )
+                                }
+                            }
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = appSpacing().cardInner, end = appSpacing().cardInner, top = appSpacing().sectionTitleGap),
+                                thickness = 0.5.dp,
+                                color = appColors().divider
+                            )
+                        }
+                    }
+                }
+            ) { entry ->
+                Box(modifier = Modifier.padding(horizontal = appSpacing().cardInner, vertical = 2.dp)) {
+                    SchoolItem(
+                        entry = entry,
+                        onClick = { onEntrySelected(it, selectedTab) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 分类选择器，使用胶囊分段控件替代 M3 PrimaryTabRow。
+ *
+ * v4.70.0：本科/专科与研究生合并成「教务系统」一个口径，胶囊由 3 段变 2 段。
+ */
+@Composable
+fun CategoryTabs(
+    selectedTab: SchoolCategoryTab,
+    onTabSelected: (SchoolCategoryTab) -> Unit,
+    displayTabs: List<SchoolCategoryTab>
+) {
+    @Composable
+    fun getDisplayName(tab: SchoolCategoryTab): String {
+        return when (tab) {
+            SchoolCategoryTab.ACADEMIC_SYSTEM -> stringResource(Res.string.category_academic_system)
+            SchoolCategoryTab.GENERAL_TOOL -> stringResource(Res.string.category_general_tool)
+        }
+    }
+
+    val selectedIndex = displayTabs.indexOf(selectedTab).coerceAtLeast(0)
+    val options = displayTabs.map { getDisplayName(it) }
+
+    AppSegmentedControl(
+        options = options,
+        selectedIndex = selectedIndex,
+        onSelect = { index -> onTabSelected(displayTabs[index]) },
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+/**
+ * 带有标题和搜索功能的自定义搜索组件。
+ * 用胶囊输入框替代 M3 SearchBar，行为与旧实现保持一致。
+ */
+@Composable
+fun SearchBarWithTitle(
+    onBack: () -> Unit,
+    searchQuery: String,
+    onQueryChange: (String) -> Unit,
+    searchActive: Boolean,
+    onSearchActiveChange: (Boolean) -> Unit,
+    placeholderText: String,
+    titleText: String,
+    filteredEntries: List<SchoolListEntry>,
+    onEntrySelected: (SchoolListEntry) -> Unit
+) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val tokens = appColors()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.statusBars)
+            // 搜索栏顶部留白跟随主题列表间距，避免固定值造成页面节奏差异。
+            .padding(top = appSpacing().listGap)
+    ) {
+        AppTextField(
+            value = searchQuery,
+            onValueChange = onQueryChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = if (searchActive) placeholderText else titleText,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(
+                onSearch = {
+                    if (searchQuery.isBlank()) {
+                        onSearchActiveChange(false)
+                    } else {
+                        if (!searchActive) onSearchActiveChange(true)
+                        keyboardController?.hide()
+                    }
+                }
+            ),
+            leadingIcon = {
+                IconButton(onClick = {
+                    if (searchActive) {
+                        onSearchActiveChange(false)
+                        onQueryChange("")
+                    } else {
+                        onBack()
+                    }
+                }) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.arrow_back_24px),
+                        contentDescription = stringResource(Res.string.a11y_back),
+                        tint = tokens.textSecondary
+                    )
+                }
+            },
+            trailingIcon = {
+                if (!searchActive) {
+                    IconButton(onClick = { onSearchActiveChange(true) }) {
+                        Icon(
+                            imageVector = vectorResource(Res.drawable.search_24px),
+                            contentDescription = stringResource(Res.string.a11y_search),
+                            tint = tokens.textSecondary
+                        )
+                    }
+                } else if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(
+                            imageVector = vectorResource(Res.drawable.close_24px),
+                            contentDescription = stringResource(Res.string.a11y_clear_search),
+                            tint = tokens.textSecondary
+                        )
+                    }
+                }
+            }
+        )
+
+        if (searchActive) {
+            // 搜索结果内容
+            if (filteredEntries.isEmpty() && searchQuery.isNotBlank()) {
+                // v4.65.0：搜索无结果时把学校名带进「申请适配」入口（点一次即复制 + 打开表单）
+                val requestAdapter = rememberAdapterRequestAction()
+                AppEmptyState(
+                    hint = stringResource(Res.string.text_no_school_found),
+                    fillScreen = true,
+                    actionLabel = stringResource(Res.string.action_request_adapter),
+                    onAction = { requestAdapter(searchQuery) }
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = appSpacing().pageHorizontal, vertical = appSpacing().cardGap),
+                    verticalArrangement = Arrangement.spacedBy(appSpacing().cardGap)
+                ) {
+                    items(filteredEntries, key = { it.id }) { entry ->
+                        SchoolItem(entry = entry) { onEntrySelected(it) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 学校列表项。
+ *
+ * v4.73.0：参数由 `School` 改为 [SchoolListEntry] —— **一行就是一所学校**，
+ * 本科与研究生两条索引记录已合并（见 [SchoolListEntry] 的注释）。
+ */
+@Composable
+fun SchoolItem(entry: SchoolListEntry, onClick: (SchoolListEntry) -> Unit) {
+    // R1-012b：快速双击只进一次选校页（500ms 节流，item 作用域）
+    var lastClickMs by remember { mutableStateOf(0L) }
+    AppCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = {
+            val nowMs = Clock.System.now().toEpochMilliseconds()
+            if (nowMs - lastClickMs > 500) {
+                lastClickMs = nowMs
+                onClick(entry)
+            }
+        }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = appSpacing().cardInner, vertical = appSpacing().cardInner),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = vectorResource(Res.drawable.school_24px),
+                contentDescription = stringResource(Res.string.a11y_school_icon),
+                modifier = Modifier
+                    .size(24.dp)
+                    .padding(end = 8.dp),
+                tint = appColors().textSecondary
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    // 学校名是行主标题：用主文字色（原 onSurfaceVariant 层级偏弱）
+                    color = appColors().textPrimary
+                )
+            }
+        }
+    }
+}

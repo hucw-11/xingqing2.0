@@ -1,0 +1,120 @@
+package com.shangkeschedule.ui.settings.notification
+
+import com.shangkeschedule.ui.components.AppTopAppBar
+import com.shangkeschedule.ui.components.ToastManager
+import com.shangkeschedule.ui.theme.appSpacing
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
+import org.koin.compose.viewmodel.koinViewModel
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.a11y_back
+import shangkeschedule.shared.generated.resources.arrow_back_24px
+import shangkeschedule.shared.generated.resources.holiday_update_failed
+import shangkeschedule.shared.generated.resources.holiday_updated
+import shangkeschedule.shared.generated.resources.title_course_notification_settings
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NotificationSettingsScreen(
+    onBack: () -> Unit,
+    viewModel: NotificationSettingsViewModel = koinViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // R59-01：节假日导入必须有可见反馈（成功条数 / 失败提示）。
+    // 文案在此预取，回调内（Compose 上下文之外）使用。
+    val holidayUpdatedTemplate = stringResource(Res.string.holiday_updated)
+    val holidayUpdateFailed = stringResource(Res.string.holiday_update_failed)
+
+    Scaffold(
+        topBar = {
+            AppTopAppBar(
+                title = { Text(stringResource(Res.string.title_course_notification_settings)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            vectorResource(Res.drawable.arrow_back_24px),
+                            contentDescription = stringResource(Res.string.a11y_back)
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = appSpacing().pageHorizontal),
+            verticalArrangement = Arrangement.spacedBy(appSpacing().cardGap),
+            contentPadding = PaddingValues(
+                top = appSpacing().pageTop,
+                bottom = appSpacing().contentBottom
+            )
+        ) {
+            // 常规卡片由于各平台差异巨大，采用 expect 隔离由各平台自行实现
+            item {
+                PlatformGeneralSettingsSection(
+                    uiState = uiState,
+                    viewModel = viewModel
+                )
+            }
+            // 高级卡片是跨平台通用的
+            item {
+                AdvancedSettingsCard(
+                    uiState = uiState,
+                    onUpdateHolidays = {
+                        // R59-01：旧实现不传 onResult，成功与失败都无任何提示，
+                        // 用户点完只见转一圈、既不知失败也不知「成功」其实什么都没导入。
+                        viewModel.updateHolidays { result ->
+                            ToastManager.show(
+                                result.getOrNull()?.let { holidayUpdatedTemplate.format(it) } ?: holidayUpdateFailed
+                            )
+                        }
+                    },
+                    onClearSkippedDates = { viewModel.showDialog(NotificationDialogType.ClearConfirmation) },
+                    onManageSkippedDates = { viewModel.showDialog(NotificationDialogType.ManageSkippedDates) }
+                )
+            }
+        }
+    }
+
+    // 平台专属的弹窗派发器也通过 expect 隔离
+    PlatformNotificationDialogDispatcher(
+        uiState = uiState,
+        viewModel = viewModel
+    )
+}
+
+/**
+ * 平台专属的常规设置区域声明
+ */
+expect @Composable
+fun PlatformGeneralSettingsSection(
+    uiState: NotificationSettingsUiState,
+    viewModel: NotificationSettingsViewModel
+)
+
+/**
+ * 平台专属的弹窗派发器声明
+ */
+expect @Composable
+fun PlatformNotificationDialogDispatcher(
+    uiState: NotificationSettingsUiState,
+    viewModel: NotificationSettingsViewModel
+)

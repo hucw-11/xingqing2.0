@@ -1,0 +1,719 @@
+package com.shangkeschedule.data.repository
+
+import androidx.room3.withWriteTransaction
+import com.shangkeschedule.data.db.main.Course
+import com.shangkeschedule.data.db.main.CourseDao
+import com.shangkeschedule.data.db.main.CourseTable
+import com.shangkeschedule.data.db.main.CourseTableConfig
+import com.shangkeschedule.data.db.main.CourseTableDao
+import com.shangkeschedule.data.db.main.CourseWeek
+import com.shangkeschedule.data.db.main.CourseWeekDao
+import com.shangkeschedule.data.db.main.CourseWithWeeks
+import com.shangkeschedule.data.db.main.MainAppDatabase
+import com.shangkeschedule.data.db.main.TimeSlot
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
+import org.koin.core.annotation.Single
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+
+/**
+ * 课表数据仓库，负责处理所有与课表、课程相关的业务逻辑和数据操作。
+ */
+@OptIn(ExperimentalUuidApi::class)
+@Single
+class CourseTableRepository(
+    private val database: MainAppDatabase,
+    private val courseTableDao: CourseTableDao,
+    private val courseDao: CourseDao,
+    private val courseWeekDao: CourseWeekDao,
+    private val timeSlotRepository: TimeSlotRepository,
+    private val appSettingsRepository: AppSettingsRepository
+) {
+    private val repositoryScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    /** 停止初始化任务，再释放其数据库。 */
+    internal suspend fun close() { repositoryScope.coroutineContext[Job]?.cancelAndJoin() }
+
+    init {
+        // 当仓库被依赖注入创建时，自动触发保护/种子数据填充逻辑
+        repositoryScope.launch {
+            seedDefaultData()
+        }
+    }
+
+    /**
+     * 种入初始默认数据（当不存在任何课表时触发）
+     */
+    private suspend fun seedDefaultData() {
+        if (courseTableDao.getAllCourseTables().first().isNotEmpty()) {
+            return
+        }
+
+        val tableId = Uuid.random().toString()
+        val defaultCourseTable = CourseTable(
+            id = tableId,
+            name = "我的课表",
+            createdAt = Clock.System.now().toEpochMilliseconds()
+        )
+        val defaultConfig = CourseTableConfig(
+            courseTableId = tableId,
+            showWeekends = false,
+            semesterTotalWeeks = 20,
+            defaultClassDuration = 45,
+            defaultBreakDuration = 10,
+            firstDayOfWeek = 1
+        )
+
+        val defaultTimeSlotsForNewTable = DEFAULT_TIME_SLOTS.map {
+            it.copy(courseTableId = tableId)
+        }
+
+        // 真事务：三张表的初始化写入要么全部成功，要么全部回滚
+        database.withWriteTransaction {
+            courseTableDao.insert(defaultCourseTable)
+            appSettingsRepository.insertOrUpdateCourseConfig(defaultConfig)
+            timeSlotRepository.insertAll(defaultTimeSlotsForNewTable)
+        }
+    }
+
+    /**
+     * 获取所有课表，返回一个数据流。
+     *
+     * Room 的 @Query Flow 在**任意**被观察表失效时都会重新发射（即使结果逐值相同），
+     * 这里补 distinctUntilChanged 拦截等值重复发射，避免下游 ViewModel / 重组白跑。
+     * 实体均为纯 data class（String/Int/Long/Boolean/List，无数组字段），结构相等安全。
+     */
+    fun getAllCourseTables(): Flow<List<CourseTable>> {
+        return courseTableDao.getAllCourseTables().distinctUntilChanged()
+    }
+
+    /**
+     * 获取指定课表ID的完整课程（包含周数）。
+     */
+    fun getCoursesWithWeeksByTableId(tableId: String): Flow<List<CourseWithWeeks>> {
+        return courseDao.getCoursesWithWeeksByTableId(tableId).distinctUntilChanged()
+    }
+
+    /** 按 ID 获取课表实体（一次性）。 */
+    suspend fun getCourseTableById(tableId: String): CourseTable? {
+        return courseTableDao.getCourseTableById(tableId)
+    }
+
+    /** 按课程 ID 反查所属课表 ID（不存在时返回 null）。 */
+    suspend fun findTableIdOfCourse(courseId: String): String? {
+        return courseDao.getCourseTableIdById(courseId)
+    }
+
+    /**
+     * 获取与本人课表配对的情侣课表（数据流）。
+     * 情侣课表是独立的 CourseTable（isCouple=true），拥有自己的课程、作息与学期配置。
+     */
+    fun getCoupleTableFor(selfTableId: String): Flow<CourseTable?> {
+        return courseTableDao.getCoupleTableByPairedId(selfTableId).distinctUntilChanged()
+    }
+
+    /**
+     * 获取与本人课表配对的情侣课表（一次性）。
+     */
+    suspend fun getCoupleTableForOnce(selfTableId: String): CourseTable? {
+        return courseTableDao.getCoupleTableByPairedIdOnce(selfTableId)
+    }
+
+    /**
+     * 为本人课表创建配对情侣课表。
+     * 复制本人课表的学期配置与默认作息方案作为初始值（之后可独立修改）。
+     *
+     * @param selfTableId 本人课表 ID
+     * @param name 情侣课表名称；缺省用「<本人课表名> · 情侣」
+     * @return 新情侣课表 ID；已存在配对情侣表时返回其 ID（幂等）
+     */
+    suspend fun createCoupleTable(selfTableId: String, name: String? = null): String {
+        // 确定性 ID（与 DB v12→v13 迁移一致）：配合事务内 check-then-insert，
+        // 并发双击/多入口同时创建只会得到同一张表（旧实现各自生成 Uuid 会产生不可见的孤儿情侣表）
+        val coupleId = selfTableId + "_couple"
+
+        database.withWriteTransaction {
+            val existing = courseTableDao.getCourseTableById(coupleId)
+            if (existing == null) {
+                val selfTable = courseTableDao.getCourseTableById(selfTableId)
+                    ?: throw IllegalArgumentException("本人课表不存在: $selfTableId")
+                courseTableDao.insert(
+                    CourseTable(
+                        id = coupleId,
+                        name = name ?: "${selfTable.name} · 情侣",
+                        createdAt = Clock.System.now().toEpochMilliseconds(),
+                        isCouple = true,
+                        pairedCourseTableId = selfTableId
+                    )
+                )
+
+                // 复制本人课表的学期配置；无配置时用默认值（快照读取全部收进事务，防撕裂）
+                val selfConfig = appSettingsRepository.getCourseTableConfigFlow(selfTableId).first()
+                val coupleConfig = (selfConfig ?: CourseTableConfig(courseTableId = selfTableId))
+                    .copy(courseTableId = coupleId)
+                appSettingsRepository.insertOrUpdateCourseConfig(coupleConfig)
+
+                // 复制本人课表**全部方案**的作息；本人表任何方案都没有 slots 时回落到出厂默认模板
+                val schemeIds = timeSlotRepository.getSchemeIdsByCourseTableId(selfTableId).first()
+                val coupleSlots = schemeIds.flatMap { schemeId ->
+                    timeSlotRepository.getTimeSlotsByCourseTableId(selfTableId, schemeId).first()
+                        .map { it.copy(courseTableId = coupleId) }
+                }.ifEmpty {
+                    DEFAULT_TIME_SLOTS.map { it.copy(courseTableId = coupleId) }
+                }
+                timeSlotRepository.insertAll(coupleSlots)
+
+                // 复制作息方案元信息（生效日期范围）
+                timeSlotRepository.getSchemeMetasOnce(selfTableId).forEach { meta ->
+                    timeSlotRepository.upsertSchemeMeta(meta.copy(courseTableId = coupleId))
+                }
+            }
+        }
+        return coupleId
+    }
+
+    /**
+     * 创建一个新的课表。
+     * 负责生成 ID 并执行插入操作，并**同步**为新课表创建默认时间段和配置。
+     *
+     * @param name 新课表的名称
+     */
+    suspend fun createNewCourseTable(name: String): String {
+        val newTable = CourseTable(
+            id = Uuid.random().toString(),
+            name = name,
+            createdAt = Clock.System.now().toEpochMilliseconds()
+        )
+
+        val defaultTimeSlotsForNewTable = DEFAULT_TIME_SLOTS.map {
+            it.copy(courseTableId = newTable.id)
+        }
+        val newConfig = CourseTableConfig(courseTableId = newTable.id)
+
+        // 真事务：课表 + 默认时段 + 默认配置原子写入
+        database.withWriteTransaction {
+            courseTableDao.insert(newTable)
+            timeSlotRepository.insertAll(defaultTimeSlotsForNewTable)
+            appSettingsRepository.insertOrUpdateCourseConfig(newConfig)
+        }
+
+        return newTable.id
+    }
+
+    /**
+     * 复制课表为新学期模板（学期管理页「历史学期 → 复制」）。
+     *
+     * 整份带过来：学期配置（开学日期 / 总周数 / 每周起始日 / 生效作息方案）、
+     * **全部作息方案**的时间段与方案元信息、以及全部课程及其周次关联；
+     * 全部写入收在同一个真事务内，中途失败不会留下半张课表。
+     *
+     * 复制结果是**独立的本人课表**（`isCouple=false`、不继承配对关系），
+     * 因此不会与源课表产生任何联动；课程逐条换新 ID（直接复用原 ID 会主键冲突）。
+     *
+     * @param sourceTableId 源课表 ID
+     * @param newName 新课表名称
+     * @return 新课表 ID
+     * @throws IllegalArgumentException 源课表不存在
+     */
+    suspend fun duplicateCourseTable(sourceTableId: String, newName: String): String {
+        val newTableId = Uuid.random().toString()
+
+        database.withWriteTransaction {
+            val sourceTable = courseTableDao.getCourseTableById(sourceTableId)
+                ?: throw IllegalArgumentException("源课表不存在: $sourceTableId")
+
+            courseTableDao.insert(
+                CourseTable(
+                    id = newTableId,
+                    name = newName.ifBlank { sourceTable.name },
+                    createdAt = Clock.System.now().toEpochMilliseconds()
+                )
+            )
+
+            // 学期配置整份带过来；源表无配置时用默认值兜底
+            val sourceConfig = appSettingsRepository.getCourseTableConfigFlow(sourceTableId).first()
+            appSettingsRepository.insertOrUpdateCourseConfig(
+                (sourceConfig ?: CourseTableConfig(courseTableId = sourceTableId))
+                    .copy(courseTableId = newTableId)
+            )
+
+            // 全部作息方案的时间段；源表任何方案都没有 slots 时回落到出厂默认模板
+            val schemeIds = timeSlotRepository.getSchemeIdsByCourseTableId(sourceTableId).first()
+            val copiedSlots = schemeIds.flatMap { schemeId ->
+                timeSlotRepository.getTimeSlotsByCourseTableId(sourceTableId, schemeId).first()
+                    .map { it.copy(courseTableId = newTableId) }
+            }.ifEmpty {
+                DEFAULT_TIME_SLOTS.map { it.copy(courseTableId = newTableId) }
+            }
+            timeSlotRepository.insertAll(copiedSlots)
+
+            // 作息方案元信息（自动切换的生效日期范围）
+            timeSlotRepository.getSchemeMetasOnce(sourceTableId).forEach { meta ->
+                timeSlotRepository.upsertSchemeMeta(meta.copy(courseTableId = newTableId))
+            }
+
+            // 课程本体 + 周次关联：按索引对齐新旧 ID 一次性批量写入
+            val sourceCourses = courseDao.getCoursesWithWeeksByTableId(sourceTableId).first()
+            if (sourceCourses.isNotEmpty()) {
+                val newCourses = sourceCourses.map { item ->
+                    item.course.copy(id = Uuid.random().toString(), courseTableId = newTableId)
+                }
+                val newWeeks = sourceCourses.flatMapIndexed { index, item ->
+                    item.weeks.map { week ->
+                        CourseWeek(courseId = newCourses[index].id, weekNumber = week.weekNumber)
+                    }
+                }
+                courseDao.insertAll(newCourses)
+                if (newWeeks.isNotEmpty()) {
+                    courseWeekDao.insertAll(newWeeks)
+                }
+            }
+        }
+
+        return newTableId
+    }
+
+    /**
+     * 更新一个课表。
+     */
+    suspend fun updateCourseTable(courseTable: CourseTable) {
+        courseTableDao.update(courseTable)
+    }
+
+    /**
+     * 删除课表并确保当前课表指针始终指向仍存在的备用课表。
+     *
+     * DataStore 与 Room 不能跨存储事务，因此先持久化一个已经存在的备用 ID；
+     * 若随后 Room 删除失败，用户只会停留在备用课表，而不会出现悬空 currentCourseTableId。
+     *
+     * 删除本人课表时级联删除其配对情侣课表（情侣课表依附于配对关系，不独立存活）。
+     */
+    suspend fun deleteCourseTableAndResolveCurrent(courseTable: CourseTable): Boolean {
+        // P2-10（2026-10-06）：数量判定与快照读取原先都在 withWriteTransaction **之外**，
+        // 两个并发删除各自读到「还有 2 张表」后都会通过 `size <= 1` 守卫，最终把课表删光
+        // 并把 currentCourseTableId 留成悬空指针。
+        // 修法：把「读快照 + 判数量 + 算回退表 + 删行」整体收进**同一个**写事务（Room 写事务串行化），
+        // 使判定与变更原子；DataStore 指针与 Room 不能同事务，故指针修正仍放在事务前后按
+        // 「先落盘指针、再删行」的顺序（保持既有语义：删行失败时用户只停在备用课表，不留悬空指针）。
+        var fallbackId: String? = null
+        var deletedIds: Set<String> = emptySet()
+        var deletedCouple = false
+        var tablesToDelete: List<CourseTable> = emptyList()
+        // R41-07：守卫「拒绝删除」此前只是 `return@withWriteTransaction`，与「删除成功」走同一条
+        // 出口 ⇒ 末尾无条件 return true 会把「拒绝」报成「已删除」。用显式标记区分两种出口。
+        var deletionApproved = false
+
+        database.withWriteTransaction {
+            val allTables = courseTableDao.getAllCourseTables().first()
+            if (allTables.size <= 1 || allTables.none { it.id == courseTable.id }) return@withWriteTransaction
+
+            // 待删除集合：本人表 + 其配对情侣表（若有）
+            val coupleOfSelf = if (!courseTable.isCouple) {
+                courseTableDao.getCoupleTableByPairedIdOnce(courseTable.id)
+            } else null
+            val allToDelete = listOfNotNull(courseTable, coupleOfSelf)
+            val ids = allToDelete.map { it.id }.toSet()
+
+            // 删除后必须至少剩余一张课表（例如仅剩「本人表+其情侣表」时删本人表应拒绝）
+            // 删除情侣表时优先回退到其配对本人表，避免落到无关的历史学期
+            val fallbackTable = if (courseTable.isCouple && courseTable.pairedCourseTableId != null &&
+                allTables.any { it.id == courseTable.pairedCourseTableId && it.id !in ids }
+            ) {
+                allTables.first { it.id == courseTable.pairedCourseTableId && it.id !in ids }
+            } else {
+                allTables.firstOrNull { it.id !in ids } ?: return@withWriteTransaction
+            }
+
+            // 指针修正必须在删行之前落盘：删行失败时用户只停在备用课表，不会悬空。
+            val currentSettings = appSettingsRepository.getAppSettingsOnce()
+            if (currentSettings.currentCourseTableId in ids) {
+                fallbackId = fallbackTable.id
+            }
+            tablesToDelete = allToDelete
+            deletedIds = ids
+            deletedCouple = allToDelete.any { it.isCouple }
+            deletionApproved = true
+        }
+        // R41-07：守卫拒绝（只剩「本人表 + 其情侣表」而删的是本人表 / 表不存在 / 只剩一张）时
+        // 什么都不删，**必须如实返回 false**，否则 UI 弹「已删除」而表原封不动还在，
+        // 专门为此设计的「不能删除最后一个课表」提示永远收不到。
+        if (!deletionApproved) return false
+        val resolvedFallbackId = fallbackId
+        if (resolvedFallbackId != null) {
+            val currentSettings = appSettingsRepository.getAppSettingsOnce()
+            if (currentSettings.currentCourseTableId in deletedIds) {
+                appSettingsRepository.insertOrUpdateAppSettings(
+                    currentSettings.copy(currentCourseTableId = resolvedFallbackId)
+                )
+            }
+        }
+        database.withWriteTransaction {
+            tablesToDelete.forEach { courseTableDao.delete(it) }
+        }
+
+        // 删除涉及情侣课表（直删或级联）时复位「双人同显」开关：
+        // 否则残留 true 后重建情侣表，叠加会静默重新生效（学期管理页与设置页两条删除入口统一收口）
+        if (deletedCouple) {
+            val settings = appSettingsRepository.getAppSettingsOnce()
+            if (settings.coupleScheduleEnabled) {
+                appSettingsRepository.insertOrUpdateAppSettings(
+                    settings.copy(coupleScheduleEnabled = false)
+                )
+            }
+        }
+        return true
+    }
+
+    /**
+     * 删除一个课表，并确保至少保留一个。
+     *
+     * @deprecated 请使用 [deleteCourseTableAndResolveCurrent]，避免 currentCourseTableId 悬空。
+     */
+    @Deprecated("Use deleteCourseTableAndResolveCurrent")
+    suspend fun deleteCourseTable(courseTable: CourseTable): Boolean =
+        deleteCourseTableAndResolveCurrent(courseTable)
+
+    /**
+     * 专门用于根据课程ID更新其颜色索引。
+     * 这是实现无效颜色自动修复机制所需的关键方法（用于历史数据迁移）。
+     *
+     * @param courseId 课程的唯一ID。
+     * @param newColorInt 新的颜色索引值 (0 到 11)。
+     */
+    suspend fun updateCourseColor(courseId: String, newColorInt: Int) {
+        courseDao.updateCourseColorById(courseId, newColorInt)
+    }
+
+    /**
+     * 插入或更新一个课程，并同时更新其对应的周数列表。
+     */
+    suspend fun upsertCourse(course: Course, weekNumbers: List<Int>) {
+        database.withWriteTransaction { upsertCourseInTransaction(course, weekNumbers) }
+    }
+
+    /** 一门课的方案增删与周次必须整批提交；失败时连同级联删除的笔记一起回滚。 */
+    suspend fun saveCourseSchemes(
+        courseTableId: String,
+        originalCourseIds: Set<String>,
+        courses: List<Pair<Course, List<Int>>>,
+    ) {
+        require(courses.isNotEmpty() && courses.all { it.first.courseTableId == courseTableId })
+        require(courses.map { it.first.id }.distinct().size == courses.size)
+        database.withWriteTransaction {
+            val existingIds = courseDao.getCoursesOnce(courseTableId).map { it.id }.toSet()
+            require(originalCourseIds.all { it in existingIds }) { "课程已发生变化，请重新打开编辑" }
+            val retainedIds = courses.map { it.first.id }.toSet()
+            val removedIds = (originalCourseIds - retainedIds).toList()
+            if (removedIds.isNotEmpty()) courseDao.deleteCoursesByIds(removedIds)
+            courses.forEach { (course, weeks) -> upsertCourseInTransaction(course, weeks) }
+        }
+    }
+
+    private suspend fun upsertCourseInTransaction(course: Course, weekNumbers: List<Int>) {
+        // take(300) 会截取前 300 个字符，如果为 null 则返回 null
+        val safeRemark = course.remark?.take(300)?.ifBlank { null }
+
+        // 使用 copy 创建一个处理过备注的新对象
+        val processedCourse = course.copy(remark = safeRemark)
+
+        val courseWeeks = weekNumbers.map { week ->
+            CourseWeek(courseId = processedCourse.id, weekNumber = week)
+        }
+
+        if (courseDao.exists(processedCourse.id)) {
+            courseDao.update(processedCourse)
+        } else {
+            courseDao.insertAll(listOf(processedCourse))
+        }
+        courseWeekDao.updateCourseWeeks(processedCourse.id, courseWeeks)
+    }
+
+    /**
+     * 删除一个课程。
+     */
+    suspend fun deleteCourse(course: Course) {
+        courseDao.delete(course)
+    }
+
+    /**
+     * 批量删除指定 ID 列表的课程实例。
+     *
+     * @param courseIds 要删除的课程的唯一ID列表。
+     */
+    suspend fun deleteCoursesByIds(courseIds: List<String>) {
+        if (courseIds.isEmpty()) return
+        courseDao.deleteCoursesByIds(courseIds)
+    }
+
+    /**
+     * 批量删除指定课表下、指定名称的所有课程实例及其关联的周次记录。
+     *
+     * 依赖 Room 的 ForeignKey.CASCADE (在 CourseWeek 实体中定义)，
+     * 此方法只需删除 Course 记录，CourseWeek 记录将自动被清理。
+     *
+     * @param tableId 课表的唯一ID。
+     * @param courseNames 需要删除的课程名称列表。
+     */
+    suspend fun deleteCoursesByNames(tableId: String, courseNames: List<String>) {
+        if (courseNames.isEmpty() || tableId.isBlank()) return
+        courseDao.deleteCoursesByNames(tableId, courseNames)
+    }
+
+    // 在类内部定义枚举
+    enum class TweakMode {
+        MERGE,      // 数据合并：A -> B (单箭头)
+        OVERWRITE,  // 数据覆盖：A >> B (双箭头)
+        EXCHANGE    // 数据交换：A <-> B (双向箭头)
+    }
+
+    /**
+     * 执行调课操作
+     * @param mode 传入 TweakMode.MERGE, TweakMode.OVERWRITE 或 TweakMode.EXCHANGE
+     */
+    suspend fun tweakCoursesOnDate(
+        mode: TweakMode,
+        courseTableId: String,
+        fromWeek: Int,
+        fromDay: Int,
+        toWeek: Int,
+        toDay: Int
+    ) {
+        // 1. 获取来源(A)和目标(B)的数据快照（读操作放事务外）
+        val sourceList = courseDao.getCoursesWithWeeksByDayAndWeek(courseTableId, fromDay, fromWeek).first()
+        val targetList = courseDao.getCoursesWithWeeksByDayAndWeek(courseTableId, toDay, toWeek).first()
+
+        // 真事务：调课涉及的多表多行写入全部原子化
+        database.withWriteTransaction {
+            when (mode) {
+                TweakMode.MERGE -> {
+                    // 直接移动 A -> B
+                    executeMoveInternal(sourceList, toWeek, toDay, fromWeek)
+                }
+
+                TweakMode.OVERWRITE -> {
+                    // 先删目标日期的周次，再移动 A -> B
+                    if (targetList.isNotEmpty()) {
+                        val targetIds = targetList.map { it.course.id }
+                        courseWeekDao.deleteCourseWeeksForCourseAndWeek(targetIds, toWeek)
+                    }
+                    executeMoveInternal(sourceList, toWeek, toDay, fromWeek)
+                }
+
+                TweakMode.EXCHANGE -> {
+                    // 互换：先切断双方现有周次联系
+                    if (sourceList.isNotEmpty()) {
+                        courseWeekDao.deleteCourseWeeksForCourseAndWeek(sourceList.map { it.course.id }, fromWeek)
+                    }
+                    if (targetList.isNotEmpty()) {
+                        courseWeekDao.deleteCourseWeeksForCourseAndWeek(targetList.map { it.course.id }, toWeek)
+                    }
+                    // 执行交叉移动 (originalWeek = -1 表示不重复执行删除逻辑)
+                    executeMoveInternal(sourceList, toWeek, toDay, -1)
+                    executeMoveInternal(targetList, fromWeek, fromDay, -1)
+                }
+            }
+        }
+    }
+
+    /**
+     * 内部辅助函数：处理课程的物理移动或多周拆分逻辑
+     */
+    private suspend fun executeMoveInternal(
+        items: List<CourseWithWeeks>,
+        targetWeek: Int,
+        targetDay: Int,
+        originalWeek: Int
+    ) {
+        if (items.isEmpty()) return
+
+        val newCourses = mutableListOf<Course>()
+        val newWeeks = mutableListOf<CourseWeek>()
+        val oldIdsToRemove = mutableListOf<String>()
+
+        for (item in items) {
+            val course = item.course
+            // 判断是否为单周课程
+            val isSingleWeek = item.weeks.size <= 1
+
+            if (isSingleWeek) {
+                // 优化：只有一周的课，直接更新 Course 表的 Day 字段
+                courseDao.update(course.copy(day = targetDay))
+                if (originalWeek != -1) {
+                    courseWeekDao.deleteCourseWeeksForCourseAndWeek(listOf(course.id), originalWeek)
+                }
+                courseWeekDao.insertAll(listOf(CourseWeek(courseId = course.id, weekNumber = targetWeek)))
+            } else {
+                // 优化：多周课，克隆新 ID 专门用于目标日期
+                val newId = Uuid.random().toString()
+                newCourses.add(course.copy(id = newId, day = targetDay))
+                newWeeks.add(CourseWeek(courseId = newId, weekNumber = targetWeek))
+                if (originalWeek != -1) oldIdsToRemove.add(course.id)
+            }
+        }
+
+        // 批量执行数据库变更
+        if (oldIdsToRemove.isNotEmpty()) {
+            courseWeekDao.deleteCourseWeeksForCourseAndWeek(oldIdsToRemove, originalWeek)
+        }
+        if (newCourses.isNotEmpty()) {
+            courseDao.insertAll(newCourses)
+            courseWeekDao.insertAll(newWeeks)
+        }
+    }
+
+    /**
+     * 一次性获取课表全部课程（含周次关联）。
+     * 供快速删除等批量操作一次拉全量后内存按 (周,日) 匹配，
+     * 避免逐组合调用 [getCoursesForDay] 造成的全表查询放大（v3.54.0）。
+     */
+    suspend fun getCoursesWithWeeksOnce(courseTableId: String): List<CourseWithWeeks> {
+        return courseDao.getCoursesWithWeeksByTableId(courseTableId).first()
+    }
+
+    /**
+     * 快速删除：仅移除特定周次的记录，不物理删除课程定义。
+     * * @param tableId 课表唯一 ID
+     * @param weekDayPairs 周次与星期的组合列表 (Pair<周次, 星期>)
+     */
+    suspend fun deleteCoursesOnDates(
+        tableId: String,
+        weekDayPairs: List<Pair<Int, Int>>
+    ) {
+        if (weekDayPairs.isEmpty()) return
+        // 一次全量拉取后内存按 (周,日) 匹配，替代此前逐组合全表查询（v3.54.0）
+        val allCourses = getCoursesWithWeeksOnce(tableId)
+        val deletions: List<Pair<List<String>, Int>> = allCourses
+            .flatMap { courseWithWeeks ->
+                weekDayPairs
+                    .filter { (week, day) ->
+                        courseWithWeeks.course.day == day &&
+                            courseWithWeeks.weeks.any { it.weekNumber == week }
+                    }
+                    .map { it.first to courseWithWeeks.course.id }
+            }
+            .groupBy({ it.first }, { it.second })
+            .map { (week, ids) -> ids.distinct() to week }
+
+        if (deletions.isEmpty()) return
+
+        // 真事务：整批周次关联删除原子化
+        database.withWriteTransaction {
+            deletions.forEach { (ids, week) ->
+                // 仅仅从 course_weeks 表中移除对应周次的关联，不触动 course 表
+                courseWeekDao.deleteCourseWeeksForCourseAndWeek(ids, week)
+            }
+        }
+    }
+
+    /**
+     * 只删除某门课程在**指定周次**的这一次课（v4.63.0）。
+     *
+     * 与 [deleteCoursesOnDates] 的「按 (周次, 星期) 整列清理」不同，这里只针对**单条课程记录**：
+     * 仅切断该课程与 [weekNumber] 的关联，它在其他周次的排课照常保留。
+     *
+     * 若切断后该课程已不再关联任何周次（即本次就是它的最后一次出现），
+     * 则把课程记录一并删除——否则会留下一条永不显示的孤儿课程行。
+     *
+     * @param courseId 课程记录的唯一 ID
+     * @param weekNumber 要删除的周次
+     * @return true 表示课程记录已被整条删除；false 表示只移除了该周次
+     */
+    suspend fun deleteCourseWeekOccurrence(courseId: String, weekNumber: Int): Boolean {
+        if (courseId.isBlank()) return false
+        var courseDeleted = false
+        // 真事务：切断周次关联与「已无周次则删课」两步原子化，避免中途失败留下孤儿行
+        database.withWriteTransaction {
+            courseWeekDao.deleteCourseWeeksForCourseAndWeek(listOf(courseId), weekNumber)
+            if (courseWeekDao.getWeekNumbersByCourseId(courseId).isEmpty()) {
+                courseDao.deleteById(courseId)
+                courseDeleted = true
+            }
+        }
+        return courseDeleted
+    }
+
+    /**
+     * 获取指定课表、周次和星期下的课程，并以数据流形式返回。
+     * 这个方法专为 UI 层提供实时更新的数据。
+     */
+    fun getCoursesForDay(
+        courseTableId: String,
+        weekNumber: Int,
+        day: Int
+    ): Flow<List<CourseWithWeeks>> {
+        // 使用简单查询获取全部课程，再在代码中过滤周次和星期
+        // 避免子查询/EXISTS + @Relation 在 Room 3.0.1 下可能导致的结果丢失问题
+        return courseDao.getCoursesWithWeeksByTableId(courseTableId).map { allCourses ->
+            allCourses.filter { cw ->
+                cw.course.day == day && cw.weeks.any { it.weekNumber == weekNumber }
+            }.sortedWith(
+                compareBy<CourseWithWeeks> {
+                    if (it.course.isCustomTime) 99 else it.course.startSection ?: 99
+                }.thenBy {
+                    if (it.course.isCustomTime) it.course.customStartTime ?: "99:99" else "99:99"
+                }
+            )
+        }
+    }
+
+    /**
+     * 根据物理日期和配置，获取该周的所有课程。
+     * 此函数是重构“真日历”模式的关键，它实现了从“日期”到“课程数据”的直接映射。
+     */
+    fun getCoursesWithWeeksByDate(
+        courseTableId: String,
+        targetDate: LocalDate,
+        config: CourseTableConfig
+    ): Flow<List<CourseWithWeeks>> {
+        val weekNumber = appSettingsRepository.getWeekIndexAtDate(
+            targetDate = targetDate,
+            startDateStr = config.semesterStartDate,
+            firstDayOfWeekInt = config.firstDayOfWeek
+        )
+
+        // 如果周次为 null（说明没设开学日期）
+        if (weekNumber == null) {
+            return flowOf(emptyList())
+        }
+
+        // 使用简单查询获取全部课程，再在代码中过滤周次（返回整周课程，不按天过滤）
+        // 避免子查询/EXISTS + @Relation 在 Room 3.0.1 下可能导致的结果丢失问题
+        return courseDao.getCoursesWithWeeksByTableId(courseTableId).map { allCourses ->
+            allCourses.filter { cw ->
+                cw.weeks.any { it.weekNumber == weekNumber }
+            }
+        }
+    }
+}
+
+/**
+ * 新课表的默认时间段模板（13 节）。
+ * 同时供「时间段管理 → 恢复默认」读取，保证恢复结果与新建课表种子一致。
+ */
+val DEFAULT_TIME_SLOTS: List<TimeSlot> = listOf(
+    TimeSlot(number = 1, startTime = "08:00", endTime = "08:45", courseTableId = "placeholder"),
+    TimeSlot(number = 2, startTime = "08:50", endTime = "09:35", courseTableId = "placeholder"),
+    TimeSlot(number = 3, startTime = "09:50", endTime = "10:35", courseTableId = "placeholder"),
+    TimeSlot(number = 4, startTime = "10:40", endTime = "11:25", courseTableId = "placeholder"),
+    TimeSlot(number = 5, startTime = "11:30", endTime = "12:15", courseTableId = "placeholder"),
+    TimeSlot(number = 6, startTime = "14:00", endTime = "14:45", courseTableId = "placeholder"),
+    TimeSlot(number = 7, startTime = "14:50", endTime = "15:35", courseTableId = "placeholder"),
+    TimeSlot(number = 8, startTime = "15:45", endTime = "16:30", courseTableId = "placeholder"),
+    TimeSlot(number = 9, startTime = "16:35", endTime = "17:20", courseTableId = "placeholder"),
+    TimeSlot(number = 10, startTime = "18:30", endTime = "19:15", courseTableId = "placeholder"),
+    TimeSlot(number = 11, startTime = "19:20", endTime = "20:05", courseTableId = "placeholder"),
+    TimeSlot(number = 12, startTime = "20:10", endTime = "20:55", courseTableId = "placeholder"),
+    TimeSlot(number = 13, startTime = "21:10", endTime = "21:55", courseTableId = "placeholder")
+)

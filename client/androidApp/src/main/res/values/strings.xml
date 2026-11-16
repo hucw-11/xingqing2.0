@@ -1,0 +1,185 @@
+<resources>
+    <!-- 应用基础信息 -->
+    <string name="app_name">心晴 2.0</string>
+
+    <!-- 通用按钮和提示信息 -->
+
+    <!-- 主界面及今日课表 -->
+    <string name="text_no_courses_today">今天没有课程</string>
+    <string name="text_no_courses_tomorrow">明天没有课程</string>
+
+    <!-- 添加课程 -->
+    <string name="label_teacher">教师</string>
+    <string name="label_position">地点</string>
+
+    <!-- 课程相关 -->
+    <string name="title_vacation">假期中</string>
+
+    <!-- 通知与闹钟 -->
+    <string name="notification_title_course_alert">上课提醒</string>
+    <string name="notification_channel_permission_notice">权限提醒</string>
+    <string name="notification_title_exact_alarm_missing">无法设置精确提醒</string>
+    <string name="notification_text_exact_alarm_missing">系统未授予「闹钟和提醒」权限，课程提醒可能延迟数分钟。点击前往开启。</string>
+    <string name="notification_title_dnd_missing">无法自动切换勿扰</string>
+    <string name="notification_text_dnd_missing">系统未授予「勿扰访问」权限，上课自动勿扰/静音不生效。点击前往开启。</string>
+    <string name="notification_live_status_preparing">准备上课</string>
+    <string name="notification_unknown_course">未知课程</string>
+    <string name="notification_unknown_position">地点未知</string>
+
+    <!-- 早八闹钟（写入系统时钟） -->
+    <string name="notification_title_morning_alarm">早八闹钟</string>
+    <string name="morning_alarm_review_notification_title">请核对早八闹钟</string>
+    <string name="morning_alarm_review_notification_text">课表或闹钟状态需要核对。已有系统闹钟仍可能响，请打开应用的通知设置检查。</string>
+    <string name="notification_text_morning_alarm_format">第一节 %1$s 的 %2$s，现在出发刚好</string>
+    <string name="notification_channel_morning_alarm">早八闹钟</string>
+    <string name="notification_channel_morning_alarm_desc">系统无可用时钟应用时的应用内早八提醒</string>
+
+    <!-- 小组件相关 -->
+    <string name="widget_name_tiny">课表 · 极简</string>
+    <string name="widget_name_compact">课表 · 今日</string>
+    <string name="widget_name_double_days">课表 · 今明两日</string>
+    <string name="widget_name_list_vertical">课表 · 纵向列表</string>
+    <string name="widget_name_next_course">课表 · 下一节课</string>
+    <!-- 「下一节课」小组件运行时文案（倒计时胶囊 + 跨天兜底） -->
+    <string name="widget_next_course_label">下一节课</string>
+    <string name="widget_next_course_tomorrow">明日第一节</string>
+    <string name="widget_next_course_in_minutes">%1$d 分钟后</string>
+    <string name="widget_next_course_ongoing">正在上课</string>
+    <string name="widget_next_course_today">今日</string>
+    <!-- 「考试倒计时」小组件（v4.67.0）：数据取自日程表的「考试」分类 -->
+    <string name="widget_name_exam_countdown">日程 · 考试</string>
+    <string name="widget_exam_label">距离考试</string>
+    <string name="widget_exam_today">今天</string>
+    <string name="widget_exam_past">已结束</string>
+    <string name="widget_exam_tomorrow">明天</string>
+    <string name="widget_exam_days">%1$d 天后</string>
+    <string name="widget_exam_none">暂无考试安排</string>
+    <string name="widget_exam_none_hint">在「日程」页添加考试即可倒计时</string>
+    <string name="widget_exam_more">还有 %1$d 场考试</string>
+    <!-- 「周课程」小组件（v4.67.0，C3）：今天起 7 天的课程列表 -->
+    <string name="widget_name_week_courses">课表 · 一周</string>
+    <string name="widget_week_remaining">本周还有 %1$d 节课</string>
+    <string name="widget_week_finished">本周课程已结束</string>
+    <string name="widget_week_finished_hint">下周一见</string>
+    <!-- 「日程清单」小组件（v4.67.0，C4）：待办 / 活动 / 作业 / 考试的统一清单 -->
+    <string name="widget_name_agenda_list">日程 · 全部</string>
+    <string name="widget_agenda_today">今日日程</string>
+    <string name="widget_agenda_upcoming">未来日程</string>
+    <string name="widget_agenda_count">共 %1$d 项</string>
+    <string name="widget_agenda_none">暂无日程</string>
+    <string name="widget_agenda_none_hint">在「日程」页添加待办、考试或活动</string>
+    <string name="widget_agenda_all_day">全天</string>
+    <string name="widget_agenda_cat_todo">待办</string>
+    <string name="widget_agenda_cat_exam">考试</string>
+    <string name="widget_agenda_cat_activity">活动</string>
+    <string name="widget_agenda_cat_homework">作业</string>
+    <string name="widget_agenda_cat_other">其他</string>
+    <string name="widget_loading">正在加载课程…</string>
+    <string name="widget_tomorrow_course_preview">明日预告</string>
+    <string name="widget_today_courses_finished">今日课程已结束</string>
+    <string name="widget_vacation_expecting">期待新学期</string>
+    <string name="widget_remaining_courses_format_today">今日还有 %1$d 节课</string>
+    <string name="widget_remaining_courses_format_tomorrow">明天有 %1$d 节课</string>
+    <string name="widget_title_today">今天</string>
+    <string name="widget_title_tomorrow">明天</string>
+    <string name="widget_course_remaining_count">剩余 %1$d 节</string>
+    <string name="widget_course_total_count">共有 %1$d 节</string>
+
+    <!-- 通知设置 -->
+    <string name="item_course_reminder">课程提醒</string>
+    <string name="action_close">关闭</string>
+
+    <!-- 设置选项 -->
+    <string name="status_current_week_format">第 %1$d 周</string>
+
+    <!-- 管理课表 -->
+
+    <!-- 管理课程 -->
+
+    <!-- 时间段管理 -->
+
+    <!-- 课表导入/导出 -->
+
+    <!-- 更多设置 -->
+
+    <!-- 课程调动 -->
+    <string name="text_no_course">无课程</string>
+
+    <!-- 教务导入 -->
+
+    <!-- 贡献者列表 -->
+
+    <!-- 教务适配仓库 -->
+
+    <!-- 色彩编辑器 -->
+
+    <!-- 个性化配置 -->
+
+    <!-- 快捷操作 -->
+
+    <!-- 快速删除课程 -->
+
+    <!-- 主题设置 -->
+
+    <!-- 备份和还原 -->
+
+    <!-- 状态栏灵动岛（Android 16 实时更新） -->
+    <string name="dynamic_island_channel_name">状态栏实时课程</string>
+    <string name="dynamic_island_channel_desc">在状态栏实时显示当前与下一节课状态（Android 16 灵动岛）</string>
+    <string name="dynamic_island_no_class_title">今日无课</string>
+    <string name="dynamic_island_no_class_text">今天没有安排课程</string>
+    <string name="dynamic_island_no_class_sub">可在「课程提醒设置」中关闭此实时显示</string>
+    <string name="dynamic_island_all_done_title">今日课程已结束</string>
+    <string name="dynamic_island_all_done_text">今天共 %1$d 节课</string>
+    <string name="dynamic_island_all_done_sub">明天也要加油哦</string>
+    <string name="dynamic_island_in_class_text">正在上课 · %1$s</string>
+    <string name="dynamic_island_in_class_sub">还剩 %1$d 分钟</string>
+    <string name="dynamic_island_chip_in_class_pct">%1$s %2$d%%</string>
+    <string name="dynamic_island_next_class_title">下一节课</string>
+    <string name="dynamic_island_next_class_text">%1$s · %2$s</string>
+    <string name="dynamic_island_minutes_format">%1$d 分钟</string>
+    <string name="dynamic_island_next_class_sub">%1$s 后开始（%2$s）</string>
+    <string name="dynamic_island_chip_next">下节:%1$s</string>
+    <string name="dynamic_island_chip_no_class">今日无课</string>
+    <string name="dynamic_island_chip_done">已结束</string>
+
+    <!-- G1/G3：下一节课常驻通知 + 考试倒计时提醒 -->
+    <string name="notification_channel_next_class">下一节课常驻</string>
+    <string name="notification_channel_next_class_desc">在状态栏常驻显示下一节课与剩余分钟</string>
+    <string name="notification_next_class_title">下一节课</string>
+    <string name="notification_next_class_tomorrow">明日第一节</string>
+    <string name="notification_next_class_in_minutes">%1$d 分钟后</string>
+    <string name="notification_next_class_ongoing">正在上课</string>
+    <string name="notification_next_class_disable">关闭常驻</string>
+    <!-- G2：状态栏胶囊（Android 16+ 实况更新）里的芯片短文本，必须自带语境 -->
+    <string name="notification_next_class_chip_ongoing">正在上课 · %1$s</string>
+    <string name="notification_next_class_chip_in_minutes">%1$d 分钟后 · %2$s</string>
+    <string name="notification_next_class_chip_at">%1$s · %2$s</string>
+    <string name="notification_channel_exam_countdown">考试倒计时提醒</string>
+    <string name="notification_channel_exam_countdown_desc">考试临近时提醒最近的考试</string>
+    <string name="notification_exam_countdown_title">考试倒计时</string>
+    <string name="notification_exam_countdown_today">%1$s 就在今天</string>
+    <string name="notification_exam_countdown_tomorrow">%1$s 就在明天</string>
+    <string name="notification_exam_countdown_days">%1$s 还有 %2$d 天</string>
+
+    <string name="notification_channel_live_update">实况提醒</string>
+    <string name="notification_channel_live_update_desc">在实时活动里显示课程与事件的进行中状态</string>
+    <string name="notification_channel_vivo_atomic">原子通知</string>
+    <string name="notification_channel_vivo_atomic_desc">在系统原子通知中展示课程提醒</string>
+
+    <string name="widget_desc_tiny">只显示当前或下一节课</string>
+    <string name="widget_desc_compact">今天的全部课程</string>
+    <string name="widget_desc_double_days">今天与明天的课程</string>
+    <string name="widget_desc_list_vertical">按时间纵向排列的课程</string>
+    <string name="widget_desc_next_course">下一节课与开始倒计时</string>
+    <string name="widget_desc_week_courses">整周课程表</string>
+    <string name="widget_desc_agenda_list">待办、活动与作业汇总</string>
+    <string name="widget_desc_exam_countdown">距下一场考试的倒计时</string>
+    <string name="morning_alarm_write_title">早八闹钟需要检查</string>
+    <string name="morning_alarm_write_blocked">旧闹钟尚未到期，新课表闹钟未写入。请在系统时钟处理旧闹钟后，返回早八设置重新核对。</string>
+    <string name="morning_alarm_write_deferred">新闹钟尚未写入，请打开上课并进入早八设置检查。</string>
+    <string name="morning_alarm_write_not_expressible">系统时钟暂时无法准确设置这一天的闹钟，请临近上课时打开上课并检查。</string>
+    <string name="morning_alarm_write_failed">系统闹钟启动失败，新闹钟未写入，请打开早八设置检查。</string>
+    <string name="morning_alarm_write_no_clock">未找到系统时钟，应用内提醒可能不可用，请检查早八设置。</string>
+    <string name="morning_alarm_write_unknown">无法确认早八闹钟状态，请打开早八设置检查。</string>
+</resources>

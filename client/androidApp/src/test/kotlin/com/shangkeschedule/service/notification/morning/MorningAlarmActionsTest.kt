@@ -1,0 +1,248 @@
+package com.shangkeschedule.service.notification.morning
+
+import com.shangkeschedule.notification.plan.MorningAlarmPlan
+import com.shangkeschedule.notification.morning.MorningAlarmSyncGate
+import com.shangkeschedule.notification.registry.MorningAlarmRegistry
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * 早八闹钟写入动作单测（原 MorningAlarmDiffTest，2026-11-06 随差分并入决策层而改名）。
+ *
+ * ## 为什么要锁「不重写」这个行为
+ *
+ * 真机实测（Xiaomi 22041216UC / MIUI V816 / Android 14）推翻了原设计的两条假设：
+ *  1. `ACTION_DISMISS_ALARM`（LABEL 与 TIME 两种搜索模式）**不删除闹钟**，
+ *     只把时钟界面调到前台；
+ *  2. `ACTION_SET_ALARM` **非幂等**——同一时刻+同一标签连发两次会留下**两条**重复闹钟。
+ *
+ * 在「删不掉」+「写了就重复」的双重约束下，唯一安全策略是**每个日期只写一次**：
+ * 已登记过的日期绝不重写，哪怕标签变了（把最终调整权交给用户）。
+ * 本测试锁死这个契约——它直接决定用户的系统闹钟列表会不会被污染。
+ */
+class MorningAlarmActionsTest {
+
+    @Test
+    fun concurrentSyncRequestsOnlyWriteOnce() {
+        val executor = Executors.newFixedThreadPool(2)
+        val ready = CyclicBarrier(2)
+        val writes = AtomicInteger()
+        val registry = java.util.concurrent.ConcurrentHashMap<String, String>()
+        val target = alarm("2026-09-28", 8, 0, 7, 15)
+        try {
+            val tasks = (1..2).map {
+                executor.submit {
+                    ready.await(5, TimeUnit.SECONDS)
+                    MorningAlarmSyncGate.run {
+                        val actions = MorningAlarmWriteDecision.actions(listOf(target), registry.toMap())
+                        if (actions.isNotEmpty()) {
+                            Thread.sleep(100)
+                            writes.incrementAndGet()
+                            registry[target.courseDate.toString()] = MorningAlarmPlan.label(target)
+                        }
+                    }
+                }
+            }
+            tasks.forEach { it.get(5, TimeUnit.SECONDS) }
+            assertEquals("并发请求只能写入一次", 1, writes.get())
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    private fun alarm(
+        date: String,
+        startHour: Int,
+        startMinute: Int,
+        alarmHour: Int,
+        alarmMinute: Int,
+        name: String = "高等数学"
+    ) = MorningAlarmPlan.MorningAlarm(
+        courseDate = LocalDate.parse(date),
+        alarmDate = LocalDate.parse(date),
+        alarmTime = LocalTime(alarmHour, alarmMinute),
+        courseName = name,
+        courseStart = LocalTime(startHour, startMinute)
+    )
+
+    @Test
+    fun emptyRegistryWritesEverything() {
+        val plan = listOf(
+            alarm("2026-09-28", 8, 0, 7, 15),
+            alarm("2026-09-29", 10, 30, 9, 45)
+        )
+        val actions = MorningAlarmWriteDecision.actions(plan, emptyMap())
+        assertEquals(2, actions.size)
+        assertTrue("空登记簿应全部为写入动作", actions.all { it is MorningAlarmWriteDecision.Decision.Write })
+    }
+
+    @Test
+    fun unchangedPlanIsIdempotent() {
+        val a = alarm("2026-09-28", 8, 0, 7, 15)
+        val plan = listOf(a)
+        val registry = mapOf("2026-09-28" to MorningAlarmPlan.label(a))
+
+        val actions = MorningAlarmWriteDecision.actions(plan, registry)
+        assertTrue("计划未变时不应产生任何动作（幂等）", actions.isEmpty())
+    }
+
+    @Test
+    fun neverRewritesRegisteredDateWhenDismissUnsupported() {
+        // 核心契约：系统不支持删除时，即使标签变了也**不重写**。
+        // 若重写，MIUI 会留下两条重复闹钟（实测），而旧的那条又删不掉。
+        val original = alarm("2026-09-28", 8, 0, 7, 15)
+        val changed = alarm("2026-09-28", 8, 30, 7, 45, name = "大学英语")
+        val registry = mapOf("2026-09-28" to MorningAlarmPlan.label(original))
+
+        val actions = MorningAlarmWriteDecision.actions(listOf(changed), registry, allowDismiss = false)
+        assertTrue("不支持删除时绝不重写已登记日期（否则重复堆积）", actions.isEmpty())
+    }
+
+    @Test
+    fun rewritesWhenDismissSupported() {
+        val original = alarm("2026-09-28", 8, 0, 7, 15)
+        val changed = alarm("2026-09-28", 8, 30, 7, 45, name = "大学英语")
+        val registry = mapOf("2026-09-28" to MorningAlarmPlan.label(original))
+
+        val actions = MorningAlarmWriteDecision.actions(listOf(changed), registry, allowDismiss = true)
+        assertEquals("支持删除时应产出「先删后写」两个动作", 2, actions.size)
+        assertTrue(actions[0] is MorningAlarmWriteDecision.Decision.Dismiss)
+        assertTrue(actions[1] is MorningAlarmWriteDecision.Decision.Write)
+        assertEquals(
+            "删除必须用旧标签精确定位",
+            MorningAlarmPlan.label(original),
+            (actions[0] as MorningAlarmWriteDecision.Decision.Dismiss).label
+        )
+    }
+
+    @Test
+    fun pendingOldDateBlocksNewDateWhenDismissUnsupported() {
+        // 旧闹钟尚未到期且系统不支持删除时：**决策层**先拦下（BlockedByExisting），
+        // 写入动作层因此永远见不到「登记簿非空 + 新日期」的组合。
+        // 该守卫曾在差分层重复一道，因决策层已排除而成为死代码，2026-11-06 合并时删除。
+        // 注意登记项的 firedAt 必须在未来：过期的条目会被 prune 丢弃（那是回收语义）。
+        val now = LocalDateTime.parse("2026-09-28T12:00:00")
+        val oldAlarm = alarm("2026-09-29", 8, 0, 7, 15)
+        val newPlan = listOf(alarm("2026-09-30", 8, 0, 7, 15))
+        val registry = mapOf(
+            "2026-09-29" to MorningAlarmRegistry.Entry(
+                firedAt = LocalDateTime.parse("2026-09-29T07:15:00"),
+                label = MorningAlarmPlan.label(oldAlarm)
+            )
+        )
+
+        val state = MorningAlarmWriteDecision.evaluate(newPlan, registry, now, visible = true)
+        assertEquals(
+            "旧闹钟尚未到期且不能删除时，决策层必须拦成 BlockedByExisting",
+            MorningAlarmWriteDecision.State.BlockedByExisting,
+            state
+        )
+    }
+
+    @Test
+    fun staleDateDismissedWhenSupported() {
+        val stale = alarm("2026-09-20", 8, 0, 7, 15)
+        val registry = mapOf("2026-09-20" to MorningAlarmPlan.label(stale))
+        val newPlan = listOf(alarm("2026-09-28", 8, 0, 7, 15))
+
+        val actions = MorningAlarmWriteDecision.actions(newPlan, registry, allowDismiss = true)
+        assertEquals(2, actions.size)
+        assertTrue(actions.any { it is MorningAlarmWriteDecision.Decision.Dismiss })
+        assertTrue(actions.any { it is MorningAlarmWriteDecision.Decision.Write })
+    }
+
+    @Test
+    fun registeredPendingAlarmBlocksOtherDate() {
+        // 同上：已有未到期登记项时由**决策层**拦下，不再写另一条
+        // （真机实测 SET_ALARM 非幂等 + DISMISS 删不掉 ⇒ 写第二条必堆积重复）。
+        // 登记项（明天响）与计划的最近一条（后天）是不同日期。
+        val now = LocalDateTime.parse("2026-09-28T12:00:00")
+        val registeredAlarm = alarm("2026-09-29", 11, 30, 10, 30)
+        val nextPlan = listOf(alarm("2026-09-30", 10, 30, 9, 45))
+        val registry = mapOf(
+            "2026-09-29" to MorningAlarmRegistry.Entry(
+                firedAt = LocalDateTime.parse("2026-09-29T10:30:00"),
+                label = MorningAlarmPlan.label(registeredAlarm)
+            )
+        )
+
+        val state = MorningAlarmWriteDecision.evaluate(nextPlan, registry, now, visible = true)
+        assertEquals(
+            "已有未到期闹钟时不增加另一条",
+            MorningAlarmWriteDecision.State.BlockedByExisting,
+            state
+        )
+    }
+
+    @Test
+    fun labelChangesWithTimeAndName() {
+        val a1 = alarm("2026-09-28", 8, 0, 7, 15, name = "高等数学")
+        val a2 = alarm("2026-09-28", 8, 0, 7, 15, name = "大学英语")
+        assertTrue(
+            "课程名变化必须反映到标签，否则无法区分同名日期",
+            MorningAlarmPlan.label(a1) != MorningAlarmPlan.label(a2)
+        )
+    }
+
+    /**
+     * 登记簿回收契约（2026-09-27 修复后语义）。
+     *
+     * 真机发现登记簿只增不减会坏在两点：
+     *  1. **响过的条目必须丢弃**：系统时钟建的是一次性闹钟（`deleteAfterUse:true`），
+     *     响过即被系统删除；登记簿若继续记着「已写入」，第二天早上就再也不会补位
+     *     —— 症状是「只有第一条闹钟，之后每天早上都没有」；
+     *  2. **超窗口的远过去条目必须丢弃**，否则登记簿无界增长（每天一行、一年 365 行）。
+     *
+     * 另外 v1 旧格式（`firedAt == null`）一律丢弃：它只记了「intent 已发出」，
+     * 既无法判断是否已响，也可能根本没写成功（后台启动限制），留着只会把错误固化。
+     */
+    @Test
+    fun registryPruneDropsFiredAndDistantPastButKeepsUpcoming() {
+        val now = LocalDateTime.parse("2026-09-27T19:52:00")
+        val pruned = MorningAlarmRegistry.prune(
+            registry = mapOf(
+                // 尚未到来 + 窗口内 → 保留
+                "2026-09-28" to MorningAlarmRegistry.Entry(
+                    firedAt = LocalDateTime.parse("2026-09-28T07:05:00"),
+                    label = "早八·09-28 07:05 大学英语"
+                ),
+                // 今天早上已经响过（一次性闹钟已被系统删除）→ 丢弃，让下一条补位
+                "2026-09-27" to MorningAlarmRegistry.Entry(
+                    firedAt = LocalDateTime.parse("2026-09-27T07:05:00"),
+                    label = "早八·09-27 07:05 大学英语"
+                ),
+                // 超出回收窗口的远过去 → 丢弃
+                "2026-08-01" to MorningAlarmRegistry.Entry(
+                    firedAt = LocalDateTime.parse("2026-08-01T07:05:00"),
+                    label = "早八·08-01 07:05 高等数学"
+                ),
+                // v1 旧格式（无响铃时刻，不可信）→ 丢弃
+                "2026-09-25" to MorningAlarmRegistry.Entry(firedAt = null, label = "早八·09-25 07:05 高等数学")
+            ),
+            now = now,
+            retentionDays = MORNING_ALARM_RETENTION_DAYS
+        )
+
+        assertEquals("只应保留尚未到来且在窗口内的那条", setOf("2026-09-28"), pruned.keys)
+    }
+
+    @Test
+    fun disabledRegistryKeepsEntriesToAvoidDuplicates() {
+        // 关闭开关时不得清空登记簿：清空后重开开关会把这几天当「未登记」再写一次，
+        // 而旧闹钟在系统时钟里删不掉 → 直接产生重复闹钟。
+        val a = alarm("2026-09-28", 8, 0, 7, 15)
+        val registry = mapOf("2026-09-28" to MorningAlarmPlan.label(a))
+
+        // 重开开关后按同一计划同步：登记簿仍在 ⇒ 不产生任何写入动作（不重复）
+        val actions = MorningAlarmWriteDecision.actions(listOf(a), registry)
+        assertTrue("登记簿保留时应幂等无动作（这正是防重复的关键）", actions.isEmpty())
+    }
+}

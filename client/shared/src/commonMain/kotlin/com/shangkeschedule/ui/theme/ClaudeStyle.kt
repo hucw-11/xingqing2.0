@@ -1,0 +1,679 @@
+package com.shangkeschedule.ui.theme
+
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.Font
+import shangkeschedule.shared.generated.resources.Lora_Regular
+import shangkeschedule.shared.generated.resources.Newsreader_SemiBold
+import shangkeschedule.shared.generated.resources.Poppins_Bold
+import shangkeschedule.shared.generated.resources.Poppins_Medium
+import shangkeschedule.shared.generated.resources.Poppins_Regular
+import shangkeschedule.shared.generated.resources.Poppins_SemiBold
+import shangkeschedule.shared.generated.resources.Res
+
+// ============================================================================
+// CLAUDE 主题（Anthropic / Claude 设计系统）
+//
+// 设计原则：
+// - 色板严格取自 Claude 设计系统的 primitive 阶梯（brand / text / bg / border / chart）
+// - 浅色 = 暖砂纸底（bg-100 #faf9f5）+ 白卡 + 赤陶主色 brand-500 #c96442
+// - 深色 = 暖炭底（bg-100 #262624）+ 亮赤陶主色 brand-500 #d97757
+// - 语义淡底色（soft）沿用 iOS tokens 的透明度约定：浅色 0x14 / 深色 0x3D；
+//   设计系统自带 50 档色值的（success #f0f3ea、destructive #fcecea）直接取 50 档
+// - 圆角更克制（16dp 卡 / 12dp 胶囊），留白更宽松（20dp 页边距）
+// - 字体：UI = Poppins，标题 = Newsreader（衬线），正文 = Lora（阅读衬线）
+// ============================================================================
+
+// --- 浅色 primitive ---------------------------------------------------------
+
+private val ClaudeBrand50 = Color(0xFFFBF2ED)
+private val ClaudeBrand400 = Color(0xFFC05A3A)
+private val ClaudeBrand500 = Color(0xFFA84A2E)
+/**
+ * 徽标底色（角标数字背景）。**与 `ClaudeBrand500` 分开** —— 后者是**主色**
+ * （primary + 渐变起点），改它会连带重派生整套 Material 配色，影响面远大于角标。
+ * 角标是 `labelSmall` 真实文本（白字），需 ≥4.5:1；`#C96442` 仅 3.90:1，
+ * 取同色相的 `#A04A2E` 后实测 5.98:1。
+ */
+private val ClaudeBadgeBrand500 = Color(0xFFA04A2E)
+private val ClaudeBrand600 = Color(0xFFB0562F)
+private val ClaudeBrand800 = Color(0xFF753A22)
+
+// 书卷次级文字色。原 `#6E6D68` 在浅色档的**输入底**（inputBg = bg-300 #EDE9DE）上仅 4.27:1，
+// 低于 WCAG 2.2 AA 的 4.5:1 —— 输入框内的占位符/标签偏弱。
+// 现取 `#66655F`（沿原色相向暗位移，保持书卷的低对比暖调不变）。
+// 运行时探针实测：书卷浅色在 pageBg / cardBg / cardBgElevated / inputBg / navBarBg
+// 上分别为 **5.55 / 5.31 / 5.85 / 4.82 / 5.31**，全部 ≥4.5。
+private val ClaudeText500 = Color(0xFF66655F)
+private val ClaudeText600 = Color(0xFF535146)
+private val ClaudeText700 = Color(0xFF46443B)
+private val ClaudeText800 = Color(0xFF3D3929)
+private val ClaudeText900 = Color(0xFF28261B)
+
+private val ClaudeBg50 = Color(0xFFFFFFFF)
+private val ClaudeBg100 = Color(0xFFFAF9F5)
+private val ClaudeBg200 = Color(0xFFF5F4EF)
+private val ClaudeBg300 = Color(0xFFEDE9DE)
+
+private val ClaudeBorder300 = Color(0xFFDAD9D4)
+
+private val ClaudeIcon900 = Color(0xFF141413)
+
+private val ClaudeSecondaryLight = Color(0xFFE9E6DC)
+private val ClaudeSuccess500 = Color(0xFF788C5D)
+private val ClaudeSuccess50 = Color(0xFFF0F3EA)
+private val ClaudeError500 = Color(0xFFD64545)
+private val ClaudeError50 = Color(0xFFFCECEA)
+
+/** chart-2 紫罗兰：设计系统的图表强调色，同时充当 tertiary / info 色相。
+ * 浅色档 `#775CD0`：压 brand-50 / 卡片淡底 4.51（`#7B5FD6` 仅 4.29，原 #9C87F5 2.47）。
+ * 深色档另有 `ClaudeDarkChart2`（深底压卡需更亮，深浅不再共用一值）。 */
+private val ClaudeChart2 = Color(0xFF775CD0)
+private val ClaudeChart4 = Color(0xFFDBD3F0)
+
+// --- 深色 primitive ---------------------------------------------------------
+
+private val ClaudeDarkBrand50 = Color(0xFF3A2A22)
+// 深色主色 `#CE7E65`：深字（#141413）压主色 5.97、主色字压卡片（#2C2C2B）4.52，双达标。
+// （并行高对比版 `#C05A3A` 深字仅 4.18 不达标，属回归；旧版 `#D97757` 深字 5.90 但压卡 3.63 不达标。）
+private val ClaudeDarkBrand500 = Color(0xFFCE7E65)
+private val ClaudeDarkBrand600 = Color(0xFFCE7E65)
+private val ClaudeDarkBrand900 = Color(0xFFF8E3D8)
+// 深色 chart-2 / danger：深底上需比浅色档更亮才能压卡 ≥4.5。
+private val ClaudeDarkChart2 = Color(0xFF9B85E0)   // 压卡 4.54（深浅共用 #775CD0 仅 2.96）
+private val ClaudeDarkError = Color(0xFFF26464)     // 压卡 4.51（#EF4444 仅 3.71）
+
+private val ClaudeDarkText500 = Color(0xFFB7B5A9)
+private val ClaudeDarkText800 = Color(0xFFF1F1EF)
+private val ClaudeDarkText900 = Color(0xFFFAF9F5)
+
+private val ClaudeDarkBg100 = Color(0xFF262624)
+private val ClaudeDarkBg200 = Color(0xFF2C2C2B)
+private val ClaudeDarkBg300 = Color(0xFF30302E)
+private val ClaudeDarkBg400 = Color(0xFF3E3E38)
+
+private val ClaudeDarkBorder300 = Color(0xFF3E3E38)
+
+private val ClaudeDarkSuccess500 = Color(0xFF8CA06F)
+private val ClaudeDarkSuccess50 = Color(0xFF232A1C)
+private val ClaudeDarkError500 = Color(0xFFEF4444)
+private val ClaudeDarkError50 = Color(0xFF3A1F1F)
+
+/**
+ * CLAUDE 预设锁定的 M3 ColorScheme（浅色）。
+ * 绕过 MaterialKolor 派生，primary 严格锁定赤陶 brand-500；
+ * 容器色按设计系统 50 档暖砂淡底推导，结构色由 withAppSurfaces 统一映射。
+ */
+fun claudeLightColorScheme(): ColorScheme = lightColorScheme(
+    primary = ClaudeBrand500,             // brand-500 #c96442
+    onPrimary = Color(0xFFFFFFFF),        // primary-foreground
+    primaryContainer = ClaudeBrand50,     // brand-50 #fbf2ed（暖砂淡底）
+    onPrimaryContainer = ClaudeBrand800,  // brand-800 #753a22
+    secondary = ClaudeSecondaryLight,     // #e9e6dc
+    onSecondary = ClaudeText600,          // secondary-foreground = text-600
+    secondaryContainer = ClaudeBg300,     // bg-300 淡一档
+    onSecondaryContainer = ClaudeText700, // text-700
+    tertiary = ClaudeChart2,              // chart-2 #9c87f5
+    onTertiary = ClaudeText900,           // text-900（紫罗兰上取深字，保证对比度）
+    tertiaryContainer = ClaudeChart4,     // chart-4 #dbd3f0
+    onTertiaryContainer = ClaudeText800,  // text-800
+    error = ClaudeError500,               // #d64545
+    onError = Color(0xFFFFFFFF),
+    errorContainer = ClaudeError50,       // error-50 #fcecea
+    onErrorContainer = Color(0xFF7F2222)  // 派生：error-500 加深，保证 50 档底上的对比度
+)
+
+/**
+ * CLAUDE 预设锁定的 M3 ColorScheme（深色）。
+ */
+fun claudeDarkColorScheme(): ColorScheme = darkColorScheme(
+    primary = ClaudeDarkBrand500,             // brand-500 (dark) #ce7e65（深字压 5.97 / 压卡 4.52）
+    onPrimary = ClaudeIcon900,                // primary-foreground (dark) = #141413
+    primaryContainer = ClaudeDarkBrand50,     // brand-50 (dark) #3a2a22
+    onPrimaryContainer = ClaudeDarkBrand900,  // brand-900 (dark) #f8e3d8
+    secondary = ClaudeDarkText900,            // text-900 (dark) #faf9f5
+    onSecondary = ClaudeDarkBg300,            // secondary-foreground = bg-300 (dark)
+    secondaryContainer = ClaudeDarkBorder300, // border-300 (dark) #3e3e38
+    onSecondaryContainer = ClaudeDarkText900,
+    tertiary = ClaudeDarkChart2,              // chart-2 深色档（深底压卡 ≥4.5）
+    onTertiary = ClaudeIcon900,               // #141413
+    tertiaryContainer = ClaudeDarkBorder300,
+    onTertiaryContainer = ClaudeChart4,       // chart-4 #dbd3f0
+    error = ClaudeDarkError,                  // #f26464（深底压卡 ≥4.5）
+    onError = Color(0xFFFFFFFF),
+    errorContainer = ClaudeDarkError50,       // error-50 (dark) #3a1f1f
+    onErrorContainer = ClaudeError50          // error-50 (light) #fcecea
+)
+
+/**
+ * CLAUDE 浅色 tokens：逐项对齐 Claude 设计系统语义层。
+ * 结构色（页面/卡片/输入/分隔）取 bg 与 border 阶梯，语义色取 brand / success / destructive。
+ */
+fun claudeLightAppColorTokens(): AppColorTokens = AppColorTokens(
+    // 页面与容器 —— 暖砂纸底 + 白卡 + 略深的嵌入底
+    pageBg = ClaudeBg100,                     // bg-100 #faf9f5
+    cardBg = ClaudeBg200,                     // bg-200 #f5f4ef
+    cardBgElevated = ClaudeBg50,              // bg-50 #ffffff（浮起卡）
+    inputBg = ClaudeBg300,                    // bg-300 #ede9de（输入/嵌入底）
+    divider = ClaudeBorder300,                // border-300 #dad9d4
+    // 与 `SettingsDividerColor.SCRIM` 的既有硬编码逐位一致（保证书卷像素零变化）：
+    // 浅色 6% 压黑 / 深色 8% 压白
+    dividerSoft = Color(0x0F000000),
+    // A1/C3：M3 描边角色显式声明（沿用 Material 基线，与 data class 默认值逐位相同）
+    outline = MaterialBaselineOutline,
+    outlineVariant = MaterialBaselineOutlineVariant,
+    // 文本 —— text 阶梯三级
+    textPrimary = ClaudeText800,              // text-800 #3d3929
+    textSecondary = ClaudeText500,            // text-500 #6e6d68
+    textOnPrimary = Color(0xFFFFFFFF),        // primary-foreground
+    // 语义色对 —— 主色 = brand-500，淡底 = brand-50
+    primary = ClaudeBrand500,                 // brand-500 #c96442
+    primarySoft = ClaudeBrand50,              // brand-50 #fbf2ed
+    success = ClaudeSuccess500,               // #788c5d
+    successSoft = ClaudeSuccess50,            // success-50 #f0f3ea
+    info = ClaudeChart2,                      // 设计系统无 info 色相，取 chart-2 紫罗兰（图表强调色）
+    infoSoft = Color(0x149C87F5),             // 浅色 0x14 淡底（iOS tokens 约定）
+    // 设计系统无独立 warning 色相，取 brand-600 暖赭 #b0562f（与赤陶主色同族但不撞色）
+    warning = ClaudeBrand600,
+    warningSoft = Color(0x14B0562F),
+    // 设计系统无独立 amber 色相，取与 success 橄榄绿同族的暖赭金；
+    // `#806527`：压 8% 淡底 4.55（`#8A6D2A` 仅 4.03，原 #A8863C 2.87，WCAG AA）。
+    amber = Color(0xFF806527),
+    amberSoft = Color(0x14806527),
+    danger = ClaudeError500,                  // #d64545
+    dangerSoft = ClaudeError50,               // error-50 #fcecea
+    // 设计系统无 favorite 色相，取与赤陶同族的暖玫瑰 #c0506a（避开 destructive 红）
+    favorite = Color(0xFFC0506A),
+    favoriteSoft = Color(0x14C0506A),
+    // 头部渐变 —— 赤陶主色 → 浅赤陶（Theme 会同步为 colorScheme.primary 同源渐变）
+    gradientStart = ClaudeBrand500,
+    gradientEnd = ClaudeBrand400,
+    // 底部导航 / 徽标 —— 取 sidebar 语义色
+    navBarBg = Color(0xFFF5F4EE),             // sidebar #f5f4ee
+    navSelectedBg = ClaudeSecondaryLight,     // sidebar-accent #e9e6dc
+    badgeBg = ClaudeBadgeBrand500,             // brand-500 加深版，仅用于徽标（主色不受影响）
+    badgeFg = Color(0xFFFFFFFF),
+    // Snackbar —— 深底浅字（暖炭底 + 暖砂字）
+    snackbarBg = ClaudeText800,               // text-800 #3d3929
+    snackbarFg = ClaudeBg100,                 // bg-100 #faf9f5
+    // 阴影 —— 对齐设计系统 shadow-sm/md 的 rgba(0,0,0,.1)
+    shadow = Color(0x1A000000)
+)
+
+/**
+ * CLAUDE 深色 tokens：同样的结构与语义，底色反转为暖炭；
+ * 淡底沿用深色 0x3D 透明度约定（success / destructive 直接用设计系统的 50 档深色值）。
+ */
+fun claudeDarkAppColorTokens(): AppColorTokens = run {
+    val primary = ClaudeDarkBrand500
+    AppColorTokens(
+        // 页面与容器 —— 暖炭三级
+        pageBg = ClaudeDarkBg100,             // bg-100 (dark) #262624
+        cardBg = ClaudeDarkBg200,             // bg-200 (dark) #2c2c2b
+        cardBgElevated = ClaudeDarkBg300,     // bg-300 (dark) #30302e
+        inputBg = ClaudeDarkBg400,            // bg-400 (dark) #3e3e38（比卡片亮一档，与浅色 bg-300 输入底对称）
+        divider = ClaudeDarkBorder300,        // border-300 (dark) #3e3e38
+        dividerSoft = Color(0x14FFFFFF),
+        // A1/C3：M3 描边角色显式声明（沿用 Material 基线，与 data class 默认值逐位相同）
+        outline = MaterialBaselineOutline,
+        outlineVariant = MaterialBaselineOutlineVariant,
+        // 文本 —— text 阶梯（深色 800 为近白）
+        textPrimary = ClaudeDarkText800,      // text-800 (dark) #f1f1ef
+        textSecondary = ClaudeDarkText500,    // text-500 (dark) #b7b5a9
+        textOnPrimary = ClaudeIcon900,        // primary-foreground (dark) #141413
+        // 语义色对 —— 深色 0x3D 淡底约定
+        primary = primary,                    // brand-500 (dark) #d97757
+        primarySoft = ClaudeDarkBrand50,      // brand-50 (dark) #3a2a22
+        success = ClaudeDarkSuccess500,       // #8ca06f
+        successSoft = ClaudeDarkSuccess50,    // success-50 (dark) #232a1c
+        info = ClaudeDarkChart2,              // chart-2 深色档（#9B85E0，压卡 4.54）
+        infoSoft = Color(0x3D9B85E0),
+        warning = ClaudeDarkBrand600,         // brand-600 (dark) #e08d6f
+        warningSoft = Color(0x3DE08D6F),
+        amber = Color(0xFFC7A45C),            // 浅色 #a8863c 在深底上提亮一档
+        amberSoft = Color(0x3DC7A45C),
+        danger = ClaudeDarkError,             // #f26464（压卡 4.51，#ef4444 深底仅 3.71）
+        dangerSoft = ClaudeDarkError50,       // error-50 (dark) #3a1f1f
+        favorite = Color(0xFFDA7E92),         // 浅色 #c0506a 在深底上提亮一档
+        favoriteSoft = Color(0x3DDA7E92),
+        // 头部渐变 —— 深色赤陶 → 亮赤陶
+        gradientStart = primary,
+        gradientEnd = ClaudeDarkBrand600,
+        // 底部导航 / 徽标 —— sidebar 语义色
+        navBarBg = Color(0xFF1F1E1D),         // sidebar (dark)
+        navSelectedBg = Color(0xFF0F0F0E),    // sidebar-accent (dark)
+        badgeBg = primary,
+        badgeFg = ClaudeIcon900,
+        // Snackbar —— 深色下同样保持深底浅字
+        snackbarBg = ClaudeDarkBg300,
+        snackbarFg = ClaudeDarkText800,
+        // 阴影 —— 深色下更重，靠层级区分
+        shadow = Color(0x66000000)
+    )
+}
+
+/**
+ * CLAUDE 形状 tokens：对齐设计系统 radius 阶梯
+ * - card 16dp / heroCard 20dp（--radius 16 / --radius-xl 20）
+ * - chip 12dp / chipSmall 8dp（--radius-md 12 / --radius-sm 8）
+ * - menu 12dp、底部面板顶部 20dp
+ * - 气泡沿用其它预设的非对称 6/18
+ */
+val claudeShapeTokens: AppShapeTokens = AppShapeTokens(
+    card = RoundedCornerShape(16.dp),
+    sheetTop = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+    chip = RoundedCornerShape(12.dp),
+    chipSmall = RoundedCornerShape(8.dp),
+    chipSmallRadius = 8.dp,
+    menu = RoundedCornerShape(12.dp),
+    capsule = RoundedCornerShape(50),
+    fab = RoundedCornerShape(50),
+    heroCard = RoundedCornerShape(20.dp),
+    // 同心：20 - 14（hero 内 padding）= 6dp
+    heroCardInner = RoundedCornerShape(6.dp),
+    bubble = RoundedCornerShape(
+        topStart = 6.dp,
+        topEnd = 18.dp,
+        bottomStart = 18.dp,
+        bottomEnd = 18.dp
+    )
+)
+
+/**
+ * CLAUDE 间距 tokens。
+ *
+ * 全局 UI 优化批 1：三主题间距取值**统一** —— `cardGap` 12 → 16、`listGap` 20 → 24、
+ * `settingsRowMinHeight` 48 → 52（书卷原本最紧，统一后与其他主题同呼吸节奏）。
+ * 书卷的「宽松感」改由衬线字阶与大字号承担，不再靠压小间距实现。
+ */
+val claudeSpacingTokens: AppSpacingTokens = AppSpacingTokens(
+    pageHorizontal = 20.dp,
+    cardGap = 16.dp,
+    listGap = 24.dp,
+    cardInner = 16.dp,
+    rowMinHeight = 56.dp,
+    // A1/P2：设置列表行独立成 token —— 批 1 与通透 / 柔绘统一为 52dp
+    settingsRowMinHeight = 52.dp,
+    touchMin = 48.dp,
+    chipIcon = 44.dp,
+    fab = 56.dp,
+    navBarHorizontal = 16.dp,
+    navBarBottom = 4.dp,
+    // 留白节奏（批 1 新增）
+    pageTop = 8.dp,
+    sectionGap = 24.dp,
+    sectionTitleGap = 8.dp,
+    contentBottom = 32.dp
+)
+
+/**
+ * CLAUDE 字阶 tokens：页面标题 28sp、行标题 18sp、正文 15sp、辅助 12–13sp。
+ */
+val claudeTypeTokens: AppTypeTokens = AppTypeTokens(
+    bigNumber = 28.sp,
+    hero = 34.sp,
+    sectionTitle = 18.sp,
+    timeLabel = 12.sp,
+    badge = 11.sp,
+    pageTitle = 28.sp,
+    rowTitle = 18.sp,
+    // A1/P2：设置项行标题 15sp / Medium —— 此前是 SettingsScreen 里的 `if (isClaudePreset)` 分支，
+    // 现成为显式 token；书卷设置行比页面行标题更小更轻（Medium 而非 SemiBold）
+    settingsRowTitle = 15.sp,
+    settingsRowTitleWeight = FontWeight.Medium,
+    body = 15.sp,
+    caption = 13.sp,
+    hint = 12.sp,
+    timeFeature = "tnum",
+    // 字重语义（批 1 新增）：标题 SemiBold（衬线标题需有分量）、正文 Normal、辅助 Medium
+    titleWeight = FontWeight.SemiBold,
+    bodyWeight = FontWeight.Normal,
+    captionWeight = FontWeight.Medium,
+    // 强调字重：三主题同值 Bold（书卷衬线在 Bold 下仍有足够字面差异）
+    emphasisWeight = FontWeight.Bold
+)
+
+/** 书卷图标尺寸 tokens（批 1 新增）：三档 16 / 20 / 24。 */
+val claudeIconTokens: AppIconTokens = AppIconTokens(
+    small = 16.dp,
+    medium = 20.dp,
+    large = 24.dp
+)
+
+/** 书卷页头 tokens（批 1 新增）：28sp SemiBold 衬线大标题，字距归零（衬线不适用负字距）。 */
+val claudePageHeaderTokens: AppPageHeaderTokens = AppPageHeaderTokens(
+    titleSize = 28.sp,
+    titleWeight = FontWeight.SemiBold,
+    titleLetterSpacing = 0.sp,
+    subtitleSize = 18.sp,
+    bottomGap = 16.dp
+)
+
+// A1/V2（v3.69.0）：顶栏玻璃材质 —— **书卷不使用玻璃顶栏**（大标题由内容区
+// ClaudePageHeader 承担），此处仅为满足「每套主题显式赋值」的规范 R2 提供兜底值，
+// 与通透一致；改动不应影响书卷观感。
+val claudeNavBarTokens: AppNavBarTokens = AppNavBarTokens(
+    glassBlurRadius = 20.dp,
+    glassTintAlpha = 0.62f,
+    titleFontWeight = FontWeight.SemiBold,
+    titleLetterSpacing = (-0.41).sp,
+    bottomEdge = NavBarBottomEdge.HAIRLINE
+)
+
+// ============================================================================
+// A1/V2 第二批（v3.69.0）：参数型主题分支的显式赋值（规范 R2）
+//
+// 全部取「原先 isClaude 为真 / 非柔绘为假时的分支」——即书卷自己那份取值，
+// 逐项与改前一致，观感零变化。
+// ============================================================================
+
+/** 分区标题：书卷 13sp SemiBold + 收口字距 -0.01em（设计系统 labelLarge 变体）。 */
+val claudeSectionHeaderTokens: AppSectionHeaderTokens = AppSectionHeaderTokens(
+    textSize = 13.sp,
+    textWeight = FontWeight.SemiBold,
+    letterSpacing = (-0.01).em
+)
+
+/** 底部毛玻璃面板：书卷走 M3 默认遮罩 + 20dp 模糊 / 0.12 噪点 / 0.86 涂色。 */
+val claudeBottomSheetTokens: AppBottomSheetTokens = AppBottomSheetTokens(
+    scrimAlpha = null,
+    blurRadius = 20.dp,
+    noiseFactor = 0.12f,
+    tintAlpha = 0.86f
+)
+
+/** 开关：书卷用 success / inputBg 原色（系数 1），无外层装饰。 */
+val claudeSwitchTokens: AppSwitchTokens = AppSwitchTokens(
+    trackAlpha = 1f,
+    uncheckedAlpha = 1f,
+    featherRim = false
+)
+
+/** 分段控件：书卷容器底全不透明 + 轻投影胶囊。 */
+val claudeSegmentedTokens: AppSegmentedTokens = AppSegmentedTokens(
+    containerAlpha = 1f,
+    pillStyle = SegmentedPillStyle.ELEVATED
+)
+
+/** 课表网格高亮：书卷 0.4 淡底、直角通栏、无内侧竖条、无羽化环。 */
+val claudeScheduleHighlightTokens: AppScheduleHighlightTokens = AppScheduleHighlightTokens(
+    todayColumnAlpha = 0.4f,
+    activeSectionAlpha = 0.4f,
+    useRoundedHighlight = false,
+    useInnerBar = false,
+    featherRim = false
+)
+
+/** 悬浮胶囊：书卷不透明暖米分组底 + 0.5dp 实色描边；文字色回落语义色。 */
+val claudeFloatingTokens: AppFloatingTokens = AppFloatingTokens(
+    surface = FloatingSurfaceStyle.OPAQUE_GROUPED,
+    contentFallbackToSemantic = true
+)
+
+/** 分组卡：书卷暖米分组底 + 14dp 收口 + 1dp 极轻投影 + 0.5dp 实色描边。 */
+val claudeGroupCardTokens: AppGroupCardTokens = AppGroupCardTokens(
+    style = GroupCardStyle.PAPER_GROUPED,
+    shadowElevation = 1.dp,
+    highlightBorderWidth = 1.dp
+)
+
+/** 周次切换：书卷与通透同为斜向扫光（纸面语言亦接受镜面反光），时长 1×。 */
+val claudeWeekPagerTokens: AppWeekPagerTokens = AppWeekPagerTokens(
+    sheen = WeekPagerSheen.DIRECTIONAL,
+    durationScale = 1f,
+    linearEasing = false
+)
+
+/** 课程块：书卷不加投影（靠材质与留白分层），元信息分隔线 1dp / 15%。 */
+val claudeCourseBlockTokens: AppCourseBlockTokens = AppCourseBlockTokens(
+    shadow = CourseBlockShadow.NONE,
+    border = CourseBlockBorder.SOLID_ALLOWED,
+    palette = CourseBlockPalette.SOLID,
+    stripStartPadding = 0.dp,
+    featherRim = false,
+    metaDividerThickness = 1.dp,
+    metaDividerAlpha = 0.15f
+)
+
+// ============================================================================
+// A1 / V3（v3.69.0）：设置页组件族合一后的书卷参数
+// 逐条取自原 ClaudeListItem / ClaudeInsetGroup / ClaudeGroupLabel / ClaudeUserRow。
+// ============================================================================
+
+internal val claudeSettingsRowTokens = AppSettingsRowTokens(
+    dividerInset = 54.dp,
+    dividerColor = SettingsDividerColor.SCRIM,
+    paddingHorizontal = 14.dp,
+    paddingVertical = 0.dp,
+    iconBoxSize = 28.dp,
+    iconBoxRadius = 8.dp,
+    iconMaterial = SettingsIconMaterial.FLAT,
+    iconGap = 12.dp,
+    titleSize = 15.sp,
+    titleWeight = FontWeight.Medium,
+    titleLetterSpacing = 0.sp,
+    detailSize = 14.sp,
+    chevronSize = 16.dp,
+    chevronAlpha = 0.7f,
+    trailingSlot = SettingsTrailingSlot.INLINE
+)
+
+internal val claudeSettingsGroupTokens = AppSettingsGroupTokens(
+    material = SettingsSurfaceMaterial.PAPER,
+    cornerRadius = 14.dp,
+    glassRim = false,
+    texture = false,
+    elevation = 0.dp
+)
+
+internal val claudeSettingsLabelTokens = AppSettingsLabelTokens(
+    fontSize = 12.sp,
+    fontWeight = FontWeight.SemiBold,
+    letterSpacing = 0.8.sp,
+    uppercase = false,
+    color = SettingsLabelColor.PRIMARY,
+    startPadding = 2.dp
+)
+
+internal val claudeSettingsUserRowTokens = AppSettingsUserRowTokens(
+    material = SettingsSurfaceMaterial.PAPER,
+    cornerRadius = 14.dp,
+    elevation = 0.dp,
+    paddingHorizontal = 16.dp,
+    paddingVertical = 18.dp,
+    avatarStyle = SettingsAvatarStyle.SOLID,
+    avatarInitialColor = SettingsAvatarInitialColor.PRIMARY,
+    avatarInitialWeight = FontWeight.SemiBold,
+    nameSize = 17.sp,
+    nameWeight = FontWeight.SemiBold,
+    chevronSize = 16.dp,
+    chevronAlpha = 0.7f
+)
+
+internal val claudeSettingsPageTokens = AppSettingsPageTokens(
+    topBar = SettingsTopBar.NONE,
+    centerContent = false
+)
+
+/**
+ * 书卷主题分组卡底色：浅色暖米 #f3efe4、深色 #2f2e2c，对齐设计包 .group-card。
+ */
+@Composable
+fun claudeGroupBg(): Color = if (LocalIsDarkTheme.current) Color(0xFF2F2E2C) else Color(0xFFF3EFE4)
+
+/**
+ * 书卷主题分组卡描边：0.5dp 浅边框，对齐设计包 border-200。
+ */
+@Composable
+fun claudeGroupBorder(): Color = if (LocalIsDarkTheme.current) Color(0x14FFFFFF) else Color(0xFFE3E0D4)
+
+/**
+ * CLAUDE 专属 Material3 Typography。
+ *
+ * - 标题（displayLarge / displayMedium / displaySmall / headlineLarge）= Newsreader 衬线，
+ *   对齐设计系统 display 28–34sp / 600
+ * - UI（headlineMedium 以下）= Poppins，卡片标题 18sp/600、正文 14–15sp、辅助 12–13sp
+ * - 阅读正文 bodyLarge = Lora 阅读衬线 16sp
+ *
+ * 字体文件已按本主题实际用到的字重做了子集化 + 变量轴固定（v3.71.0 体积优化）：
+ * - Newsreader 原为 wght 200–800 / opsz 6–72 双轴变量字体，本主题只在 600 档使用，
+ *   故固定实例为 wght=600 / opsz=18（即 fvar 默认光学尺寸），文件更名 Newsreader-SemiBold.ttf；
+ * - Lora 原为 wght 400–700 变量字体，本主题只在 400 档使用，固定实例为 wght=400，
+ *   更名 Lora-Regular.ttf；
+ * - 全部字体按「拉丁 + 拉丁扩展 + 希腊 + 常用标点/箭头/数学/几何/圈号」区间取子集，
+ *   中文仍走系统字体 fallback（原字体本身不含 CJK，子集化不影响中文渲染）；
+ * - Geist Mono（等宽）本版未接入且无任何代码引用，已删除以免打包死重。
+ * 固定实例的字重与 CMP 声明一致，避免「平台未应用 wght 轴则退化为默认字重」的观感漂移。
+ */
+/**
+ * UI 无衬线字族（Poppins 四档静态字重）——供 Claude 主题页面自定义排版直接复用。
+ */
+@Composable
+fun claudeUiSans(): FontFamily = FontFamily(
+    Font(Res.font.Poppins_Regular, FontWeight.Normal),
+    Font(Res.font.Poppins_Medium, FontWeight.Medium),
+    Font(Res.font.Poppins_SemiBold, FontWeight.SemiBold),
+    Font(Res.font.Poppins_Bold, FontWeight.Bold)
+)
+
+/** 展示衬线字族（Newsreader 固定 600 档实例，标题统一 600）。 */
+@Composable
+fun claudeDisplaySerif(): FontFamily = FontFamily(
+    Font(Res.font.Newsreader_SemiBold, FontWeight.SemiBold)
+)
+
+/** 阅读衬线字族（Lora 固定 400 档实例，正文 400）。 */
+@Composable
+fun claudeReadingSerif(): FontFamily = FontFamily(
+    Font(Res.font.Lora_Regular, FontWeight.Normal)
+)
+
+@Composable
+fun claudeTypography(): Typography {
+    val uiSans = claudeUiSans()
+    val displaySerif = claudeDisplaySerif()
+    val readingSerif = claudeReadingSerif()
+
+    return remember(uiSans, displaySerif, readingSerif) {
+    Typography(
+        displayLarge = TextStyle(
+            fontFamily = displaySerif,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 34.sp,
+            lineHeight = 42.sp,
+            letterSpacing = 0.sp
+        ),
+        displayMedium = TextStyle(
+            fontFamily = displaySerif,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 30.sp,
+            lineHeight = 38.sp,
+            letterSpacing = 0.sp
+        ),
+        displaySmall = TextStyle(
+            fontFamily = displaySerif,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 28.sp,
+            lineHeight = 36.sp,
+            letterSpacing = 0.sp
+        ),
+        headlineLarge = TextStyle(
+            fontFamily = displaySerif,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 24.sp,
+            lineHeight = 32.sp,
+            letterSpacing = 0.sp
+        ),
+        headlineMedium = TextStyle(
+            fontFamily = uiSans,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 22.sp,
+            lineHeight = 30.sp,
+            letterSpacing = 0.sp
+        ),
+        // 弹窗标题槽（M3 AlertDialog 默认吃 headlineSmall）：20sp SemiBold，与基线观感一致
+        headlineSmall = TextStyle(
+            fontFamily = uiSans,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 20.sp,
+            lineHeight = 28.sp,
+            letterSpacing = 0.sp
+        ),
+        titleLarge = TextStyle(
+            fontFamily = uiSans,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            letterSpacing = 0.sp
+        ),
+        titleMedium = TextStyle(
+            fontFamily = uiSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+            letterSpacing = 0.sp
+        ),
+        titleSmall = TextStyle(
+            fontFamily = uiSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            letterSpacing = 0.sp
+        ),
+        bodyLarge = TextStyle(
+            fontFamily = readingSerif,
+            fontWeight = FontWeight.Normal,
+            fontSize = 16.sp,
+            lineHeight = 26.sp,
+            letterSpacing = 0.2.sp
+        ),
+        bodyMedium = TextStyle(
+            fontFamily = uiSans,
+            fontWeight = FontWeight.Normal,
+            fontSize = 14.sp,
+            lineHeight = 22.sp,
+            letterSpacing = 0.1.sp
+        ),
+        bodySmall = TextStyle(
+            fontFamily = uiSans,
+            fontWeight = FontWeight.Normal,
+            fontSize = 13.sp,
+            lineHeight = 20.sp,
+            letterSpacing = 0.1.sp
+        ),
+        labelLarge = TextStyle(
+            fontFamily = uiSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            letterSpacing = 0.sp
+        ),
+        labelMedium = TextStyle(
+            fontFamily = uiSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            letterSpacing = 0.1.sp
+        ),
+        labelSmall = TextStyle(
+            fontFamily = uiSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+            letterSpacing = 0.1.sp
+        )
+    )
+    }
+}

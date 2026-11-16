@@ -1,0 +1,181 @@
+<resources>
+    <!-- Basic App Information -->
+    <string name="app_name">心晴 2.0</string>
+    
+    <!-- Common Buttons and Messages -->
+    
+    <!-- Main Interface and Today's Schedule -->
+    <string name="text_no_courses_today">No courses today</string>
+
+    <!-- Add Course -->
+    <string name="label_teacher">Instructor</string>
+    <string name="label_position">Location</string>
+
+    <!-- Course Related -->
+    <string name="title_vacation">On vacation</string>
+    
+    <!-- Notifications and Alarms -->
+    <string name="notification_title_course_alert">Class reminder</string>
+    <string name="notification_channel_permission_notice">Permission notices</string>
+    <string name="notification_title_exact_alarm_missing">Exact reminders unavailable</string>
+    <string name="notification_text_exact_alarm_missing">The "Alarms &amp; reminders" permission is off, so class reminders may be delayed by minutes. Tap to enable it.</string>
+    <string name="notification_title_dnd_missing">Auto Do Not Disturb unavailable</string>
+    <string name="notification_text_dnd_missing">The "Do Not Disturb access" permission is off, so auto DND/silent during class will not work. Tap to enable it.</string>
+    <string name="notification_live_status_preparing">Pre-class</string>
+    <string name="notification_unknown_course">Unknown Course</string>
+    <string name="notification_unknown_position">Unknown Location</string>
+
+    <!-- Morning alarm (written into the system clock app) -->
+    <string name="notification_title_morning_alarm">Morning alarm</string>
+    <string name="morning_alarm_review_notification_title">Check your morning alarms</string>
+    <string name="morning_alarm_review_notification_text">Your timetable or alarm settings need review. Existing clock alarms may still ring. Open notification settings in the app to check them.</string>
+    <string name="notification_text_morning_alarm_format">First class %1$s at %2$s — time to head out</string>
+    <string name="notification_channel_morning_alarm">Morning alarm</string>
+    <string name="notification_channel_morning_alarm_desc">In-app morning reminder used when no system clock app is available</string>
+
+    <!-- Widget Related -->
+    <string name="widget_name_tiny">Classes - Minimal</string>
+    <string name="widget_name_compact">Classes - Today</string>
+    <string name="widget_name_double_days">Classes - Today and Tomorrow</string>
+    <string name="widget_name_list_vertical">Classes - Vertical List</string>
+    <string name="widget_name_next_course">Classes - Next Class</string>
+    <!-- Next-class widget runtime strings (countdown chip + cross-day fallback) -->
+    <string name="widget_next_course_label">Next class</string>
+    <string name="widget_next_course_tomorrow">Tomorrow\'s first class</string>
+    <string name="widget_next_course_in_minutes">in %1$d min</string>
+    <string name="widget_next_course_ongoing">In progress</string>
+    <string name="widget_next_course_today">Today</string>
+    <!-- Exam countdown widget (v4.67.0): reads the "exam" category of the agenda -->
+    <string name="widget_name_exam_countdown">Agenda - Exam</string>
+    <string name="widget_exam_label">Until exam</string>
+    <string name="widget_exam_today">Today</string>
+    <string name="widget_exam_past">Ended</string>
+    <string name="widget_exam_tomorrow">Tomorrow</string>
+    <string name="widget_exam_days">in %1$d days</string>
+    <string name="widget_exam_none">No upcoming exam</string>
+    <string name="widget_exam_none_hint">Add an exam in Agenda to see the countdown</string>
+    <string name="widget_exam_more">%1$d more exams</string>
+    <!-- Weekly classes widget (v4.67.0, C3) -->
+    <string name="widget_name_week_courses">Classes - Whole Week</string>
+    <string name="widget_week_remaining">%1$d classes left this week</string>
+    <string name="widget_week_finished">No classes left this week</string>
+    <string name="widget_week_finished_hint">See you next week</string>
+    <!-- Agenda widget (v4.67.0, C4) -->
+    <string name="widget_name_agenda_list">Agenda - All</string>
+    <string name="widget_agenda_today">Today\'s agenda</string>
+    <string name="widget_agenda_upcoming">Upcoming agenda</string>
+    <string name="widget_agenda_count">%1$d items</string>
+    <string name="widget_agenda_none">No agenda items</string>
+    <string name="widget_agenda_none_hint">Add todos, exams or activities in Agenda</string>
+    <string name="widget_agenda_all_day">All day</string>
+    <string name="widget_agenda_cat_todo">Todo</string>
+    <string name="widget_agenda_cat_exam">Exam</string>
+    <string name="widget_agenda_cat_activity">Activity</string>
+    <string name="widget_agenda_cat_homework">Homework</string>
+    <string name="widget_agenda_cat_other">Other</string>
+    <string name="widget_loading">Loading courses…</string>
+    <string name="widget_tomorrow_course_preview">Tomorrow</string>
+    <string name="widget_today_courses_finished">Today\'s classes ended.</string>
+    <string name="widget_vacation_expecting">Looking forward to new semester</string>
+    <string name="widget_remaining_courses_format_today">%1$d courses left today</string>
+    <string name="widget_remaining_courses_format_tomorrow">%1$d courses tomorrow</string>
+    <string name="widget_title_today">Today</string>
+    <string name="widget_title_tomorrow">Tomorrow</string>
+    <string name="text_no_courses_tomorrow">No courses tomorrow</string>
+
+    <!-- Notification Settings -->
+    <string name="widget_course_total_count">%1$d total</string>
+    <string name="item_course_reminder">Course reminders</string>
+    <string name="action_close">Close</string>
+    
+    <!-- Settings Options -->
+    <string name="status_current_week_format">Week %1$d</string>
+    
+    <!-- Manage Course Tables -->
+
+    <!-- Course Management -->
+
+    <!-- Time Slot Management -->
+
+    <!-- Import/Export Schedule -->
+    
+    <!-- More Settings -->
+
+    <!-- Schedule Adjustment -->
+    <string name="text_no_course">No courses</string>
+
+    <!-- Academic System Import -->
+    
+    <!-- Contributors List -->
+    
+    <!-- Academic Adapter Repository -->
+
+    <!-- Color Picker -->
+
+    <!-- Personalization -->
+
+    <!-- Quick Actions -->
+
+    <!-- Quick Delete Courses -->
+    <string name="widget_course_remaining_count">%1$d left</string>
+
+    <!-- 状态栏灵动岛（Android 16 实时更新） -->
+    <string name="dynamic_island_channel_name">Live Class Status</string>
+    <string name="dynamic_island_channel_desc">Shows current and next class status live in the status bar (Android 16 Dynamic Island)</string>
+    <string name="dynamic_island_no_class_title">No class today</string>
+    <string name="dynamic_island_no_class_text">No classes scheduled today</string>
+    <string name="dynamic_island_no_class_sub">You can turn this off in notification settings</string>
+    <string name="dynamic_island_all_done_title">Today\'s classes are done</string>
+    <string name="dynamic_island_all_done_text">%1$d classes today</string>
+    <string name="dynamic_island_all_done_sub">See you tomorrow!</string>
+    <string name="dynamic_island_in_class_text">In class · %1$s</string>
+    <string name="dynamic_island_in_class_sub">%1$d min left</string>
+    <string name="dynamic_island_chip_in_class_pct">%1$s %2$d%%</string>
+    <string name="dynamic_island_next_class_title">Next class</string>
+    <string name="dynamic_island_next_class_text">%1$s · %2$s</string>
+    <string name="dynamic_island_minutes_format">%1$d min</string>
+    <string name="dynamic_island_next_class_sub">%1$s to start (%2$s)</string>
+    <string name="dynamic_island_chip_next">Next:%1$s</string>
+    <string name="dynamic_island_chip_no_class">No class</string>
+    <string name="dynamic_island_chip_done">Done</string>
+
+    <!-- G1/G3：下一节课常驻通知 + 考试倒计时提醒 -->
+    <string name="notification_channel_next_class">Next class status</string>
+    <string name="notification_channel_next_class_desc">Keep the next class and the minutes left in your status bar</string>
+    <string name="notification_next_class_title">Next class</string>
+    <string name="notification_next_class_tomorrow">Tomorrow\'s first class</string>
+    <string name="notification_next_class_in_minutes">in %1$d min</string>
+    <string name="notification_next_class_ongoing">In progress</string>
+    <string name="notification_next_class_disable">Turn off</string>
+    <!-- G2: chip text for the status-bar chip (Android 16+ live updates); must carry context -->
+    <string name="notification_next_class_chip_ongoing">In class · %1$s</string>
+    <string name="notification_next_class_chip_in_minutes">in %1$d min · %2$s</string>
+    <string name="notification_next_class_chip_at">%1$s · %2$s</string>
+    <string name="notification_channel_exam_countdown">Exam countdown</string>
+    <string name="notification_channel_exam_countdown_desc">Reminds you of the nearest exam</string>
+    <string name="notification_exam_countdown_title">Exam countdown</string>
+    <string name="notification_exam_countdown_today">%1$s is today</string>
+    <string name="notification_exam_countdown_tomorrow">%1$s is tomorrow</string>
+    <string name="notification_exam_countdown_days">%1$s in %2$d days</string>
+
+    <string name="notification_channel_live_update">Live updates</string>
+    <string name="notification_channel_live_update_desc">Show in-progress class and event status in the live activity</string>
+    <string name="notification_channel_vivo_atomic">Atomic notification</string>
+    <string name="notification_channel_vivo_atomic_desc">Show course reminders in the system atomic notification</string>
+
+    <string name="widget_desc_tiny">Shows the current or next class</string>
+    <string name="widget_desc_compact">All classes today</string>
+    <string name="widget_desc_double_days">Classes for today and tomorrow</string>
+    <string name="widget_desc_list_vertical">Classes in a vertical timeline</string>
+    <string name="widget_desc_next_course">Next class with start countdown</string>
+    <string name="widget_desc_week_courses">The full week timetable</string>
+    <string name="widget_desc_agenda_list">To-dos, activities and homework</string>
+    <string name="widget_desc_exam_countdown">Countdown to your next exam</string>
+    <string name="morning_alarm_write_title">Check your morning alarm</string>
+    <string name="morning_alarm_write_blocked">An old alarm is still pending, so the new one was not added. Manage old alarms in your clock, then review morning alarm settings.</string>
+    <string name="morning_alarm_write_deferred">The new alarm has not been added. Open the app and check morning alarm settings.</string>
+    <string name="morning_alarm_write_not_expressible">The system clock cannot set an alarm for this date yet. Open the app and check again closer to class.</string>
+    <string name="morning_alarm_write_failed">The system clock could not be opened and the alarm was not added. Check morning alarm settings.</string>
+    <string name="morning_alarm_write_no_clock">No system clock was found. In-app reminders may not be available; check morning alarm settings.</string>
+    <string name="morning_alarm_write_unknown">The morning alarm status is unknown. Check morning alarm settings.</string>
+</resources>

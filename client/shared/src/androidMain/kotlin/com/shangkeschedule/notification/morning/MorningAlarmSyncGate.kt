@@ -1,0 +1,24 @@
+package com.shangkeschedule.notification.morning
+
+import android.content.Context
+
+/** 多个调度入口与用户确认共用同一把锁。 */
+object MorningAlarmSyncGate {
+    private val lock = Any()
+    fun <T> run(block: () -> T): T = synchronized(lock, block)
+
+    /** 读取核对标记和写入必须持有同一把锁，核对期间不能创建新闹钟。 */
+    fun <T> runIfReviewed(store: WeeklyAlarmConfirmationStore, block: () -> T): T? = run {
+        if (runCatching { store.requiresReview() }.getOrDefault(true)) null else block()
+    }
+
+    /**
+     * 仅在用户确认已在系统时钟关闭旧上课闹钟后调用。
+     *
+     * 具体的 prefs 名与读写收敛在 [MorningAlarmRegistryStore]，此处不再出现字面量
+     * —— 曾经这里与 `MorningAlarmWriter` 各硬编码一次 `"morning_alarm_registry"`，
+     * 改一处就会静默清空不到真正的登记簿。
+     */
+    fun clearVerifiedOldAlarms(context: Context): Boolean =
+        MorningAlarmRegistryStore.clear(context)
+}

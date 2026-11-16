@@ -1,0 +1,741 @@
+package com.shangkeschedule.ui.schoolselection.web
+
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.wb_adapter_error_fmt
+import shangkeschedule.shared.generated.resources.wb_adapter_network_error
+import shangkeschedule.shared.generated.resources.wb_adapter_no_entry
+import shangkeschedule.shared.generated.resources.wb_default_confirm
+import shangkeschedule.shared.generated.resources.wb_config_import_failed_fmt
+import shangkeschedule.shared.generated.resources.wb_config_import_no_table
+import shangkeschedule.shared.generated.resources.wb_import_failed_fmt
+import shangkeschedule.shared.generated.resources.wb_import_no_table
+import shangkeschedule.shared.generated.resources.wb_import_success_fmt
+import shangkeschedule.shared.generated.resources.wb_import_timeout
+import shangkeschedule.shared.generated.resources.wb_list_invalid
+import shangkeschedule.shared.generated.resources.wb_list_json_invalid_fmt
+import shangkeschedule.shared.generated.resources.wb_native_dialog_title
+import shangkeschedule.shared.generated.resources.wb_preset_import_failed_fmt
+import shangkeschedule.shared.generated.resources.wb_show_alert_queue_full
+import shangkeschedule.shared.generated.resources.wb_show_list_queue_full
+import shangkeschedule.shared.generated.resources.wb_show_prompt_queue_full
+import shangkeschedule.shared.generated.resources.wb_table_cancelled
+import shangkeschedule.shared.generated.resources.wb_table_cancelled_or_unset
+
+import org.jetbrains.compose.resources.getString
+
+import com.shangkeschedule.data.model.CourseImportExport
+import com.shangkeschedule.data.repository.CourseConversionRepository
+import com.shangkeschedule.tool.AppLog
+import com.shangkeschedule.ui.components.ToastManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
+
+/**
+ * JS Bridge 消息处理器，负责路由通信请求并与 Native 业务及 UI 进行交互。
+ *
+ * @param onAdapterScanDelivered 适配脚本钩子回传抓取结果时的回调（成绩 / 空教室 / 学业）。
+ *   三个动作分别以 [AdapterScanActions] 中的常量作为 key；载荷是钩子返回值的
+ *   Base64(JSON) 原文，由调用方（WebViewScreen）按用途各自的模型解析 ——
+ *   解析失败与「钩子没适配」都表现为空结果，调用方据此回落到通用脚本。
+ * @param onAdapterScanFailed 适配脚本钩子抛错时的回调：调用方据此回落通用脚本，
+ *   而不是把「本校钩子坏了」直接报成失败（通用脚本往往仍能认出同一张表）。
+ */
+class WebBridgeHandler(
+    private val coroutineScope: CoroutineScope,
+    private val uiEventChannel: SendChannel<WebUiEvent>,
+    private val courseConversionRepository: CourseConversionRepository,
+    private val onTaskCompleted: () -> Unit,
+    private val evaluateJs: (script: String, callback: ((String?) -> Unit)?) -> Unit,
+    private val onImportStateChanged: (ImportRunState) -> Unit = {},
+    private val onAdapterScanDelivered: (action: String, base64Json: String) -> Unit = { _, _ -> },
+    private val onAdapterScanFailed: (action: String) -> Unit = {},
+    /**
+     * 扫描**超时**（区别于「钩子抛错」）。超时意味着「不知道结果」，
+     * 与「读了但为空」是不同的用户动作，界面据此给不同提示。
+     */
+    private val onAdapterScanTimeout: (action: String) -> Unit = {}
+) {
+    private val json = CourseImportExport.json
+    private var importTableId: String? = null
+
+    /** 当前导入运行状态，用于避免「成功结果被收尾动作覆盖成 Idle」。 */
+    private var importState: ImportRunState = ImportRunState.Idle
+
+    /** 弹窗事件序号，单调递增，保证 UI 层可以稳定区分前后两个弹窗。 */
+    private var nextEventId = 0L
+
+    /**
+     * 正在等待结果的适配脚本钩子（成绩 / 空教室 / 学业）。
+     *
+     * 作用只有一个：钩子抛错时让 [reportAdapterError] 知道「这条错误属于某个
+     * 扫描动作」，从而回落通用脚本而不是弹「适配脚本出错」。
+     * 一次只会有一个扫描在跑（按钮在运行期间被禁用），因此用集合而不是队列。
+     */
+    private val pendingScanActions = mutableSetOf<String>()
+
+    /**
+     * 适配扫描看门狗（成绩 / 空教室 / 学业）。与课表导入的 [importWatchdogJob] 是两套：
+     * 那个只在 [setImportTableId] 启动，覆盖不到扫描路径（见 [ADAPTER_SCAN_TIMEOUT_MS] 注释）。
+     */
+    private var adapterScanWatchdogJob: Job? = null
+
+    /** 标记开始等待某个钩子的结果；投递成功或失败后自动清除。 */
+    fun beginAdapterScan(action: String) {
+        pendingScanActions.add(action)
+        armAdapterScanWatchdog()
+    }
+
+    /**
+     * 给适配扫描兜底一个超时。
+     *
+     * 超时按「结果未知」处理：调用 [onAdapterScanFailed] 让界面退出运行态并弹出可读的
+     * 提示，而不是让用户对着一圈永远转不出来的进度条。
+     */
+    private fun armAdapterScanWatchdog() {
+        cancelAdapterScanWatchdog()
+        adapterScanWatchdogJob = coroutineScope.launch {
+            delay(ADAPTER_SCAN_TIMEOUT_MS)
+            val pending = pendingScanActions.toList()
+            pendingScanActions.clear()
+            pending.forEach { onAdapterScanTimeout(it) }
+        }
+    }
+
+    private fun cancelAdapterScanWatchdog() {
+        adapterScanWatchdogJob?.cancel()
+        adapterScanWatchdogJob = null
+    }
+
+    /**
+     * 导入看门狗。仅在「已注入脚本但一条桥接消息都没收到」时触发，
+     * 收到任意一条消息即永久取消（脚本已证明存活，后续耗时不再视为卡死）。
+     */
+    private var importWatchdogJob: Job? = null
+
+    /**
+     * 提示账本：一次导入会话内只给用户一条结果提示。
+     *
+     * 背景：适配脚本自己会弹「导入成功：N 条课程安排」，App 侧也会弹
+     * 「课程导入成功！共导入 N 门课。」；而 ToastManager 是 CONFLATED 语义
+     * （`ToastManager.kt` 直接 `_event.value = ...` 覆盖，不排队），两条连发
+     * 只会互相顶掉，用户看到哪条取决于时序。现在结果提示统一由 App 给出，
+     * 脚本侧的重复提示在注入 JS 里被静默（见 `shouldSuppressAdapterToast`）。
+     */
+    private var importedCoursesTotal = 0
+
+    /** 本次会话是否至少成功落库过一批数据（决定要不要给结果提示）。 */
+    private var importSaveSucceeded = false
+
+    private var importFailureNotified = false
+
+    /**
+     * 成功提示的防抖任务。非 null 表示「这批落库的结果还没报给用户」——
+     * 收尾（`notifyTaskCompletion`）时据此决定要不要补一条最终总账。
+     */
+    private var importSuccessToastJob: Job? = null
+
+    private companion object {
+        const val TAG = "WebBridgeHandler"
+
+        /**
+         * 无响应超时。JS_IMPORT_AUTOSTART 自身在 1500ms 探测不到入口时就会发一条
+         * toast（即一条桥接消息），因此零消息超时只可能是脚本整体没跑起来。
+         */
+        const val IMPORT_IDLE_TIMEOUT_MS = 30_000L
+
+        /**
+         * 成功提示防抖窗口。8 个适配脚本会分多批调用 saveImportedCourses
+         * （BUPT / CQCST / CUST / HUAT / hbeu / NIIT / XIYI / zhengfang），
+         * 逐批提示只会互相覆盖、还只显示最后一批的数字，这里等总门数收敛。
+         */
+        const val IMPORT_SUCCESS_DEBOUNCE_MS = 1_000L
+
+        /**
+         * 适配扫描（成绩 / 空教室 / 学业）无响应超时（v4.75.2）。
+         *
+         * 此前这三个钩子**没有任何超时兜底**：看门狗只在 `setImportTableId`（课表导入）
+         * 里启动，而扫描走的是 `beginAdapterScan`，两者互不相干。于是只要钩子抛错、
+         * 页面结构变了导致回传为空、或 WebView 根本没跑起来，界面就永久停在
+         * 「正在读取…���，按钮一直禁用，用户既等不到结果也等不到报错
+         * （实测反馈：导入学业情况长时间不成功）。
+         *
+         * 15 秒不是拍脑袋：钩子只读 DOM，同步返回（见 `NTU/ntu.js` 的
+         * `shangkeScanStudy`），正常在百毫秒级；15 秒足够覆盖教务页卡顿与
+         * 首次注入适配脚本的耗时，又不至于让用户干等。
+         */
+        const val ADAPTER_SCAN_TIMEOUT_MS = 15_000L
+    }
+
+    /**
+     * 设置当前导入的目标课表 ID。
+     *
+     * 传入非 null 表示开始一次新导入：进入 Running 态并启动看门狗。
+     * 传入 null 表示导入上下文结束（任务完成/页面销毁）：回到 Idle 态并取消看门狗。
+     */
+    fun setImportTableId(tableId: String?) {
+        this.importTableId = tableId
+        if (tableId == null) {
+            cancelImportWatchdog()
+            updateImportState(ImportRunState.Idle)
+        } else {
+            resetImportSession()
+            updateImportState(ImportRunState.Running)
+            armImportWatchdog()
+        }
+    }
+
+    /**
+     * 开始一次新导入：清空上一次会话的提示账本。
+     *
+     * 没有这一步时，第二次导入会被上一次的「已提示过」拦住，用户再也看不到结果提示。
+     */
+    private fun resetImportSession() {
+        importSuccessToastJob?.cancel()
+        importSuccessToastJob = null
+        importedCoursesTotal = 0
+        importSaveSucceeded = false
+        importFailureNotified = false
+    }
+
+    private fun updateImportState(state: ImportRunState) {
+        importState = state
+        onImportStateChanged(state)
+    }
+
+    private fun armImportWatchdog() {
+        cancelImportWatchdog()
+        importWatchdogJob = coroutineScope.launch {
+            delay(IMPORT_IDLE_TIMEOUT_MS)
+            // 走到这里说明**最近 IMPORT_IDLE_TIMEOUT_MS 内没有任何桥接消息**（空闲超时）。
+            // 此时刻意保留 importTableId：脚本可能只是启动很慢，晚到的
+            // saveImportedCourses 仍应能正常落库，不能被判成「未选择课表」。
+            //
+            // v4.75.13：若这 30 秒内已经拿到结果（成功 / 失败都已置位），就不要再覆盖它。
+            // 空闲超时的语义是「**还在运行**且长时间没有消息」，已出结果就不属于这个情形。
+            if (importState !is ImportRunState.Running) return@launch
+            val timeoutMessage = getString(Res.string.wb_import_timeout)
+            notifyImportFailure(timeoutMessage)
+            updateImportState(ImportRunState.Failed(timeoutMessage))
+        }
+    }
+
+    /**
+     * 收到一条桥接消息后**重置**导入空闲超时（v4.75.13）。
+     *
+     * ★ 这是「点击执行导入后一直没有反应」的修复点。
+     *
+     * 旧实现是 `cancelImportWatchdog()`：收到**任意**一条消息就把看门狗**永久取消**，
+     * 注释理由是「脚本已证明存活，后续耗时不再视为卡死」。但这条推理对**教务适配脚本**
+     * 不成立 —— 绝大多数脚本在注入顶层就会先发一条与导入无关的提示
+     * （实测正方：`检测到正方教务系统，点击导入按钮抓取课表`；见
+     * `build_qa/regress/run_watchdog_ab.js` 的时序取证）。
+     * 于是：
+     *   1. 脚本注入 → 立刻发「检测到正方教务系统…」→ 看门狗被永久取消；
+     *   2. 用户点「执行导入」→ 页面表格解析不出课程 → 回落到接口抓取；
+     *   3. 教务接口假死 / 不返回（会话过期、WebVPN 挂起、接口慢）⇒ **再无任何消息**；
+     *   4. 看门狗已不在 ⇒ 既无结果也无超时 ⇒ 界面**永远**停在「正在执行导入脚本...」。
+     *
+     * 修法：语义从「收到消息即永久取消」改为「收到消息即**重新计时**」。这样
+     *   · 脚本持续有回传时，超时被不断推后，正常导入完全不受影响；
+     *   · 脚本停住不动超过 30 秒时，仍能得到一条可读的失败提示与「重新导入」入口。
+     * 这也与常量名 [IMPORT_IDLE_TIMEOUT_MS]（**idle** timeout）的本意一致。
+     */
+    private fun resetImportWatchdog() {
+        if (importTableId == null) return
+        if (importState !is ImportRunState.Running) return
+        armImportWatchdog()
+    }
+
+    private fun cancelImportWatchdog() {
+        importWatchdogJob?.cancel()
+        importWatchdogJob = null
+    }
+
+    /**
+     * 一次导入会话内最多给出一条失败提示。
+     *
+     * 失败可能来自多个来源（脚本抛错上报 / 落库异常 / 无响应超时 / 未选课表），
+     * 而 ToastManager 是 CONFLATED 语义（新消息直接覆盖旧消息，不排队），连发只会
+     * 互相覆盖。这里只放行第一条，后续失败仍写日志，避免用户看到提示闪烁。
+     */
+    private fun notifyImportFailure(message: String) {
+        if (importFailureNotified) {
+            AppLog.w(TAG, "导入失败提示已发过，后续失败仅记录：$message")
+            return
+        }
+        importFailureNotified = true
+        ToastManager.show(message)
+    }
+
+    /**
+     * 结果提示防抖：适配脚本可能分多批落库，等总门数收敛后再报一次总账。
+     *
+     * 后到的批次会重新计时并再报一次（ToastManager 是 CONFLATED 语义，旧文案被覆盖），
+     * 因此用户最终看到的门数始终是累计值，不会停在某一批的分批数字上。
+     */
+    private fun scheduleImportSuccessToast() {
+        importSuccessToastJob?.cancel()
+        importSuccessToastJob = coroutineScope.launch(Dispatchers.Main) {
+            delay(IMPORT_SUCCESS_DEBOUNCE_MS)
+            importSuccessToastJob = null
+            ToastManager.show(getString(Res.string.wb_import_success_fmt, importedCoursesTotal))
+        }
+    }
+
+    /**
+     * 接收并解析来自 JS 端的消息 JSON 字符串。
+     */
+    fun onMessageReceived(jsonString: String) {
+        try {
+            val message = bridgeJson.decodeFromString<JsBridgeMessage>(jsonString)
+            val callbackId = message.callbackId
+
+            // v4.75.13：收到消息**重新计时**，而不是永久取消看门狗。
+            // 旧实现（cancelImportWatchdog）会被脚本注入期那条与导入无关的提示
+            //（如正方「检测到正方教务系统…」）废掉看门狗 ⇒ 之后脚本若卡在接口假死上，
+            // 界面永远停在「正在执行导入脚本...」，既无结果也无提示。
+            resetImportWatchdog()
+
+            when (message.action) {
+                "showToast" -> parsePayload<ShowToastPayload>(message.payload)?.let {
+                    showToast(it.message)
+                }
+
+                "showAlert" -> parsePayload<ShowAlertPayload>(message.payload)?.let {
+                    showAlert(it.titleText, it.contentText, it.confirmText, callbackId)
+                }
+
+                "showPrompt" -> parsePayload<ShowPromptPayload>(message.payload)?.let {
+                    showPrompt(it.titleText, it.tipText, it.defaultText, it.validatorJsFunction, callbackId)
+                }
+
+                "showSingleSelection" -> parsePayload<ShowSingleSelectionPayload>(message.payload)?.let {
+                    showSingleSelection(it.titleText, it.itemsJsonString, it.defaultSelectedIndex, callbackId)
+                }
+
+                "saveImportedCourses" -> parsePayload<SaveCoursesPayload>(message.payload)?.let {
+                    saveImportedCourses(it.coursesJsonString, callbackId)
+                }
+
+                "saveCourseConfig" -> parsePayload<SaveConfigPayload>(message.payload)?.let {
+                    saveCourseConfig(it.configJsonString, callbackId)
+                }
+
+                "savePresetTimeSlots" -> parsePayload<SaveTimeSlotsPayload>(message.payload)?.let {
+                    savePresetTimeSlots(it.timeSlotsJsonString, callbackId)
+                }
+
+                "reportAdapterError" -> parsePayload<ReportErrorPayload>(message.payload)?.let {
+                    reportAdapterError(it)
+                }
+
+                AdapterScanActions.GRADES,
+                AdapterScanActions.EMPTY_CLASSROOMS,
+                AdapterScanActions.STUDY -> parsePayload<AdapterScanPayload>(message.payload)?.let {
+                    pendingScanActions.remove(message.action)
+                    if (pendingScanActions.isEmpty()) cancelAdapterScanWatchdog()
+                    onAdapterScanDelivered(message.action, it.dataJsonString)
+                }
+
+                "notifyTaskCompletion" -> notifyTaskCompletion()
+            }
+        } catch (e: Exception) {
+            AppLog.e(TAG, "桥接消息处理失败", e)
+        }
+    }
+
+    /**
+     * 显示短提示 Toast。
+     */
+    fun showToast(message: String) {
+        ToastManager.show(message)
+    }
+
+    /**
+     * 显示 Alert 确认弹窗。
+     */
+    fun showAlert(
+        titleText: String,
+        contentText: String,
+        confirmText: String? = null,
+        callbackId: String? = null
+    ) {
+        coroutineScope.launch(Dispatchers.Main) {
+            val resolvedConfirmText = confirmText ?: getString(Res.string.wb_default_confirm)
+            val data = AlertDialogData(titleText, contentText, resolvedConfirmText)
+
+            val promiseCallback: (Boolean) -> Unit = { confirmed ->
+                if (callbackId != null) {
+                    resolveJsPromise(callbackId, if (confirmed) "true" else "false")
+                }
+            }
+
+            val sendResult = uiEventChannel.trySend(
+                WebUiEvent.ShowAlert(data, promiseCallback, nextEventId++)
+            )
+            if (sendResult.isFailure && callbackId != null) {
+                rejectJsPromise(callbackId, getString(Res.string.wb_show_alert_queue_full))
+            }
+        }
+    }
+
+    /**
+     * 显示 Prompt 输入弹窗并支持 JS 校验。
+     */
+    fun showPrompt(
+        titleText: String,
+        tipText: String,
+        defaultText: String = "",
+        validatorJsFunction: String? = null,
+        callbackId: String? = null
+    ) {
+        val data = PromptDialogData(
+            title = titleText,
+            tip = tipText,
+            defaultText = defaultText,
+            validatorJsFunction = validatorJsFunction
+        )
+
+        val errorFlow = MutableSharedFlow<String?>(extraBufferCapacity = 1)
+
+        val onCancel: () -> Unit = {
+            if (callbackId != null) {
+                resolveJsPromise(callbackId, "null")
+            }
+        }
+
+        val onRequestValidation: (String, () -> Unit) -> Unit = { input, onSuccess ->
+            val encodedInput = bridgeJson.encodeToString(input)
+
+            if (data.validatorJsFunction.isNullOrEmpty()) {
+                if (callbackId != null) {
+                    resolveJsPromise(callbackId, encodedInput)
+                }
+                onSuccess()
+            } else {
+                val jsScript = "${data.validatorJsFunction}($encodedInput)"
+                evaluateJs(jsScript) { result ->
+                    val validationResult = result?.trim('\"')
+                    if (validationResult.isNullOrEmpty() || validationResult.equals("false", ignoreCase = true)) {
+                        if (callbackId != null) {
+                            resolveJsPromise(callbackId, encodedInput)
+                        }
+                        onSuccess()
+                    } else {
+                        coroutineScope.launch {
+                            errorFlow.emit(validationResult)
+                        }
+                    }
+                }
+            }
+        }
+
+        val sendResult = uiEventChannel.trySend(
+            WebUiEvent.ShowPrompt(data, onRequestValidation, errorFlow.asSharedFlow(), onCancel, nextEventId++)
+        )
+        if (sendResult.isFailure && callbackId != null) {
+            coroutineScope.launch {
+                rejectJsPromise(callbackId, getString(Res.string.wb_show_prompt_queue_full))
+            }
+        }
+    }
+
+    /**
+     * 显示单选列表弹窗。
+     */
+    fun showSingleSelection(
+        titleText: String,
+        itemsJsonString: String,
+        defaultSelectedIndex: Int = -1,
+        callbackId: String? = null
+    ) {
+        try {
+            val items = json.decodeFromString<List<String>>(itemsJsonString)
+            val data = SingleSelectionDialogData(titleText, items, defaultSelectedIndex)
+
+            val promiseCallback: (Int?) -> Unit = { selectedIndex ->
+                if (callbackId != null) {
+                    resolveJsPromise(callbackId, selectedIndex?.toString() ?: "null")
+                }
+            }
+
+            val sendResult = uiEventChannel.trySend(
+                WebUiEvent.ShowSingleSelection(data, promiseCallback, nextEventId++)
+            )
+            if (sendResult.isFailure && callbackId != null) {
+                coroutineScope.launch {
+                    rejectJsPromise(callbackId, getString(Res.string.wb_show_list_queue_full))
+                }
+            }
+        } catch (e: Exception) {
+            coroutineScope.launch {
+                ToastManager.show(getString(Res.string.wb_list_invalid))
+                if (callbackId != null) {
+                    rejectJsPromise(callbackId, getString(Res.string.wb_list_json_invalid_fmt, e.message ?: ""))
+                }
+            }
+        }
+    }
+
+    /**
+     * 解析并保存导入的课程数据。
+     */
+    fun saveImportedCourses(coursesJsonString: String, callbackId: String? = null) {
+        coroutineScope.launch(Dispatchers.Default) {
+            val tableId = importTableId
+            if (tableId == null) {
+                coroutineScope.launch(Dispatchers.Main) {
+                    val noTableMessage = getString(Res.string.wb_import_no_table)
+                    notifyImportFailure(noTableMessage)
+                    updateImportState(ImportRunState.Failed(noTableMessage))
+                    if (callbackId != null) rejectJsPromise(callbackId, getString(Res.string.wb_table_cancelled))
+                }
+                return@launch
+            }
+
+            val result = runCatching {
+                val importedCoursesList = json.decodeFromString<List<CourseImportExport.ImportCourseJsonModel>>(coursesJsonString)
+                courseConversionRepository.importCoursesFromList(tableId, importedCoursesList)
+                importedCoursesList.size
+            }
+
+            coroutineScope.launch(Dispatchers.Main) {
+                result.onSuccess { importedCount ->
+                    importedCoursesTotal += importedCount
+                    importSaveSucceeded = true
+                    // 分批落库时状态先按累计门数更新，用户提示等防抖收敛后再发一条总账
+                    updateImportState(ImportRunState.Succeeded(importedCoursesTotal))
+                    scheduleImportSuccessToast()
+                    if (callbackId != null) resolveJsPromise(callbackId, "true")
+                }.onFailure { e ->
+                    val failureMessage = getString(Res.string.wb_import_failed_fmt, e.message ?: "")
+                    notifyImportFailure(failureMessage)
+                    updateImportState(ImportRunState.Failed(failureMessage))
+                    if (callbackId != null) rejectJsPromise(callbackId, failureMessage)
+                }
+            }
+        }
+    }
+
+    /**
+     * 解析并保存课表配置信息。
+     */
+    fun saveCourseConfig(configJsonString: String, callbackId: String? = null) {
+        coroutineScope.launch(Dispatchers.Default) {
+            val tableId = importTableId
+            if (tableId == null) {
+                coroutineScope.launch(Dispatchers.Main) {
+                    notifyImportFailure(getString(Res.string.wb_config_import_no_table))
+                    if (callbackId != null) rejectJsPromise(callbackId, getString(Res.string.wb_table_cancelled_or_unset))
+                }
+                return@launch
+            }
+
+            val result = runCatching {
+                val importedConfig = json.decodeFromString<CourseImportExport.CourseConfigJsonModel>(configJsonString)
+                courseConversionRepository.importCourseConfig(tableId, importedConfig)
+            }
+
+            coroutineScope.launch(Dispatchers.Main) {
+                result.onSuccess {
+                    // 配置/时间段与课程落库同属一次会话的结果，不再单独发提示：
+                    // 三条成功 toast 连发只会互相覆盖（ToastManager 是 CONFLATED 语义），
+                    // 统一由课程落库那条「共导入 N 门课」代表整次导入的结果。
+                    if (callbackId != null) resolveJsPromise(callbackId, "true")
+                }.onFailure { e ->
+                    val failureMessage = getString(Res.string.wb_config_import_failed_fmt, e.message ?: "")
+                    notifyImportFailure(failureMessage)
+                    if (callbackId != null) rejectJsPromise(callbackId, failureMessage)
+                }
+            }
+        }
+    }
+
+    /**
+     * 解析并保存预设时间段信息。
+     */
+    fun savePresetTimeSlots(timeSlotsJsonString: String, callbackId: String? = null) {
+        coroutineScope.launch(Dispatchers.Default) {
+            val tableId = importTableId
+            if (tableId == null) {
+                coroutineScope.launch(Dispatchers.Main) {
+                    notifyImportFailure(getString(Res.string.wb_import_no_table))
+                    if (callbackId != null) rejectJsPromise(callbackId, getString(Res.string.wb_table_cancelled))
+                }
+                return@launch
+            }
+
+            val result = runCatching {
+                val importedTimeSlotsJson = json.decodeFromString<List<CourseImportExport.TimeSlotJsonModel>>(timeSlotsJsonString)
+                courseConversionRepository.importTimeSlots(tableId, importedTimeSlotsJson)
+            }
+
+            coroutineScope.launch(Dispatchers.Main) {
+                result.onSuccess {
+                    // 同 saveCourseConfig：成功提示合并到课程落库那一条
+                    if (callbackId != null) resolveJsPromise(callbackId, "true")
+                }.onFailure { e ->
+                    val failureMessage = getString(Res.string.wb_preset_import_failed_fmt, e.message ?: "")
+                    notifyImportFailure(failureMessage)
+                    if (callbackId != null) rejectJsPromise(callbackId, failureMessage)
+                }
+            }
+        }
+    }
+
+    /**
+     * 通知 Web 任务执行完成，清理上下文状态。
+     */
+    fun notifyTaskCompletion() {
+        importTableId = null
+        cancelImportWatchdog()
+        // 收尾时拿到的是最终总门数：若防抖还没到点，就由这里补上最终总账，
+        // 这样不发成功 toast 的适配脚本（195 个里 130 个）也能得到一条带门数的提示。
+        val pendingSuccessToast = importSuccessToastJob != null
+        importSuccessToastJob?.cancel()
+        importSuccessToastJob = null
+        coroutineScope.launch(Dispatchers.Main) {
+            if (pendingSuccessToast && importSaveSucceeded) {
+                ToastManager.show(getString(Res.string.wb_import_success_fmt, importedCoursesTotal))
+            }
+            // 脚本没回传成功态就直接收尾时，Running 会把按钮永久卡死，这里复位；
+            // 已拿到成功/失败结果时保留该状态，供用户在离开页面前仍有据可查。
+            if (importState == ImportRunState.Running) {
+                updateImportState(ImportRunState.Idle)
+            }
+            onTaskCompleted()
+        }
+    }
+
+    /**
+     * 处理适配脚本 / 页面的错误上报。
+     *
+     * 只有在一次导入确实运行中时才提示用户并复位按钮；用户单纯浏览教务页面时，
+     * 页面自身的报错只写日志，避免刷屏。
+     *
+     * 适配脚本钩子（成绩 / 空教室 / 学业）抛错时**不**走用户提示：调用方会回落到
+     * 内置通用脚本，多数情况下仍能认出同一张表，此时弹「适配脚本出错」只会误导
+     * （用户以为学校没适配，实际是钩子过时、通用解析依然可用）。
+     */
+    private fun reportAdapterError(payload: ReportErrorPayload) {
+        coroutineScope.launch(Dispatchers.Main) {
+            val text = if (payload.kind == "noEntry") {
+                getString(Res.string.wb_adapter_no_entry)
+            } else if (isNativeNetworkErrorText(payload.message)) {
+                // 原生 fetch/XHR 网络错误（Failed to fetch 等）：脚本侧普遍没有 .catch，
+                // 这里统一换成可执行的中文提示，避免把浏览器英文原文弹给用户（见 AdapterErrorText）。
+                getString(Res.string.wb_adapter_network_error)
+            } else {
+                getString(Res.string.wb_adapter_error_fmt, payload.message)
+            }
+
+            // R1-017c：stack 可能含教务页 URL/路径，不进日志；message 已是用户可见文案
+            AppLog.w(
+                TAG,
+                "适配脚本错误上报 kind=${payload.kind} message=${payload.message}"
+            )
+
+            // 钩子失败：先告诉调用方去回落通用脚本，再决定要不要给用户提示。
+            //
+            // R40-10：归属判据由「有扫描在跑」改为「**该错误发生在钩子调用窗口内**」。
+            // 原判据把教务页面自身的任意 JS 异常（第三方脚本 / 页面 bug）在扫描在途时
+            // 一律算作钩子失败 ⇒ 学业扫描被强制中止并弹误导性提示（「没读到培养方案学分要求」），
+            // 而此时钩子可能本来正常。标记由注入脚本在调用前后置 / 清（见 WebBridgeProtocol
+            // 的 buildAdapterHookInvokeScript）；未带标记的错误照常上报与留痕，但**不**中止扫描，
+            // 交由 15 秒看门狗兜底 —— 宁可多等几秒，也不要用别人的错误否掉自己的扫描。
+            val hookScoped = payload.hookRunning
+            val handledByScan = hookScoped && pendingScanActions.isNotEmpty()
+            if (handledByScan) {
+                // R52-01：**逐个**通知，不只通知第一个。
+                // 旧实现 `pendingScanActions.first()` + clear() 只回调一个 action，
+                // 其余待定扫描既不投递也不复位 ⇒ 界面永久卡在运行态，用户既无结果也无法重试。
+                // 与看门狗超时路径（:103-106 逐个 forEach）的口径保持一致。
+                val pending = pendingScanActions.toList()
+                pendingScanActions.clear()
+                cancelAdapterScanWatchdog()
+                pending.forEach { onAdapterScanFailed(it) }
+            }
+
+            // 导入会话中的失败：一次会话只报第一条，避免与脚本自己的 catch 提示互相覆盖。
+            // 注意此分支**不在** else 里 —— `handledByScan` 为 true 时说明已按扫描失败处理，
+            // 但导入态仍可能同时在跑（两个流程共用一个页面），所以判据是独立的。
+            if (!handledByScan && importState is ImportRunState.Running) {
+                notifyImportFailure(text)
+                updateImportState(ImportRunState.Failed(text))
+            }
+        }
+    }
+
+    /**
+     * 以应用内弹窗替换 WebView 原生 `confirm()` 对话框。
+     *
+     * `confirm()` 有同步返回值，调用方（`WebChromeClient.onJsConfirm`）必须在
+     * [onResult] 里恢复 `JsResult`，否则页面拿到的结果与用户操作相反。
+     */
+    fun showNativeConfirm(contentText: String, onResult: (Boolean) -> Unit) {
+        coroutineScope.launch(Dispatchers.Main) {
+            val data = AlertDialogData(
+                title = getString(Res.string.wb_native_dialog_title),
+                content = contentText,
+                confirmText = getString(Res.string.wb_default_confirm)
+            )
+            val sendResult = uiEventChannel.trySend(WebUiEvent.ShowAlert(data, onResult, nextEventId++))
+            if (sendResult.isFailure) onResult(false)
+        }
+    }
+
+    /**
+     * 以应用内弹窗替换 WebView 原生 `prompt()` 对话框；用户取消时 [onResult] 收到 null。
+     */
+    fun showNativePrompt(tipText: String, defaultText: String, onResult: (String?) -> Unit) {
+        coroutineScope.launch(Dispatchers.Main) {
+            val data = PromptDialogData(
+                title = getString(Res.string.wb_native_dialog_title),
+                tip = tipText,
+                defaultText = defaultText,
+                validatorJsFunction = null
+            )
+            val errorFlow = MutableSharedFlow<String?>(extraBufferCapacity = 1)
+            val onCancel: () -> Unit = { onResult(null) }
+            val onRequestValidation: (String, () -> Unit) -> Unit = { input, onSuccess ->
+                onResult(input)
+                onSuccess()
+            }
+            val sendResult = uiEventChannel.trySend(
+                WebUiEvent.ShowPrompt(data, onRequestValidation, errorFlow.asSharedFlow(), onCancel, nextEventId++)
+            )
+            if (sendResult.isFailure) onResult(null)
+        }
+    }
+
+    private inline fun <reified T> parsePayload(payloadJson: String?): T? {
+        if (payloadJson == null) return null
+        return try {
+            bridgeJson.decodeFromString<T>(payloadJson)
+        } catch (e: Exception) {
+            AppLog.e(TAG, "桥接 payload 解析失败", e)
+            null
+        }
+    }
+
+    private fun resolveJsPromise(callbackId: String, resultRawJs: String) {
+        val script = buildJsCallbackScript(callbackId, isSuccess = true, resultRawJs = resultRawJs)
+        coroutineScope.launch(Dispatchers.Main) {
+            evaluateJs(script, null)
+        }
+    }
+
+    private fun rejectJsPromise(callbackId: String, errorText: String) {
+        val safeErrorJson = bridgeJson.encodeToString(errorText)
+        val script = buildJsCallbackScript(callbackId, isSuccess = false, resultRawJs = safeErrorJson)
+        coroutineScope.launch(Dispatchers.Main) {
+            evaluateJs(script, null)
+        }
+    }
+}

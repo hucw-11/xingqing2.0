@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <!-- 早八闹钟：normal 级权限，仅用于通过 AlarmClock Intent 写入系统时钟应用 -->
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <!-- 本应用日历账户首次登记时关闭系统自动同步；课程仍通过原有入口手动写回。 -->
+    <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
+    <!--
+      电池优化白名单：设置页「电池优化」入口用
+      `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` 直接弹白名单申请对话框，
+      比只跳到「优化策略」列表页少两步。
+      AOSP `Settings.java` 对该 action 的说明明写「For an app to use this, it also must hold
+      the REQUEST_IGNORE_BATTERY_OPTIMIZATIONS permission」——缺本权限时系统直接拒绝该
+      Intent，设置页入口在真机上点不动（`NotificationSettingUtils.openIgnoreBatteryOptimizationSettings`）。
+      仅 normal 级权限、不弹运行时授权框；最终是否放行仍由用户在系统对话框决定。
+    -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!--
+      包可见性（Android 11+ / targetSdk 37）：早八写入系统时钟前用
+      `packageManager.resolveActivity(ACTION_SET_ALARM)` 探测「是否装了时钟应用」。
+      该查询受包可见性过滤，缺此声明会恒返回 null → 早八永远走应用内降级、永远写不进
+      系统时钟；且因为「没发生交互」，可见性也不会事后自动补授，形成自锁。
+      startActivity 本身不受过滤，所以缺声明时是「探测失败、写入从未尝试」。
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.SET_ALARM" />
+        </intent>
+        <!--
+          文件导入/导出：FileManager.android.kt 在 buildImportIntent() / canCreateDocument() 里用
+          `resolveActivity` / `queryIntentActivities` 探测这三类「文件选择器」的处理者。
+          DocumentsUI（com.android.documentsui）不在系统自动可见集合内（AOSP 默认只有
+          com.android.settings、com.android.providers.settings 强制可查询），自身也未声明
+          android:forceQueryable，缺此声明时三处查询恒为 null / 空集：buildImportIntent 的
+          三级选路退化成最裸的 GET_CONTENT（即本类 KDoc 记录的 MIUI「选择器一闪而过」），
+          canCreateDocument() 恒 false 使导出永远落到「下载/ShangKe」兜底、无法自选位置。
+          与 SET_ALARM 那条不同，这里必须带 <data android:mimeType="*/*"/>：
+          IntentFilter.matchData 对「自身声明了 MIME 类型的 filter」走 findMimeType(type)，
+          而 findMimeType(null) 直接返回 false ⇒ 不带 data 的声明匹配不上任何文件选择器。
+          （<category> 无需声明：文档明确「加 category 对匹配无影响，除非 Intent 里指定了它」。）
+        -->
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.CREATE_DOCUMENT" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".MyApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.shangkeschedule"
+        tools:targetApi="33"
+        android:enableOnBackInvokedCallback="true">
+
+        <!-- 系统日历通过账户类型读取图标；与桌面入口共用 ic_launcher。 -->
+        <service
+            android:name=".calendar.CalendarAuthenticatorService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/calendar_authenticator" />
+        </service>
+
+        <service
+            android:name=".calendar.CalendarSyncAdapterService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.content.SyncAdapter" />
+            </intent-filter>
+            <meta-data
+                android:name="android.content.SyncAdapter"
+                android:resource="@xml/calendar_sync_adapter" />
+        </service>
+
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.shangkeschedule">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- v4.66.0（L1）：系统文本选择工具栏条目。选中任意外部文本（浏览器/微信/备忘录）
+                 → 工具栏点「上课」（条目名取 application 的 android:label = @string/app_name）
+                 → MainActivity 读 EXTRA_PROCESS_TEXT 交给「文本粘贴导入」页预填。
+                 只声明 text/plain：选中文本的 Intent 一律是该类型，窄声明不会漏。 -->
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".service.DynamicIslandService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="状态栏实时显示当前/下一节课状态" />
+        </service>
+
+        <receiver
+            android:name=".service.DynamicIslandAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".service.notification.receiver.ReminderAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- 小组件「课表边界」精确闹钟接收器（v4.67.36）：在每节课的开始前 15 分 / 开始 /
+             开始后 6 分 / 结束四个时刻直接刷新桌面组件，使「正在上课 → 下一节课」这类
+             时刻型内容准时翻转，而不必等 15 分钟 tick。
+             必须静态注册：闹钟可能在进程被杀时触发，运行时注册收不到。 -->
+        <receiver
+            android:name=".widget.WidgetRefreshAlarmReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.hucw.xinqing2.action.WIDGET_BOUNDARY_REFRESH" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".service.notification.receiver.AutoModeAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- 「闹钟和提醒」权限状态变更（XL-003）：此前全仓无监听，用户撤销权限后系统
+             静默取消全部精确闹钟，App 侧毫无感知，提醒全线失灵且无从排查。
+             必须静态注册：权限变更发生在用户离开本 App 之后，运行时注册收不到。
+             撤销时降级重排（延迟但不再静默），恢复时重排升级回精确闹钟。 -->
+        <receiver
+            android:name=".service.notification.receiver.AlarmPermissionReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 时间/时区/日期/语言变更：闹钟时间基准的纠偏入口。
+             此前由 MyApplication 在启动期运行时注册，与进程同寿 —— 用户在 App 未启动时
+             改时区或改系统时间，已排闹钟不重排，课表整体偏移且 App 无感知。
+             TIME_SET / TIMEZONE_CHANGED / LOCALE_CHANGED 在官方隐式广播豁免清单内，
+             静态注册照常投递；DATE_CHANGED **不在**清单内（见 TimeChangeReceiver KDoc），
+             保留它只是「万一 OEM 投递」的免费机会，跨天不能依赖它
+             —— 跨天由 .widget.WidgetDayBoundaryReceiver 的精确闹钟负责。 -->
+        <receiver
+            android:name=".service.notification.TimeChangeReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 旧版课程/自动模式闹钟接收器：冻结保留一版做升级兵底。
+             升级安装后旧版已排下的闹钟会指向本类，待 LegacyAlarmMigrator 首次运行清理完毕。
+             下个大版本连同 LegacyAlarmMigrator 一并移除。 -->
+        <receiver
+            android:name=".service.CourseAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".service.BootEventReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <!-- 只保留 BOOT_COMPLETED：LOCKED_BOOT_COMPLETED 只投递给
+                     android:directBootAware="true" 的组件，本应用未声明（也不应声明 ——
+                     Room/DataStore 全为 credential-protected，解锁前读不到库），且
+                     BootEventReceiver 本身也只处理 ACTION_BOOT_COMPLETED。
+                     故该 action 是永不投递的死配置，删之。 -->
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 应用升级即时刷新小组件：升级后桌面残留旧版渲染，打开 App 前推一次全量渲染。 -->
+        <receiver
+            android:name=".widget.WidgetPackageReplacedReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 小组件跨天精确锚点（v4.80.4）：由 WidgetDayBoundaryAlarmScheduler 的精确闹钟
+             （每日 00:00:20）显式拉起。刻意没有 intent-filter —— 该闹钟用显式 PendingIntent
+             指定组件，不需要也不应对外声明 action。零点后在此同步组件数据并重绘全部组件：
+             WorkManager 的 00:05 自愈是不精确任务（Doze 下可推迟数小时），而 DATE_CHANGED
+             投递不到 manifest 接收器，两者都保证不了「零点后立刻翻页」。 -->
+        <receiver
+            android:name=".widget.WidgetDayBoundaryReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- 列表型小组件（今日课程 / 周课程）的 ListView 数据源（v4.83.0）：
+             课程超出可视高度时组件内可滑动。exported=false：仅本应用的 RemoteViews 绑定，
+             RemoteViewsService 的 intent 无 action、由布局 setRemoteAdapter 显式指定类名。 -->
+        <service
+            android:name=".widget.courselist.CourseListRemoteViewsService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+
+        <receiver
+            android:name=".widget.tiny.TinyNativeProvider"
+            android:label="@string/widget_name_tiny"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/shangkeschedule_tiny_widget" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.compact.CompactNativeProvider"
+            android:label="@string/widget_name_compact"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/shangkeschedule_compact_widget" />
+        </receiver>
+
+
+        <receiver
+            android:name=".widget.double_days.DoubleDaysNativeProvider"
+            android:label="@string/widget_name_double_days"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/shangkeschedule_double_days_widget" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.list_vertical.ListVerticalNativeProvider"
+            android:exported="false"
+            android:label="@string/widget_name_list_vertical">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/shangkeschedule_list_vertical_widget" />
+        </receiver>
+
+        <!-- 下一节课（v4.67.0 新增）：只显示下一节课 + 倒计时，跨天退化为「明日第一节」 -->
+        <receiver
+            android:name=".widget.next_course.NextCourseNativeProvider"
+            android:exported="false"
+            android:label="@string/widget_name_next_course">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/shangkeschedule_next_course_widget" />
+        </receiver>
+
+        <!-- 考试倒计时（v4.67.0 新增）：最近一场考试 + 天数倒计时，数据来自日程表 exam 分类 -->
+        <receiver
+            android:name=".widget.exam_countdown.ExamCountdownNativeProvider"
+            android:exported="false"
+            android:label="@string/widget_name_exam_countdown">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/shangkeschedule_exam_countdown_widget" />
+        </receiver>
+
+        <!-- 周课程（v4.67.0 新增）：今天起 7 天的课程，按「日期 + 时间 + 课程名」逐行 -->
+        <receiver
+            android:name=".widget.week_courses.WeekCoursesNativeProvider"
+            android:exported="false"
+            android:label="@string/widget_name_week_courses">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/shangkeschedule_week_courses_widget" />
+        </receiver>
+
+        <!-- 日程清单（v4.67.0 新增）：日期 >= 今天的日程，左侧色条按类别取色 -->
+        <receiver
+            android:name=".widget.agenda_list.AgendaListNativeProvider"
+            android:exported="false"
+            android:label="@string/widget_name_agenda_list">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/shangkeschedule_agenda_list_widget" />
+        </receiver>
+
+        <!-- G1：「下一节课」常驻通知里的「关闭常驻」动作（应用内广播，不对外暴露） -->
+        <receiver
+            android:name=".service.notification.receiver.NextClassControlReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.hucw.xinqing2.action.DISABLE_NEXT_CLASS_NOTIFICATION" />
+            </intent-filter>
+        </receiver>
+
+        <!-- App Startup：只摘掉 WorkManager 的自动初始化，交给 Koin 的 workManagerFactory() 接管
+             （见 MyApplication.onCreate）。这里必须用 meta-data 级移除：整个 InitializationProvider
+             节点同时承载 emoji2 / profileinstaller / lifecycle-process / okhttp-android 四个库声明的
+             初始化器，一起删掉会让它们静默失效；其中 okhttp-android 的 PlatformInitializer 是应用
+             Context 的唯一来源，缺它时 PlatformRegistry.getApplicationContext() 为 null，OkHttp 无法
+             加载 publicsuffix 资产（okhttp 自己的报错文案就叫 "Startup Initializer possibly disabled"）。 -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                tools:node="remove" />
+        </provider>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>

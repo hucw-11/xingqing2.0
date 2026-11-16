@@ -1,0 +1,393 @@
+package com.shangkeschedule.data.model
+
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.cbor.Cbor
+import kotlinx.serialization.cbor.ByteString
+
+object CourseImportExport {
+
+    /**
+     * 核心数据规范版本号
+     * 确立基础全量多课表 CBOR 备份协议规范
+     * 未来如果重构了底层数据架构（如颠覆了基础字段或关联关系），可手动升级为 2，借此编写迁移清洗流
+     */
+    // v3：作息节次身份保持稳定，允许删除未使用节次后出现编号间隔。
+    const val COURSE_SCHEMA_VERSION = 3
+
+    /**
+     * 全局用户数据（待办 / 日程 / 成绩 / 课堂笔记 / 培养方案课程）备份规范版本号。
+     * v1：首次纳入全量备份（此前这两个表完全不进备份，换机/恢复即丢）。
+     * v2：新增成绩表（`grades`）；旧 v1 备份缺该字段 ⇒ 解码为 null ⇒ 恢复时**不动**本机成绩，
+     *     避免「用老备份恢复」把成绩静默清空。
+     * v3：新增课堂笔记表 `course_notes`。
+     * v4：新增培养方案课程表 `curriculum_courses`（学业情况「应修 / 已修 / 未修」）。
+     *     同样可空：旧备份缺该字段 ⇒ 解码为 null ⇒ 恢复时不动本机课程清单。
+     */
+    // 3：新增课堂笔记表 course_notes
+    // 4：新增培养方案课程表 curriculum_courses
+    // 5：笔记图片内容及跨设备路径重建
+    const val USER_DATA_SCHEMA_VERSION = 5
+
+    /**
+     * 自定义 Json 解析器
+     * ignoreUnknownKeys = true: 确保旧版 App 遇到新加的字段（如 remark）时能跳过而不崩溃
+     * encodeDefaults = true: 导出时即使字段是默认值也会包含在 JSON 中
+     */
+    val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        coerceInputValues = true
+    }
+
+    /**
+     * CBOR 解析器（用于全盘多表备份、WebDAV 高密二进制流场景）
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    val cbor = Cbor {
+        ignoreUnknownKeys = true
+    }
+
+    /**
+     * 全盘备份文件的最外层“集装箱”
+     */
+    @Serializable
+    data class TotalAppBackupEnvelope(
+        val backupTimestamp: Long,          // 备份生成的时间戳
+        val appVersionCode: Int,            // 实际承载 CURRENT_SCHEMA_VERSION，代表数据协议版本
+        val currentCourseTableId: String,   // 备份前用户当前激活/选中的课表 ID
+        val allTables: List<SingleTablePack> // 系统中所有课表的总集合列表
+    )
+
+    /**
+     * 单个课表资产的隔离包裹
+     */
+    @Serializable
+    data class SingleTablePack(
+        val tableId: String,          // 课表在数据库中的物理 UUID 主键
+        val tableName: String,        // 课表名称
+        val createdAt: Long,          // 课表本身的创建时间戳，用于恢复后列表排序
+        val tableData: CourseTableExportModel, // 直接复用单表导出模型
+        // v2 备份新增：情侣课表标记与配对关系（缺省兼容 v1 备份）
+        val isCouple: Boolean = false,
+        val pairedCourseTableId: String? = null
+    )
+
+
+
+    // 用于 JSON 导入和导出的配置模型
+    @Serializable
+    data class CourseConfigJsonModel(
+        val semesterStartDate: String? = null,
+        val semesterTotalWeeks: Int = 20,
+        val defaultClassDuration: Int = 45,
+        val defaultBreakDuration: Int = 10,
+        val firstDayOfWeek: Int = 1,
+        // v2 备份：作息方案与显示偏好随备份走（缺省兼容 v1 备份/旧 JSON 文件）
+        val currentSchemeId: String = "default",
+        val autoSwitchScheme: Boolean = false,
+        val showWeekends: Boolean = false
+    )
+
+    // 导入时使用的 JSON 模型
+    @Serializable
+    data class CourseTableImportModel(
+        val courses: List<ImportCourseJsonModel>,
+        val timeSlots: List<TimeSlotJsonModel>? = emptyList(),
+        val config: CourseConfigJsonModel? = null,
+        // v2 备份：作息方案元信息（旧 JSON 文件缺省为空列表，导入跳过）
+        val timeSlotSchemes: List<SchemeMetaJsonModel> = emptyList()
+    )
+
+    @Serializable
+    data class ImportCourseJsonModel(
+        val id: String? = null,
+        val name: String,
+        val teacher: String,
+        val position: String,
+        val day: Int,
+        val startSection: Int? = null,
+        val endSection: Int? = null,
+        val weeks: List<Int>,
+        val isCustomTime: Boolean = false,
+        val customStartTime: String? = null,
+        val customEndTime: String? = null,
+        val color: Int? = null,
+        val remark: String? = null,
+        val credit: String? = null,
+        val assessmentMethod: String? = null,
+        val isLab: Boolean = false
+    )
+
+    // 导出时使用的 JSON 模型
+    @Serializable
+    data class CourseTableExportModel(
+        val courses: List<ExportCourseJsonModel>,
+        val timeSlots: List<TimeSlotJsonModel>,
+        val config: CourseConfigJsonModel,
+        // v2 备份：全部作息方案元信息（旧 JSON 文件缺省为空列表，导入跳过）
+        val timeSlotSchemes: List<SchemeMetaJsonModel> = emptyList()
+    )
+
+    @Serializable
+    data class ExportCourseJsonModel(
+        val id: String, // 导出时id必须
+        val name: String,
+        val teacher: String,
+        val position: String,
+        val day: Int,
+        val startSection: Int? = null,
+        val endSection: Int? = null,
+        val color: Int, // 导出时颜色必须
+        val weeks: List<Int>,
+        val isCustomTime: Boolean = false,
+        val customStartTime: String? = null,
+        val customEndTime: String? = null,
+        val remark: String?,
+        val credit: String? = null,
+        val assessmentMethod: String? = null,
+        val isLab: Boolean = false
+    )
+
+    // 导入和导出都通用的时间段模型
+    // v2 备份起携带 schemeId（默认 "default"，兼容 v1 备份/旧 JSON 文件）
+    @Serializable
+    data class TimeSlotJsonModel(
+        val number: Int,
+        val startTime: String,
+        val endTime: String,
+        val alias: String? = null,
+        val schemeId: String = "default"
+    )
+
+    /** 作息方案元信息（生效日期范围，夏/冬令时自动切换）；v2 备份新增。 */
+    @Serializable
+    data class SchemeMetaJsonModel(
+        val schemeId: String,
+        val startMonthDay: String? = null,
+        val endMonthDay: String? = null
+    )
+
+    /**
+     * 应用设置备份信封
+     * 枚举类型统一用字符串存储，避免跨版本序列化问题
+     */
+    @Serializable
+    data class AppSettingsBackupEnvelope(
+        val backupTimestamp: Long,
+        val appVersionCode: Int,
+        val settings: AppSettingsBackupModel
+    )
+
+    /**
+     * 应用设置备份模型（App 自身备份通道：本地 zip / WebDAV）。
+     *
+     * 字符串编码契约（两套编码，**不要混用**）：本模型的枚举字段一律存**枚举常量名**
+     * （`.name`，如 `HZ_120` / `SCALE_4`），恢复端按同名 `valueOf` 解析；DataStore 侧存的是
+     * **枚举 value**（刷新率存 `"120"`、绩点制存 `"4.0"`），读取走 `fromString`。两者只对
+     * 大多数取值恰好同形，`RefreshRateMode` 与 `GpaScale` 并不同形。
+     *
+     * 可空字段（`?`）的约定：旧备份缺该字段 ⇒ 解码为 null ⇒ 恢复时**保留设备现值**；
+     * 反之非空字段的默认值会在旧备份里兜底写入，所以默认值必须与 `AppSettingsModel` 一致
+     * （v3.25.0 之前的备份没有 `glassBlurRadiusDp`，历史上正是这样把模糊半径写回 4dp 的）。
+     * `themePreset` 还额外要求恢复端走 `AppThemePreset.fromString`（含已删除取值迁移）。
+     */
+    @Serializable
+    data class AppSettingsBackupModel(
+        val currentCourseTableId: String = "",
+        val reminderEnabled: Boolean = false,
+        val remindBeforeMinutes: Int = 15,
+        val skippedDates: Set<String> = emptySet(),
+        val autoModeEnabled: Boolean = false,
+        val autoControlMode: String = "DND",
+        val compatWearableSync: Boolean = false,
+        val showNonCurrentWeekCourses: Boolean = false,
+        val startScreen: String = "COURSE_SCHEDULE",
+        val themeMode: String = "FOLLOW_SYSTEM",
+        // 必须可空：旧备份缺字段 ⇒ 恢复时保留设备现值。
+        // 早期取值 ORIGINAL / SLEEPY / TIMETABLE / AIRY 已从枚举删除，故这里不能写死 "ORIGINAL"：
+        // 那是已不存在的枚举名，恢复端用 valueOf 解析会失败并静默丢掉备份里的主题选择（应经 fromString 迁移）。
+        val themePreset: String? = null,
+        val developerModeEnabled: Boolean = false,
+        val coupleScheduleEnabled: Boolean = false,
+        /** 情侣叠加显示课程时间段（v3.53.3 起随备份迁移）；可空：旧备份缺字段 ⇒ 恢复时保留设备现值 */
+        val coupleShowTimeRanges: Boolean? = null,
+        val selfCourseColorIndex: Int = 5,
+        val crushCourseColorIndex: Int = 1,
+        val scheduleViewMode: String = "WEEK",
+        /**
+         * 液态玻璃模糊半径（dp），0 = 关闭模糊；v3.25.0 新增。
+         * 必须可空：v3.25.0 之前的备份没有该字段，若用非空默认值（4f）解码，恢复时会把用户
+         * 已调好的模糊半径静默重置为 4dp（App 现默认 8dp，见 AppSettingsModel.glassBlurRadiusDp）。
+         */
+        val glassBlurRadiusDp: Float? = null,
+        /**
+         * 液态玻璃边缘折射（v3.49.3 起随备份迁移）。
+         * 必须可空：旧版本备份缺这些字段时 CBOR 解码为 null ⇒ 恢复时保留设备现值；
+         * 若用非空默认值（false/16f…），旧备份会把用户已调好的折射静默重置。
+         */
+        val glassRefractionEnabled: Boolean? = null,
+        val glassRefractionHeightDp: Float? = null,
+        val glassRefractionAmountDp: Float? = null,
+        val glassRefractionDispersion: Boolean? = null,
+        val glassRefractionDepthEffect: Boolean? = null,
+        /** 全局动画风格名（GLASS/GENTLE/SNAPPY）；v3.26.0 新增 */
+        val animationStyle: String = "GLASS",
+        /**
+         * 已关闭的动画分组名集合；v3.26.0 新增。
+         *
+         * R45-01：改为**可空**。本字段与 animationStyle 同为 v3.26.0 新增，
+         * 但同批新增字段（v2 起的 21 个）一律声明为可空 —— 依本模型 KDoc「可空字段的约定」：
+         * 旧备份缺该字段 ⇒ 解码为 null ⇒ 恢复时保留设备现值。
+         * 保持非空默认 emptySet() 会让**旧备份缺字段时兜底写入空集**，
+         * 于是恢复一次就把用户已关闭的动画分组全部重置为「开启」（用户视觉上突然全屏动画）。
+         */
+        val disabledAnimationGroups: Set<String>? = null,
+
+        // ---- v2 新增：此前未纳入备份、换机恢复即丢的字段 ----
+        // 全部可空：旧备份缺字段 ⇒ CBOR 解码为 null ⇒ 恢复时保留设备现值，
+        // 避免用非空默认值（""/false）把用户已填写的资料静默清空。
+        val dynamicIslandEnabled: Boolean? = null,
+        val reduceMotionEnabled: Boolean? = null,
+        val motionSpeed: String? = null,
+        val nextCardMode: String? = null,
+        val refreshRateMode: String? = null,
+        val profileNickname: String? = null,
+        val profileSchool: String? = null,
+        val profileCollege: String? = null,
+        val profileMajor: String? = null,
+        val profileGrade: String? = null,
+        val profileSignature: String? = null,
+        val profileAvatarPath: String? = null,
+
+        // ---- v3 新增：早八闹钟（写入系统时钟应用）----
+        // 可空：旧备份缺字段 ⇒ 解码为 null ⇒ 恢复时保留设备现值
+        val morningAlarmEnabled: Boolean? = null,
+        val morningAlarmLeadMinutes: Int? = null,
+        val morningAlarmMode: String? = null,
+        val morningAlarmWeeklyTimes: Map<Int, String>? = null,
+
+        // ---- v4 新增：学业要求 / 绩点制 / 常驻通知开关 ----
+        // 同样可空：旧备份缺字段 ⇒ null ⇒ 恢复时保留设备现值
+        /** 培养方案学分要求（[CreditRequirement] 列表的 JSON 串）。 */
+        val creditRequirements: String? = null,
+        /** 绩点制名称（GpaScale 枚举的 name）。 */
+        val gpaScale: String? = null,
+        val nextClassNotificationEnabled: Boolean? = null,
+        val examCountdownReminderEnabled: Boolean? = null
+    )
+
+    /**
+     * 全局用户数据（待办 + 日程 + 成绩 + 课堂笔记 + 培养方案课程）备份信封。
+     *
+     * 背景：`todo_items` / `schedule_events` 是 Room 实体，但此前不属于任何备份模块，
+     * 全量备份/恢复（本地 zip 与 WebDAV）完全不覆盖它们 —— 换机或恢复后这两张表为空。
+     * v2：`grades` 也纳入（在此之前成绩同样完全不进备份）。
+     * v3：`course_notes` 课堂笔记也纳入。v5 起图片内容一同备份并在恢复时重新落盘。
+     * v4：`curriculum_courses` 培养方案课程清单也纳入（学业情况的「应修 / 已修 / 未修」依赖它）。
+     */
+    @Serializable
+    data class UserDataBackupEnvelope(
+        val backupTimestamp: Long,
+        val appVersionCode: Int,
+        val todos: List<TodoBackupModel> = emptyList(),
+        val events: List<ScheduleEventBackupModel> = emptyList(),
+        // 可空（而非默认空列表）：旧 v1 备份缺该字段 ⇒ 解码为 null ⇒ 恢复时不动本机成绩，
+        // 避免「用老备份恢复」把成绩静默清空。
+        val grades: List<GradeBackupModel>? = null,
+        // 可空（v3 新增）：旧备份缺该字段 ⇒ 解码为 null ⇒ 恢复时不动本机笔记。
+        val notes: List<CourseNoteBackupModel>? = null,
+        // 可空（v4 新增）：旧备份缺该字段 ⇒ 解码为 null ⇒ 恢复时不动本机培养方案课程。
+        val curriculumCourses: List<CurriculumCourseBackupModel>? = null,
+        // v5：附件以相对身份和字节打包，imagePaths 存对应键；旧版本为 null。
+        val noteImages: Map<String, NoteImageBackupModel>? = null
+    )
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Serializable
+    data class NoteImageBackupModel(@ByteString val bytes: ByteArray)
+
+    /**
+     * 培养方案课程备份模型（v4 新增）。
+     *
+     * 字段与 Room 实体 `CurriculumCourse` 一一对应。
+     */
+    @Serializable
+    data class CurriculumCourseBackupModel(
+        val id: String,
+        val courseName: String,
+        val category: String? = null,
+        val credit: Double? = null,
+        val suggestedTerm: String? = null,
+        val source: String = "MANUAL",
+        val createdAt: Long = 0L,
+        val updatedAt: Long = 0L
+    )
+
+    @Serializable
+    data class CourseNoteBackupModel(
+        val id: String,
+        val courseId: String,
+        val date: String,
+        val sections: String? = null,
+        val title: String = "",
+        val content: String = "",
+        val imagePaths: String? = null,
+        val createdAt: Long = 0L,
+        val updatedAt: Long = 0L
+    )
+
+    @Serializable
+    data class TodoBackupModel(
+        val id: String,
+        val date: String,
+        val title: String,
+        val note: String? = null,
+        val time: String? = null,
+        val done: Boolean = false,
+        val sortOrder: Int = 0,
+        val createdAt: Long = 0L,
+        val updatedAt: Long = 0L
+    )
+
+    @Serializable
+    data class ScheduleEventBackupModel(
+        val id: String,
+        val date: String,
+        val title: String,
+        val category: String = "other",
+        val isAllDay: Boolean = false,
+        val startTime: String? = null,
+        val endTime: String? = null,
+        val location: String? = null,
+        val note: String? = null,
+        val done: Boolean = false,
+        val createdAt: Long = 0L,
+        val updatedAt: Long = 0L
+    )
+
+    /**
+     * 成绩记录备份模型（v2 新增）。
+     *
+     * 字段与 Room 实体 `Grade` 一一对应；`source` 默认值为手工录入（`Grade.SOURCE_MANUAL`）。
+     */
+    @Serializable
+    data class GradeBackupModel(
+        val id: String,
+        val semester: String,
+        val courseName: String,
+        val credit: Double? = null,
+        val scoreText: String? = null,
+        val scoreValue: Double? = null,
+        /** 本校教务给出的绩点（v4.75.0）；旧备份缺该字段 ⇒ null ⇒ 按分数换算。 */
+        val gradePoint: Double? = null,
+        val category: String? = null,
+        val isRetake: Boolean = false,
+        val note: String? = null,
+        val source: String = "MANUAL",
+        val createdAt: Long = 0L,
+        val updatedAt: Long = 0L
+    )
+
+}

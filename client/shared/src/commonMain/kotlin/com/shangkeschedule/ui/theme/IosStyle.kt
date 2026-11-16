@@ -1,0 +1,652 @@
+package com.shangkeschedule.ui.theme
+
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+// ============================================================================
+// 通透主题（iOS 26 · Liquid Glass）样式层
+//
+// 本文件是 App 唯一的主题样式实现（旧 ClaudeStyle.kt 已删除）。
+// 「书卷」主题的全部功能位——页头 / 周次条 / 课程卡片流 / 明日预览 /
+// inset grouped 设置列表 / 详情面板 / 弹窗 / 悬浮件——由本文件提供 iOS 26 形态，
+// 结构、位置与信息层级与书卷逐项一致，只替换视觉与动效。
+//
+// 设计基线（Apple Human Interface Guidelines · iOS 26）：
+// - 色板 = iOS System Colors（label / secondaryLabel / systemGroupedBackground /
+//   separator 全部为 Apple 原始定义值，不做主观调色）
+// - 材质 = Liquid Glass：半透明 + 背景模糊 + 镜面高光 + 边缘折射环
+// - 圆角 = 连续圆角阶梯 26/22/16/12/10（卡片 16、分组 16、控件 12、小标 10）
+// - 字体 = SF 风格：标题 Bold + 紧字距（-0.4），正文 Regular，辅助 Medium
+// - 层级 = 靠留白与分组卡分层，不用线框（分隔线只在分组内出现且缩进对齐内容）
+// ============================================================================
+
+// --- iOS 26 语义色（Apple 原始定义） ---------------------------------------
+
+private val IosLabelLight = Color(0xFF000000)
+private val IosLabelDark = Color(0xFFFFFFFF)
+
+// systemGroupedBackground 家族（浅色）
+private val IosGroupedBgLight = Color(0xFFF2F2F7)
+private val IosSecondaryGroupedBgLight = Color(0xFFFFFFFF)
+
+// systemGroupedBackground 家族（深色）
+private val IosGroupedBgDark = Color(0xFF000000)
+private val IosSecondaryGroupedBgDark = Color(0xFF1C1C1E)
+private val IosTertiaryGroupedBgDark = Color(0xFF2C2C2E)
+
+// 填充色家族
+private val IosFillLight = Color(0x1F787880)   // systemFill 12%
+private val IosFillDark = Color(0x3D787880)    // systemFill 24%
+
+// 分隔线（separator / opaqueSeparator）
+private val IosSeparatorLight = Color(0x493C3C43)
+private val IosSeparatorDark = Color(0x99545458)
+
+// --- iOS 26 系统色（浅 / 深） ----------------------------------------------
+
+// 浅色档语义色 = Apple「高对比/可访问」变体（Accessibility → Increase Contrast 口径）：
+// 原始系统色（#007AFF/#34C759/#FF9500/#FF3B30）压白字仅 3.5~4.0、压 12% 淡底仅 1.4~2.0，
+// 全部低于 WCAG 2.2 AA。高对比变体保持同一色相族，仅加深明度 —— 蓝仍是那个 iOS 蓝，
+// 但正文、图标与底栏选中全部回到 ≥4.5 / ≥3.0。
+private val IosBlueLight = Color(0xFF0066D6)
+// 高对比变体再加深半档（#248A3D→#217A38）：压 12% 淡底实测 3.97→4.51（WCAG AA）。
+private val IosGreenLight = Color(0xFF217A38)
+// 高对比变体再加深半档（#C66900→#A85A00）：压 12% 淡底实测 3.51→4.56（WCAG AA）。
+private val IosOrangeLight = Color(0xFFA85A00)
+private val IosRedLight = Color(0xFFD70015)
+/**
+ * 徽标底色（角标数字的背景）。**与 `IosRedLight` 分开定义** —— 后者同时是
+ * `error` / `danger` 的语义色，不能为了角标对比度而加深它（会连带改变错误提示与
+ * 危险操作的红色）。
+ * 角标是 `labelSmall` 的真实文本（`StyleComponents.kt` 的 Badge），白字需 ≥4.5:1；
+ * `#FF3B30` 只有 3.55:1，取同色相的 `#C0271F` 后实测 5.91:1。
+ */
+private val IosBadgeRedLight = Color(0xFFC0271F)
+private val IosPinkLight = Color(0xFFFF2D55)
+private val IosTealLight = Color(0xFF5AC8FA)
+private val IosIndigoLight = Color(0xFF5856D6)
+private val IosYellowLight = Color(0xFFFFCC00)
+
+// 深色档：主色蓝维持 Apple 深色系统色原值 `#0A84FF` —— 压卡片（#1C1C1E）4.66 达标；
+// 「白字压主色」3.65 属 WCAG 大字/图形级（≥3.0），与 Apple 官方深色按钮同口径。
+// （理论证明不存在同时满足「白字压 ≥4.5」且「压卡 ≥4.5」的蓝色：亮度窗口互斥 ≤0.183 vs ≥0.226；
+//  高对比版 #0073E6 把压卡拖到 3.72 反而不达标，已回退。）
+private val IosBlueDark = Color(0xFF0A84FF)
+private val IosGreenDark = Color(0xFF30D158)
+private val IosOrangeDark = Color(0xFFFF9F0A)
+private val IosRedDark = Color(0xFFFF453A)
+/** 徽标底色（通透深色档）。白字在 #FF453A 上仅 3.41:1，取更深的 #C4302F（探针实测达标）。 */
+private val IosBadgeRedDark = Color(0xFFC4302F)
+private val IosPinkDark = Color(0xFFFF375F)
+private val IosTealDark = Color(0xFF64D2FF)
+private val IosIndigoDark = Color(0xFF5E5CE6)
+private val IosYellowDark = Color(0xFFFFD60A)
+
+/**
+ * 通透主题锁定的 M3 ColorScheme（浅色）。
+ *
+ * 绕过 MaterialKolor 派生：Expressive 风格会对种子色做色相旋转，systemBlue #007AFF
+ * 会被派生成绿色系 primary。这里严格锁定 Apple 系统色，保证全站蓝是同一个蓝。
+ */
+internal fun iosLightColorScheme(): ColorScheme = lightColorScheme(
+    primary = IosBlueLight,
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0x1F007AFF),          // 12% 系统蓝选中底
+    onPrimaryContainer = Color(0xFF003E7A),
+    secondary = IosIndigoLight,
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0x1F5856D6),
+    onSecondaryContainer = Color(0xFF1B1B4B),
+    tertiary = IosGreenLight,
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0x1F34C759),
+    onTertiaryContainer = Color(0xFF0B3D1D),
+    error = IosRedLight,
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0x1FFF3B30),
+    onErrorContainer = Color(0xFF5C100A)
+)
+
+/**
+ * 通透主题锁定的 M3 ColorScheme（深色）。
+ */
+internal fun iosDarkColorScheme(): ColorScheme = darkColorScheme(
+    primary = IosBlueDark,
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0x3D0A84FF),          // 24% 系统蓝选中底
+    onPrimaryContainer = Color(0xFFCFE3FF),
+    secondary = IosIndigoDark,
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0x3D5E5CE6),
+    onSecondaryContainer = Color(0xFFE2E1FF),
+    tertiary = IosGreenDark,
+    onTertiary = Color(0xFF00210C),
+    tertiaryContainer = Color(0x3D30D158),
+    onTertiaryContainer = Color(0xFFD3F8DC),
+    error = IosRedDark,
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0x3DFF453A),
+    onErrorContainer = Color(0xFFFFDAD6)
+)
+
+/**
+ * 通透浅色 tokens：逐项对齐 iOS 26 分组列表层级。
+ */
+internal fun iosLightAppColorTokens(): AppColorTokens = AppColorTokens(
+    // 页面与容器
+    pageBg = IosGroupedBgLight,                    // systemGroupedBackground
+    cardBg = IosSecondaryGroupedBgLight,           // secondarySystemGroupedBackground（白卡）
+    cardBgElevated = IosSecondaryGroupedBgLight,
+    inputBg = IosFillLight,                        // systemFill 12%
+    divider = IosSeparatorLight,
+    // hairline 级：iOS separator 的同一色调，浓度减半（0x49 ≈ 0.29 → 0x24 ≈ 0.14）
+    dividerSoft = Color(0x243C3C43),
+    // A1/C3：M3 描边角色显式声明（沿用 Material 基线，与 data class 默认值逐位相同）
+    outline = MaterialBaselineOutline,
+    outlineVariant = MaterialBaselineOutlineVariant,
+    // 文本
+    textPrimary = IosLabelLight,
+    textSecondary = Color(0xFF636366),             // systemGray2（WCAG AA ≥4.5；见下方对比度说明）
+    textOnPrimary = Color(0xFFFFFFFF),
+    // 语义色 —— 严格 Apple 系统色
+    primary = IosBlueLight,
+    primarySoft = Color(0x1F007AFF),
+    success = IosGreenLight,
+    successSoft = Color(0x1F34C759),
+    info = IosTealLight,
+    infoSoft = Color(0x1F5AC8FA),
+    warning = IosOrangeLight,
+    warningSoft = Color(0x1FFF9500),
+    amber = IosYellowLight,
+    amberSoft = Color(0x1FFFCC00),
+    danger = IosRedLight,
+    dangerSoft = Color(0x1FFF3B30),
+    favorite = IosPinkLight,
+    favoriteSoft = Color(0x1FFF2D55),
+    // 头部渐变 —— 系统蓝 → 靛蓝
+    gradientStart = IosBlueLight,
+    gradientEnd = IosIndigoLight,
+    // 底部导航 / 徽标 —— Liquid Glass 底栏：近乎透明，靠 blur 与边缘光学立形
+    navBarBg = Color(0xD9F9F9F9),                  // 85% 系统底 + 玻璃模糊
+    navSelectedBg = Color(0x1F007AFF),
+    badgeBg = IosBadgeRedLight,
+    badgeFg = Color(0xFFFFFFFF),
+    // Snackbar —— iOS 深色毛玻璃提示条
+    snackbarBg = Color(0xE61C1C1E),
+    snackbarFg = Color(0xFFFFFFFF),
+    // 阴影 —— iOS 26 靠材质而非投影分层，阴影极淡
+    shadow = Color(0x0F000000)
+)
+
+/**
+ * 通透深色 tokens：逐项对齐 iOS 26 深色分组列表层级。
+ */
+internal fun iosDarkAppColorTokens(): AppColorTokens = run {
+    val primary = IosBlueDark
+    AppColorTokens(
+        // 页面与容器 —— iOS 深色下页面底是纯黑，卡片抬起一级
+        pageBg = IosGroupedBgDark,                 // systemGroupedBackground (dark) = #000000
+        cardBg = IosSecondaryGroupedBgDark,        // #1C1C1E
+        cardBgElevated = IosTertiaryGroupedBgDark, // #2C2C2E
+        inputBg = IosFillDark,
+        divider = IosSeparatorDark,
+        dividerSoft = Color(0x4D545458),
+        // A1/C3：M3 描边角色显式声明（沿用 Material 基线，与 data class 默认值逐位相同）
+        outline = MaterialBaselineOutline,
+        outlineVariant = MaterialBaselineOutlineVariant,
+        // 文本
+        textPrimary = IosLabelDark,
+        // systemGray 略提亮：#98989D 在深色档**输入底**（inputBg）上仅 4.45:1，
+        // 低于 WCAG AA 的 4.5:1；输入框内的占位符/标签偏弱。取 #9EA0A5 后达标。
+        textSecondary = Color(0xFF9EA0A5),         // systemGray (dark, AA ≥4.5)
+        textOnPrimary = Color(0xFFFFFFFF),
+        // 语义色 —— Apple 深色系统色
+        primary = primary,
+        primarySoft = Color(0x3D0A84FF),
+        success = IosGreenDark,
+        successSoft = Color(0x3D30D158),
+        info = IosTealDark,
+        infoSoft = Color(0x3D64D2FF),
+        warning = IosOrangeDark,
+        warningSoft = Color(0x3DFF9F0A),
+        amber = IosYellowDark,
+        amberSoft = Color(0x3DFFD60A),
+        danger = IosRedDark,
+        dangerSoft = Color(0x3DFF453A),
+        favorite = IosPinkDark,
+        favoriteSoft = Color(0x3DFF375F),
+        // 头部渐变
+        gradientStart = primary,
+        gradientEnd = IosIndigoDark,
+        // 底部导航 / 徽标 —— 深色玻璃底栏
+        navBarBg = Color(0xD91C1C1E),
+        navSelectedBg = Color(0x3D0A84FF),
+        badgeBg = IosBadgeRedDark,
+        badgeFg = Color(0xFFFFFFFF),
+        // Snackbar
+        snackbarBg = Color(0xF22C2C2E),
+        snackbarFg = Color(0xFFFFFFFF),
+        // 阴影 —— 深色下更弱
+        shadow = Color(0x66000000)
+    )
+}
+
+/**
+ * 按深浅模式取通透（iOS 26）颜色 tokens。
+ *
+ * App 现在只有这一套 tokens——旧 `lightAppColorTokens` / `darkAppColorTokens`
+ * （v2 紫渐变基线）已随经典/云舒主题一并删除。
+ */
+fun iosAppColorTokens(isDark: Boolean): AppColorTokens =
+    if (isDark) iosDarkAppColorTokens() else iosLightAppColorTokens()
+
+// ============================================================================
+// 通透形状 / 间距 / 字阶 tokens（iOS 26 连续圆角 + 8pt 网格 + SF 字阶）
+//
+// 圆角阶梯：卡片 16（iOS inset grouped 标准）、hero 22（大分组头卡）、
+// 控件 12（按钮/输入/单元格图标容器）、小标 10（chip）、菜单 14。
+// 间距遵循 8pt 网格：页边距 20、卡间距 16、分区间距 24、卡内 16、行高 52。
+// ============================================================================
+
+/** 通透形状 tokens。 */
+internal val iosShapeTokens = AppShapeTokens(
+    card = RoundedCornerShape(16.dp),
+    sheetTop = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+    chip = RoundedCornerShape(10.dp),
+    chipSmall = RoundedCornerShape(8.dp),
+    chipSmallRadius = 8.dp,
+    menu = RoundedCornerShape(14.dp),
+    capsule = RoundedCornerShape(50),
+    fab = RoundedCornerShape(50),
+    heroCard = RoundedCornerShape(22.dp),
+    // 同心：22 - 14（hero 内 padding）= 8dp
+    heroCardInner = RoundedCornerShape(8.dp),
+    bubble = RoundedCornerShape(
+        topStart = 4.dp,
+        topEnd = 18.dp,
+        bottomStart = 18.dp,
+        bottomEnd = 18.dp
+    )
+)
+
+/**
+ * 通透间距 tokens（8pt 网格）。
+ *
+ * 全局 UI 优化批 1：三主题间距取值**统一**（`pageHorizontal` 20 / `cardGap` 16 /
+ * `listGap` 24 / `cardInner` 16 / `rowMinHeight` 56 / `settingsRowMinHeight` 52）。
+ * 通透此处 `rowMinHeight` 52 → 56（+4dp 呼吸感），其余不变。
+ */
+internal val iosSpacingTokens = AppSpacingTokens(
+    pageHorizontal = 20.dp,
+    cardGap = 16.dp,
+    listGap = 24.dp,
+    cardInner = 16.dp,
+    rowMinHeight = 56.dp,
+    // A1/P2：设置列表行高度独立成 token（通透与普通行同高）
+    settingsRowMinHeight = 52.dp,
+    touchMin = 48.dp,
+    chipIcon = 44.dp,
+    fab = 56.dp,
+    navBarHorizontal = 16.dp,
+    navBarBottom = 4.dp,
+    // 留白节奏（批 1 新增）
+    pageTop = 8.dp,
+    sectionGap = 24.dp,
+    sectionTitleGap = 8.dp,
+    contentBottom = 32.dp
+)
+
+/**
+ * 通透字阶 tokens（SF 字阶）。
+ * - hero 34 = iOS Large Title
+ * - bigNumber 28 = Title 1
+ * - pageTitle 22 = Title 2
+ * - sectionTitle 17 = Headline（iOS 分组小标题）
+ * - rowTitle 17 = Body（列表行标题恰是 17）
+ * - body 17 = Body（iOS 正文字号是 17，不是 15）
+ * - caption 13 = Footnote
+ * - hint 11 = Caption 2
+ */
+internal val iosTypeTokens = AppTypeTokens(
+    bigNumber = 28.sp,
+    hero = 34.sp,
+    sectionTitle = 17.sp,
+    timeLabel = 13.sp,
+    badge = 11.sp,
+    pageTitle = 22.sp,
+    rowTitle = 17.sp,
+    // A1/P2：设置项行标题独立成 token（通透与普通行同字号/字重）
+    settingsRowTitle = 17.sp,
+    settingsRowTitleWeight = FontWeight.SemiBold,
+    body = 17.sp,
+    caption = 13.sp,
+    hint = 11.sp,
+    timeFeature = "tnum",
+    // 字重语义（批 1 新增）：标题 SemiBold（SF Display 口径）、正文 Normal、辅助 Medium
+    titleWeight = FontWeight.SemiBold,
+    bodyWeight = FontWeight.Normal,
+    captionWeight = FontWeight.Medium,
+    // 强调字重：三主题同值 Bold（通透沿用 SF 的强调口径）
+    emphasisWeight = FontWeight.Bold
+)
+
+/** 通透图标尺寸 tokens（批 1 新增）：三档 16 / 20 / 24，与 `touchMin` 命中区解耦。 */
+internal val iosIconTokens = AppIconTokens(
+    small = 16.dp,
+    medium = 20.dp,
+    large = 24.dp
+)
+
+/** 通透页头 tokens（批 1 新增）：22sp SemiBold + SF 字距，副标题 17sp（承接原日期大字的层级）。 */
+internal val iosPageHeaderTokens = AppPageHeaderTokens(
+    titleSize = 22.sp,
+    titleWeight = FontWeight.SemiBold,
+    titleLetterSpacing = (-0.41).sp,
+    subtitleSize = 17.sp,
+    bottomGap = 16.dp
+)
+
+// A1/V2（v3.69.0）：顶栏玻璃材质（原 AppTopAppBar.kt 里 `if (isSoft) … else …` 的非柔绘分支）
+internal val iosNavBarTokens = AppNavBarTokens(
+    glassBlurRadius = 20.dp,
+    glassTintAlpha = 0.62f,
+    titleFontWeight = FontWeight.SemiBold,
+    titleLetterSpacing = (-0.41).sp,
+    bottomEdge = NavBarBottomEdge.HAIRLINE
+)
+
+// ============================================================================
+// A1/V2 第二批（v3.69.0）：参数型主题分支的显式赋值（规范 R2）
+//
+// 全部取「原先 isSoft / isClaude 为假时的分支」——即通透自己的那份取值，
+// 逐项与改前一致，观感零变化。
+// ============================================================================
+
+/** 分区标题：通透（iOS 26）13sp SemiBold + SF 绝对字距 -0.08sp。 */
+internal val iosSectionHeaderTokens = AppSectionHeaderTokens(
+    textSize = 13.sp,
+    textWeight = FontWeight.SemiBold,
+    letterSpacing = (-0.08).sp
+)
+
+/** 底部毛玻璃面板：通透走 M3 默认遮罩 + 20dp 模糊 / 0.12 噪点 / 0.86 涂色。 */
+internal val iosBottomSheetTokens = AppBottomSheetTokens(
+    scrimAlpha = null,
+    blurRadius = 20.dp,
+    noiseFactor = 0.12f,
+    tintAlpha = 0.86f
+)
+
+/** 开关：通透直接用 success / inputBg 原色（系数 1），无外层装饰。 */
+internal val iosSwitchTokens = AppSwitchTokens(
+    trackAlpha = 1f,
+    uncheckedAlpha = 1f,
+    featherRim = false
+)
+
+/** 分段控件：通透容器底全不透明 + 轻投影胶囊。 */
+internal val iosSegmentedTokens = AppSegmentedTokens(
+    containerAlpha = 1f,
+    pillStyle = SegmentedPillStyle.ELEVATED
+)
+
+/** 课表网格高亮：通透 0.4 淡底、直角通栏、无内侧竖条、无羽化环。 */
+internal val iosScheduleHighlightTokens = AppScheduleHighlightTokens(
+    todayColumnAlpha = 0.4f,
+    activeSectionAlpha = 0.4f,
+    useRoundedHighlight = false,
+    useInnerBar = false,
+    featherRim = false
+)
+
+/** 悬浮胶囊：通透本体透明，玻璃底由下垫 LiquidGlass 承担；文字色沿用调用方 contentColor。 */
+internal val iosFloatingTokens = AppFloatingTokens(
+    surface = FloatingSurfaceStyle.GLASS_UNDERLAY,
+    contentFallbackToSemantic = false
+)
+
+/** 分组卡：通透白卡 + 2dp 轻投影 + 玻璃高光内描边；高亮描边 1dp。 */
+internal val iosGroupCardTokens = AppGroupCardTokens(
+    style = GroupCardStyle.GLASS_CARD,
+    shadowElevation = 2.dp,
+    highlightBorderWidth = 1.dp
+)
+
+/** 周次切换：通透走斜向扫光，时长 1× 且用主题 entranceEasing。 */
+internal val iosWeekPagerTokens = AppWeekPagerTokens(
+    sheen = WeekPagerSheen.DIRECTIONAL,
+    durationScale = 1f,
+    linearEasing = false
+)
+
+/** 课程块：通透不加投影（靠材质与留白分层），元信息分隔线 1dp / 15%。 */
+internal val iosCourseBlockTokens = AppCourseBlockTokens(
+    shadow = CourseBlockShadow.NONE,
+    border = CourseBlockBorder.SOLID_ALLOWED,
+    palette = CourseBlockPalette.STRIP,
+    stripStartPadding = 4.dp,
+    featherRim = false,
+    metaDividerThickness = 1.dp,
+    metaDividerAlpha = 0.15f
+)
+
+// ============================================================================
+// A1 / V3（v3.69.0）：设置页组件族合一后的通透参数
+// 逐条取自原 IosSettingCell / IosSettingsGroup / IosGroupLabel / IosUserRow。
+// cornerRadius 为 0.dp：CARD 材质统一取 appShapes().card，不需要独立半径。
+// ============================================================================
+
+internal val iosSettingsRowTokens = AppSettingsRowTokens(
+    dividerInset = 58.dp,
+    dividerColor = SettingsDividerColor.DIVIDER_TOKEN,
+    paddingHorizontal = 16.dp,
+    paddingVertical = 10.dp,
+    iconBoxSize = 28.dp,
+    iconBoxRadius = 7.dp,
+    iconMaterial = SettingsIconMaterial.SOLID,
+    iconGap = 14.dp,
+    titleSize = 17.sp,
+    titleWeight = FontWeight.Normal,
+    titleLetterSpacing = (-0.41).sp,
+    detailSize = 15.sp,
+    chevronSize = 15.dp,
+    chevronAlpha = 0.6f,
+    trailingSlot = SettingsTrailingSlot.FIXED_56X32
+)
+
+internal val iosSettingsGroupTokens = AppSettingsGroupTokens(
+    material = SettingsSurfaceMaterial.CARD,
+    cornerRadius = 0.dp,
+    glassRim = true,
+    texture = false,
+    elevation = 0.dp
+)
+
+internal val iosSettingsLabelTokens = AppSettingsLabelTokens(
+    fontSize = 13.sp,
+    fontWeight = FontWeight.SemiBold,
+    letterSpacing = 0.6.sp,
+    uppercase = true,
+    color = SettingsLabelColor.SECONDARY,
+    startPadding = 4.dp
+)
+
+internal val iosSettingsUserRowTokens = AppSettingsUserRowTokens(
+    material = SettingsSurfaceMaterial.CARD,
+    cornerRadius = 0.dp,
+    elevation = 0.dp,
+    paddingHorizontal = 16.dp,
+    paddingVertical = 18.dp,
+    avatarStyle = SettingsAvatarStyle.SYSTEM_GRADIENT,
+    avatarInitialColor = SettingsAvatarInitialColor.WHITE,
+    avatarInitialWeight = FontWeight.Bold,
+    nameSize = 18.sp,
+    nameWeight = FontWeight.SemiBold,
+    chevronSize = 15.dp,
+    chevronAlpha = 0.6f
+)
+
+internal val iosSettingsPageTokens = AppSettingsPageTokens(
+    topBar = SettingsTopBar.LEADING_LARGE,
+    centerContent = true
+)
+
+// ============================================================================
+// 通透分组卡（inset grouped）材质
+//
+// iOS 26 的「Inset Grouped List」是 App 的主题语言：白色（深色下 #1C1C1E）圆角卡片
+// 承载一组同类行，卡片之间用页面底色的留白分隔，组内行与行之间用缩进分隔线。
+// 书卷主题用「暖米色分组底 + 0.5dp 描边」，这里换成 iOS 26 的
+// 「卡片底 + Liquid Glass 高光描边」——位置与层级完全一致，材质不同。
+// ============================================================================
+
+/** 通透分组卡底色：浅色白卡 / 深色 #1C1C1E。 */
+@Composable
+fun iosGroupBg(): Color = if (LocalIsDarkTheme.current) {
+    IosSecondaryGroupedBgDark
+} else {
+    IosSecondaryGroupedBgLight
+}
+
+// ============================================================================
+// 通透主题字体
+//
+// iOS 用 SF Pro。Android 上无法内置（授权限制），因此走「系统无衬线 + SF 字阶 +
+// SF 字重/字距」的等价路线：字号、字重、行高、字距严格按 HIG 取值，字形交给
+// 系统 sans（Roboto 与 SF 同为 Helvetica 系人文无衬线，观感接近）。
+// 书卷主题用 Poppins / Newsreader / Lora 三套字体——这是它视觉性格的主要来源；
+// 通透换成系统无衬线，属于用户要求的「只替换 UI 与动画组件」范围内的字体替换。
+// ============================================================================
+
+/** 通透 UI 无衬线字族（系统默认，等价 SF Pro Text）。 */
+@Composable
+fun iosUiSans(): FontFamily = FontFamily.Default
+
+/** 通透展示字族（系统默认，等价 SF Pro Display —— iOS 大标题同族仅光学尺寸不同）。 */
+@Composable
+fun iosDisplaySans(): FontFamily = FontFamily.Default
+
+/**
+ * 通透专属 Material3 Typography：严格按 iOS 26 字阶取值。
+ *
+ * 与书卷的关键差别是**没有衬线**：书卷的 display/headline 用 Newsreader 衬线制造
+ * 「书卷气」，通透全部改为系统无衬线并加大字重，这是 iOS 系统的原生观感。
+ */
+@Composable
+fun iosTypography(): Typography = Typography(
+    displayLarge = TextStyle(
+        fontFamily = iosDisplaySans(),
+        fontWeight = FontWeight.Bold,
+        fontSize = 34.sp,
+        lineHeight = 41.sp,
+        letterSpacing = 0.37.sp
+    ),
+    displayMedium = TextStyle(
+        fontFamily = iosDisplaySans(),
+        fontWeight = FontWeight.Bold,
+        fontSize = 28.sp,
+        lineHeight = 34.sp,
+        letterSpacing = 0.36.sp
+    ),
+    displaySmall = TextStyle(
+        fontFamily = iosDisplaySans(),
+        fontWeight = FontWeight.Bold,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = 0.35.sp
+    ),
+    headlineLarge = TextStyle(
+        fontFamily = iosDisplaySans(),
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 28.sp,
+        lineHeight = 34.sp,
+        letterSpacing = 0.sp
+    ),
+    headlineMedium = TextStyle(
+        fontFamily = iosUiSans(),
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = (-0.26).sp
+    ),
+    headlineSmall = TextStyle(
+        fontFamily = iosUiSans(),
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 17.sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.41).sp
+    ),
+    titleLarge = TextStyle(
+        fontFamily = iosUiSans(),
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 17.sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.41).sp
+    ),
+    titleMedium = TextStyle(
+        fontFamily = iosUiSans(),
+        fontWeight = FontWeight.Medium,
+        fontSize = 16.sp,
+        lineHeight = 21.sp,
+        letterSpacing = (-0.32).sp
+    ),
+    titleSmall = TextStyle(
+        fontFamily = iosUiSans(),
+        fontWeight = FontWeight.Medium,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+        letterSpacing = (-0.24).sp
+    ),
+    bodyLarge = TextStyle(
+        fontFamily = iosUiSans(),
+        fontWeight = FontWeight.Normal,
+        fontSize = 17.sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.41).sp
+    ),
+    bodyMedium = TextStyle(
+        fontFamily = iosUiSans(),
+        fontWeight = FontWeight.Normal,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+        letterSpacing = (-0.24).sp
+    ),
+    bodySmall = TextStyle(
+        fontFamily = iosUiSans(),
+        fontWeight = FontWeight.Normal,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        letterSpacing = (-0.08).sp
+    ),
+    labelLarge = TextStyle(
+        fontFamily = iosUiSans(),
+        fontWeight = FontWeight.Medium,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+        letterSpacing = (-0.24).sp
+    ),
+    labelMedium = TextStyle(
+        fontFamily = iosUiSans(),
+        fontWeight = FontWeight.Medium,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        letterSpacing = (-0.08).sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = iosUiSans(),
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        lineHeight = 13.sp,
+        letterSpacing = 0.07.sp
+    )
+)

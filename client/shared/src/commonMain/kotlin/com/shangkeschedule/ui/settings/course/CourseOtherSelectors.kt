@@ -1,0 +1,377 @@
+package com.shangkeschedule.ui.settings.course
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.shangkeschedule.data.model.DualColor
+import com.shangkeschedule.ui.components.AppDialogActions
+import com.shangkeschedule.ui.components.AppGlassBottomSheet
+import dev.chrisbanes.haze.HazeState
+import com.shangkeschedule.ui.theme.LocalIsDarkTheme
+import com.shangkeschedule.ui.theme.appColors
+import com.shangkeschedule.ui.theme.appSpacing
+import com.shangkeschedule.ui.theme.appType
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.action_cancel
+import shangkeschedule.shared.generated.resources.action_confirm
+import shangkeschedule.shared.generated.resources.action_double_week
+import shangkeschedule.shared.generated.resources.action_select_all
+import shangkeschedule.shared.generated.resources.action_single_week
+import shangkeschedule.shared.generated.resources.check_24px
+import shangkeschedule.shared.generated.resources.label_course_weeks
+import shangkeschedule.shared.generated.resources.label_none
+import shangkeschedule.shared.generated.resources.text_weeks_selected
+import shangkeschedule.shared.generated.resources.title_select_color
+import shangkeschedule.shared.generated.resources.title_select_weeks
+
+
+@Composable
+fun WeekSection(
+    selectedWeeks: Set<Int>,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val label = stringResource(Res.string.label_course_weeks)
+    val noneSelected = stringResource(Res.string.label_none)
+
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
+        shape = MaterialTheme.shapes.small
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.height(4.dp))
+            if (selectedWeeks.isEmpty()) {
+                Text(text = noneSelected, style = MaterialTheme.typography.bodyMedium, fontWeight = appType().emphasisWeight)
+            } else {
+                Text(
+                    text = stringResource(Res.string.text_weeks_selected, selectedWeeks.sorted().joinToString(", ")),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = appType().emphasisWeight,
+                    lineHeight = 16.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TimeSection(
+    dayName: String,
+    timeDesc: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        color = appColors().primarySoft.copy(alpha = 0.7f),
+        shape = MaterialTheme.shapes.small
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(text = dayName, style = MaterialTheme.typography.labelSmall, color = appColors().primary)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = timeDesc, style = MaterialTheme.typography.bodyMedium, fontWeight = appType().emphasisWeight)
+        }
+    }
+}
+
+@Composable
+fun ColorIndicatorSection(
+    colorIndex: Int,
+    colorMaps: List<DualColor>,
+    onClick: () -> Unit
+) {
+    val isDark = LocalIsDarkTheme.current
+    val displayColor = colorMaps.getOrNull(colorIndex)?.let {
+        if (isDark) it.dark else it.light
+    } ?: appColors().divider
+    // AC2（v3.69.2）：色条是「打开颜色选择器」的入口，只有 16dp 宽、无文字，
+    // 此前 TalkBack 读到的是「未加标签，可点击」。补描述 + 按钮角色。
+    val openPickerLabel = stringResource(Res.string.title_select_color)
+
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(16.dp)
+            .background(displayColor)
+            .semantics {
+                contentDescription = openPickerLabel
+                role = Role.Button
+            }
+            .clickable(onClick = onClick)
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun WeekSelectorBottomSheet(
+    totalWeeks: Int,
+    selectedWeeks: Set<Int>,
+    onDismissRequest: () -> Unit,
+    onConfirm: (Set<Int>) -> Unit,
+    hazeState: HazeState? = null
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var tempSelectedWeeks by remember { mutableStateOf(selectedWeeks) }
+    val titleSelectWeeks = stringResource(Res.string.title_select_weeks)
+    val actionSelectAll = stringResource(Res.string.action_select_all)
+    val actionSingleWeek = stringResource(Res.string.action_single_week)
+    val actionDoubleWeek = stringResource(Res.string.action_double_week)
+    val actionCancel = stringResource(Res.string.action_cancel)
+    val actionConfirm = stringResource(Res.string.action_confirm)
+
+    AppGlassBottomSheet(
+        hazeState = hazeState,
+        onDismissRequest = onDismissRequest,
+        sheetState = modalBottomSheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = titleSelectWeeks,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = appSpacing().cardGap)
+            )
+
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 48.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 300.dp),
+                contentPadding = PaddingValues(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(totalWeeks, key = { it }) { index ->
+                    val weekNumber = index + 1
+                    val isSelected = tempSelectedWeeks.contains(weekNumber)
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(MaterialTheme.shapes.extraSmall)
+                            .clickable {
+                                tempSelectedWeeks = if (isSelected) {
+                                    tempSelectedWeeks - weekNumber
+                                } else {
+                                    tempSelectedWeeks + weekNumber
+                                }
+                            }
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = weekNumber.toString(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                            else appColors().textSecondary
+                        )
+                    }
+                }
+            }
+
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = appSpacing().cardGap),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = tempSelectedWeeks.size == totalWeeks && totalWeeks > 0,
+                    onClick = {
+                        tempSelectedWeeks = if (tempSelectedWeeks.size == totalWeeks) emptySet()
+                        else (1..totalWeeks).toSet()
+                    },
+                    label = { Text(actionSelectAll) }
+                )
+                FilterChip(
+                    selected = tempSelectedWeeks.isNotEmpty() && tempSelectedWeeks.all { it % 2 != 0 },
+                    onClick = {
+                        tempSelectedWeeks = (1..totalWeeks).filter { it % 2 != 0 }.toSet()
+                    },
+                    label = { Text(actionSingleWeek) }
+                )
+                FilterChip(
+                    selected = tempSelectedWeeks.isNotEmpty() && tempSelectedWeeks.all { it % 2 == 0 },
+                    onClick = {
+                        tempSelectedWeeks = (1..totalWeeks).filter { it % 2 == 0 }.toSet()
+                    },
+                    label = { Text(actionDoubleWeek) }
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AppDialogActions(
+                    confirmText = actionConfirm,
+                    onConfirm = {
+                        onConfirm(tempSelectedWeeks)
+                        coroutineScope.launch { modalBottomSheetState.hide() }.invokeOnCompletion {
+                            if (!modalBottomSheetState.isVisible) onDismissRequest()
+                        }
+                    },
+                    dismissText = actionCancel,
+                    onDismiss = onDismissRequest,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ColorPickerBottomSheet(
+    colorMaps: List<DualColor>,
+    selectedIndex: Int,
+    onDismissRequest: () -> Unit,
+    onConfirm: (Int) -> Unit,
+    hazeState: HazeState? = null
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var tempSelectedIndex by remember { mutableIntStateOf(selectedIndex) }
+
+    val isDark = LocalIsDarkTheme.current
+    val actionCancel = stringResource(Res.string.action_cancel)
+    val actionConfirm = stringResource(Res.string.action_confirm)
+
+    AppGlassBottomSheet(
+        hazeState = hazeState,
+        onDismissRequest = onDismissRequest,
+        sheetState = modalBottomSheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 24.dp, end = 24.dp, bottom = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = stringResource(Res.string.title_select_color),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = appSpacing().sectionGap)
+            )
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(6),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                itemsIndexed(colorMaps) { index, dualColor ->
+                    val color = if (isDark) dualColor.dark else dualColor.light
+                    val isSelected = tempSelectedIndex == index
+
+                    Box(
+                        modifier = Modifier
+                            .aspectRatio(1f)
+                            .clip(CircleShape)
+                            // AC2（v3.69.2）：与设置页 ColorSwatch 同一处理 —— 色块无文字，
+                            // selectable 让 TalkBack 播报「单选按钮，已选中 / 未选中」。
+                            .selectable(
+                                selected = isSelected,
+                                role = Role.RadioButton,
+                                onClick = { tempSelectedIndex = index }
+                            )
+                            .then(
+                                if (isSelected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                else Modifier
+                            )
+                            .padding(4.dp)
+                            .clip(CircleShape)
+                            .background(color),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isSelected) {
+                            Icon(
+                                imageVector = vectorResource(Res.drawable.check_24px),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(appSpacing().sectionGap))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                AppDialogActions(
+                    confirmText = actionConfirm,
+                    onConfirm = {
+                        onConfirm(tempSelectedIndex)
+                        coroutineScope.launch { modalBottomSheetState.hide() }.invokeOnCompletion {
+                            if (!modalBottomSheetState.isVisible) onDismissRequest()
+                        }
+                    },
+                    dismissText = actionCancel,
+                    onDismiss = onDismissRequest,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}

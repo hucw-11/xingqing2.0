@@ -1,0 +1,155 @@
+package com.shangkeschedule.service.notification.notify
+
+import android.app.NotificationManager
+import android.content.Context
+import android.util.Log
+import androidx.core.content.edit
+import androidx.core.content.getSystemService
+
+/**
+ * 已投递通知登记簿（occKey → 通知 ID）。
+ *
+ * 背景（旧实现病根）：`CourseNotificationWorker.cancelAllAlarms()` 只做
+ * `AlarmManager.cancel()`，**从不调用 `NotificationManager.cancel()`**。
+ * 而课程提醒通知在非兼容模式下是 `setOngoing(true)` 的常驻通知——
+ * 于是每次重排后，旧提醒会一直挂在状态栏，直到用户手动逐条关闭：
+ * 课表变更越频繁，状态栏堆积越多「上课提醒」。
+ *
+ * 修复：所有主动投递的课程提醒通知先行登记，在**两个**时机统一回收——
+ *  1. 重新排程（课表/设置变更）：`pruneExcept` 回收「已不在新计划里」的那些
+ *  2. 关闭课程提醒总开关：`clear` 全部回收
+ *
+ * 升级迁移的清理由 `LegacyAlarmMigrator` 负责（按旧槽位 ID 区间直接 `cancel()`），
+ * **不经本登记簿**：旧版通知从未登记过，登记簿里没有它们的记录。
+ *
+ * 用 SharedPreferences 而非内存集合：投递发生在广播接收器（可能由系统冷启动进程），
+ * 回收发生在 Worker，两者不共享内存。
+ */
+class PostedNotificationRegistry(context: Context) {
+
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    /**
+     * 登记一条已投递的通知。
+     *
+     * P2-28：登记与回收必须保证 **occKey → notificationId 一对一**。
+     *
+     * 实测（kotlinc 实跑）确认的机制：`Map + (key to id)` 在 Kotlin 里**是覆盖**（同键 put），
+     * 因此单次 [register] 不会产生重键。真正产生重键的是**底层的 `SharedPreferences` `StringSet`**：
+     * 它无序，一旦因历史数据/并发写入留下两条同 key 记录，[load] 的 `toMap()`
+     *「后者胜出」的「后」就取决于 **Set 的迭代顺序（不可控）** —— 实测两条同样记录在两种
+     * 迭代顺序下分别解析出 id=2 与 id=1 ⇒ 被丢弃的那个 notificationId **永远不在**
+     * `pruneExcept` / `clear` / `remove` 的视野里，那条通知**取消不掉**（用户划不掉）。
+     *
+     * 因此本方法的职责是「写入前先按 key 清理旧条目」，保证持久化集合里恒无重键；
+     * [load] 侧另加重键检出与告警，作为历史脏数据的一次性自愈。
+     */
+    fun register(occurrenceKey: String, notificationId: Int) {
+        runCatching {
+            // 显式「先移旧、再放新」：即使 load() 曾因历史脏数据返回过别的 id，
+            // 这里也只保留本次这一条，落地集合里不会累积同 key 记录。
+            val next = load().toMutableMap().apply { put(occurrenceKey, notificationId) }
+            persist(next)
+        }.onFailure { Log.w(TAG, "登记通知失败", it) }
+    }
+
+    /**
+     * 当前登记的全部「occKey → 通知 ID」。
+     *
+     * P2-28：检出重键并**显式告警**。底层是 `SharedPreferences` 的 `StringSet`（无序），
+     * 一旦存在同 key 的两条记录，`toMap()` 谁胜出取决于迭代顺序（实测两种顺序分别得
+     * id=2 与 id=1），被丢弃的那个 ID 就再也回收不到。这里把重键暴露到日志，
+     * 不再静默丢弃；[register] 侧保证新写入不再产生重键。
+     */
+    fun load(): Map<String, Int> = runCatching {
+        val raw = prefs.getStringSet(KEY_ENTRIES, null) ?: return@runCatching emptyMap()
+        val parsed = raw.mapNotNull { entry ->
+            // 前缀式存储，split 限 1 次 → occKey 内部含任何字符都不会切错
+            val parts = entry.split(ENTRY_SEPARATOR, limit = 2)
+            if (parts.size != 2) return@mapNotNull null
+            val id = parts[0].toIntOrNull() ?: return@mapNotNull null
+            parts[1] to id
+        }
+        val dupKeys = parsed.groupingBy { it.first }.eachCount().filterValues { it > 1 }.keys
+        if (dupKeys.isNotEmpty()) {
+            // 只记数量与键的个数，不打印 occKey 原文（含课程 ID）
+            Log.w(TAG, "登记簿存在重键 ${dupKeys.size} 个：收敛时只能保留其中一条，另一条通知将无法被取消")
+        }
+        parsed.toMap()
+    }.getOrDefault(emptyMap())
+
+    /**
+     * 回收**不在** [keepOccurrenceKeys] 中的通知，并从登记簿移除。
+     *
+     * 重排时调用：新计划里仍存在的提醒保留（不闪断），
+     * 已删除/改期的课程提醒则连带通知一起清掉。
+     *
+     * @return 实际取消的通知条数
+     */
+    fun pruneExcept(keepOccurrenceKeys: Set<String>): Int {
+        val current = load()
+        val stale = current.filterKeys { it !in keepOccurrenceKeys }
+        if (stale.isEmpty()) return 0
+        val nm = appContext.getSystemService<NotificationManager>()
+        stale.values.forEach { id ->
+            runCatching { nm?.cancel(id) }.onFailure { Log.w(TAG, "取消陈旧通知失败 id=$id", it) }
+        }
+        persist(current.filterKeys { it in keepOccurrenceKeys })
+        Log.d(TAG, "已回收 ${stale.size} 条陈旧课程提醒通知")
+        return stale.size
+    }
+
+    /** 回收全部已登记通知（关闭课程提醒总开关）。 */
+    fun clear(): Int {
+        val current = load()
+        if (current.isEmpty()) return 0
+        val nm = appContext.getSystemService<NotificationManager>()
+        current.values.forEach { id ->
+            runCatching { nm?.cancel(id) }.onFailure { Log.w(TAG, "取消通知失败 id=$id", it) }
+        }
+        persist(emptyMap())
+        Log.d(TAG, "已回收全部 ${current.size} 条已登记通知")
+        return current.size
+    }
+
+    /**
+     * 用户点了某条提醒的「关闭」：从登记簿移除该通知 ID。
+     * 通知本身已由调用方的 `NotificationManager.cancel` 关掉，这里只做登记清理。
+     */
+    fun remove(notificationId: Int) {
+        runCatching {
+            val current = load()
+            if (current.none { it.value == notificationId }) return@runCatching
+            persist(current.filterValues { it != notificationId })
+        }.onFailure { Log.w(TAG, "移除通知登记失败 id=$notificationId", it) }
+    }
+
+    private fun persist(entries: Map<String, Int>) {
+        runCatching {
+            prefs.edit {
+                putStringSet(
+                    KEY_ENTRIES,
+                    // 排序后再写入：底层 StringSet 无序，排序让持久化内容**确定性**，
+                    // 便于排查「同一 occKey 为何解析出不同 id」这类重键问题（P2-28）。
+                    entries.map { "${it.value}$ENTRY_SEPARATOR${it.key}" }.sorted().toSet()
+                )
+            }
+        }.onFailure { Log.w(TAG, "持久化通知登记簿失败", it) }
+    }
+
+    private companion object {
+        const val TAG = "PostedNotifRegistry"
+        const val PREFS_NAME = "posted_notification_registry"
+        const val KEY_ENTRIES = "entries"
+
+        /**
+         * 条目分隔符。
+         *
+         * 必须是 occKey 内部**绝不出现**的字符：`NotificationIds.occurrenceKey` 用
+         * `\u0001` 拼接三段，故这里改用 `\u0002`；同时又配合 `split(limit = 2)`
+         * （ID 在前、键在后），双重保证课程 ID 含任意字符也不会切错。
+         */
+        const val ENTRY_SEPARATOR = "\u0002"
+    }
+}

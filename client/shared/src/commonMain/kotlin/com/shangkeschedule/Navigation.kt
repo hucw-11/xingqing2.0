@@ -1,0 +1,361 @@
+package com.shangkeschedule
+
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.NavMetadataKey
+import androidx.savedstate.serialization.SavedStateConfiguration
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
+
+/**
+ * 导航元数据 Key 定义
+ */
+object ShangKeNavMetadata {
+    object IsMainScreenKey : NavMetadataKey<Boolean>
+}
+
+/**
+ * 应用所有目的地（页面）的定义
+ */
+@Serializable
+sealed interface Destination : NavKey {
+
+    /** 标记一级主界面的子接口 */
+    sealed interface MainDestination : Destination
+
+    // --- 一级导航页面（底栏对应页面） ---
+    @Serializable data object CourseSchedule : MainDestination
+    @Serializable data object Settings : MainDestination
+    @Serializable data object TodaySchedule : MainDestination
+    /** 「日程」页：月历 + 当日课程/自建日程时间轴 */
+    @Serializable data object Schedule : MainDestination
+
+    // --- 二级功能页面 ---
+    @Serializable
+    data class TimeSlotSettings(
+        /** 显式指定编辑的课表（情侣课表设置页跳转时传情侣课表 ID）；null = 当前选中课表。 */
+        val targetCourseTableId: String? = null
+    ) : Destination
+    @Serializable data object ManageCourseTables : Destination
+    /**
+     * 教务系统学校列表（选学校 → 选适配方案 → 打开教务系统内嵌页）。
+     *
+     * [purpose] 决定内嵌页注入哪段脚本、抓取结果如何回写：
+     * COURSE = 导入课表（默认，走适配仓库的适配脚本）；GRADE = 抓取成绩（走内置通用成绩识别脚本）；
+     * EMPTY_CLASSROOM = 查询空教室（走内置通用空教室识别脚本）。
+     */
+    @Serializable data class SchoolSelectionListScreen(
+        val purpose: String = WebPagePurpose.COURSE
+    ) : Destination
+    @Serializable data object CourseTableConversion : Destination
+    @Serializable data object NotificationSettings : Destination
+    @Serializable data object SemesterSettings : Destination
+    @Serializable data object CoupleScheduleSettings : Destination
+
+    /**
+     * 找共同空闲页（v4.66.0 · D2）。
+     *
+     * 复用既有情侣课表（本机两张普通课表，`CourseTable.isCouple` + `pairedCourseTableId`），
+     * 按周次合并当天占用求空档；不涉及账号/协作体系，也不需要对方安装应用。
+     */
+    @Serializable data object CoupleFreeTime : Destination
+    @Serializable data object MoreOptions : Destination
+    @Serializable data object OpenSourceLicenses : Destination
+    @Serializable data object TweakSchedule : Destination
+    @Serializable data object QuickDelete : Destination
+    @Serializable data object CourseManagementList : Destination
+    @Serializable data object AppearanceSettings : Destination
+    /** 外观与样式二级页：主题（主题风格/深色模式/动态取色/自定义主色） */
+    @Serializable data object ThemeSettings : Destination
+    /**
+     * 「我的」页二级页：我的信息（头像 / 昵称 / 学校 / 学院 / 专业 / 年级 / 个性签名）。
+     * v3.49.0：原「我的」页顶部身份卡直接跳「外观与样式」，改为跳本页。
+     */
+    @Serializable data object ProfileInfo : Destination
+    /** 外观与样式二级页：自定义课表页（壁纸/样式预览/功能色） */
+    @Serializable data object ScheduleStyleSettings : Destination
+    /** 外观与样式二级页：个性化显示（v3.25.0 起为两卡 hub：玻璃模糊 / 动画效果） */
+    @Serializable data object PersonalizedDisplay : Destination
+    /** 个性化显示三级页：玻璃模糊强度（v3.26.0 自 hub 拆出） */
+    @Serializable data object GlassBlurSettings : Destination
+    /** 个性化显示三级页：动画效果（三风格 + 六分组开关，v3.26.0 新增） */
+    @Serializable data object AnimationSettings : Destination
+    /** 个性化显示三级页：课程配色（颜色池 + 课程块/页面文字颜色 + 一键重置，自「自定义课表页」整块迁入） */
+    @Serializable data object CourseColorSettings : Destination
+    /** 个性化显示三级页：下节课卡（今日课程结束后的行为，v3.47.0 新增） */
+    @Serializable data object NextCardSettings : Destination
+    @Serializable data object BackupAndRestore : Destination
+    @Serializable data object LanguageSettings : Destination
+    /** 意见反馈页（v4.65.0）：填写后经邮件 / GitHub Issue / 剪贴板三种出口提交，不采集任何标识符。 */
+    @Serializable data object Feedback : Destination
+    /** 法律文档页（v4.65.0）：type 传 LegalDocumentType 名称（PRIVACY / TERMS）。 */
+    @Serializable data class LegalDocument(val type: String) : Destination
+    /** 成绩与绩点页（v4.66.0）：汇总 GPA / 平均分 / 学分，支持手动录入、粘贴解析导入与教务抓取导入。 */
+    @Serializable data object Grade : Destination
+    /** 考证查分入口页（v4.66.0）：四六级 / 计算机等级 / 教师资格 / 普通话，直达官网查分并按需保存凭据。 */
+    @Serializable data object CertExam : Destination
+    /**
+     * 教务适配状态页（v4.66.0）：只展示本机真实数据 —— 本地适配脚本数、学校索引学校数、
+     * 已选学校各自命中的适配器、最近一次远程同步结果，并给出适配申请入口。
+     * 不伪造「已支持 / 适配中」进度：适配仓库清单（index.json）目前没有学校维度的状态字段。
+     */
+    @Serializable data object AdapterStatus : Destination
+    /**
+     * 学业情况页（v4.66.0）：按课程类别汇总的培养方案学分完成度。
+     * 类别要求由用户自己填写（各校各专业培养方案不同），已获学分只统计及格课程；
+     * 数据全部来自本机成绩表，不联网。
+     */
+    @Serializable data object StudyProgress : Destination
+    /**
+     * 课堂笔记页（v4.66.0）：按课次记录听课内容，可附板书照片。
+     * 笔记挂在课程下（外键 CASCADE），删除课程时随课一起删除。
+     */
+    @Serializable
+    data class CourseNote(
+        val courseId: String,
+        val courseName: String,
+        val sectionLabel: String = ""
+    ) : Destination
+
+    /**
+     * 课表分享页（v4.66.0）：把一张课表压成自包含分享串（`SK1:` 前缀 + CRC 校验）
+     * 与二维码，对方复制粘贴或扫码即可导入；不依赖网盘/文件传输。
+     */
+    @Serializable data object CourseShare : Destination
+
+    /**
+     * 主题分享页（v4.66.0，D3）：把当前主题预设、深浅色模式与整份课表样式压成一条
+     * `SKT1:` 分享串（CRC 校验 + 二维码），对方粘贴即可得到同样的外观。
+     * 载荷只含外观，不含课程、成绩与账号信息；应用端保留本机壁纸路径与时间轴模式。
+     */
+    @Serializable data object ThemeShare : Destination
+
+    /**
+     * 小组件排障页（v4.66.0，K7）：只在开发者模式下可见。
+     * 用于排查桌面小组件不刷新：看已放置数量与快照概况、重建快照并请求重绘、跳系统设置放开后台限制。
+     */
+    @Serializable data object WidgetTroubleshoot : Destination
+
+    // --- 导入体系（v4.80.0 整合） ---
+
+    /**
+     * 统一导入页：把原「文件导入」与「文本粘贴导入」两条并行链路合并为一页。
+     *
+     * 页内用来源分段选择器区分「粘贴文本 / 选择文件」，格式识别交给
+     * `UniversalScheduleParser` 自动嗅探（含失败回退链），随后共用同一套
+     * 预览 → 逐条改错 → 另存新课表 / 覆盖已有课表 → 覆盖二次确认。
+     *
+     * [source] 取 `ImportSource` 常量：TEXT / FILE / AUTO。
+     */
+    @Serializable
+    data class ImportEntry(val source: String = "AUTO") : Destination
+
+    /**
+     * 「AI 识别导入」页（v4.66.0 起；v4.80.0 合并原「AI 图片导入」页）。
+     *
+     * 两条路线产出的都是同一种「一行一门课」纯文本，最终都进 [ImportEntry] 预览后入库：
+     * - 提示词法（默认）：复制固定提示词给自己的 AI，不联网、无需配置；
+     * - 接口法：应用代发 OpenAI 兼容请求；默认关闭，首次开启前有数据外发明示。
+     */
+    @Serializable data object AiImport : Destination
+
+    // --- 以下是 v4.80.0 之前的导入页，仅为解码旧返回栈保留，不再作任何入口 ---
+    // rememberNavBackStack 把返回栈编码进 savedInstanceState：App 更新后系统恢复任务时，
+    // 旧栈里可能出现已被合并掉的页面。删除这些类会让反序列化抛异常（升级即崩），
+    // 故保留定义并在 App.kt 统一重定向到 [ImportEntry] / [AiImport]。
+    @Deprecated("v4.80.0 合并到 ImportEntryScreen，仅为解码旧返回栈保留")
+    @Serializable data object FileImportHub : Destination
+    @Deprecated("v4.80.0 合并到 ImportEntryScreen，仅为解码旧返回栈保留")
+    @Serializable data object ExcelImport : Destination
+    @Deprecated("v4.80.0 合并到 ImportEntryScreen，仅为解码旧返回栈保留")
+    @Serializable data object JsonFileImport : Destination
+    @Deprecated("v4.80.0 合并到 ImportEntryScreen，仅为解码旧返回栈保留")
+    @Serializable data class TextFileImport(val format: String = "AUTO") : Destination
+    @Deprecated("v4.80.0 合并到 ImportEntryScreen，仅为解码旧返回栈保留")
+    @Serializable data object TextImportHub : Destination
+    @Deprecated("v4.80.0 合并到 ImportEntryScreen，仅为解码旧返回栈保留")
+    @Serializable data class TextImportFormatPage(val format: String) : Destination
+    @Deprecated("v4.80.0 合并到 ImportEntryScreen，仅为解码旧返回栈保留")
+    @Serializable data object ShareTextImport : Destination
+    @Deprecated("v4.80.0 合并到 AiImportScreen（提示词法），仅为解码旧返回栈保留")
+    @Serializable data object AiImageImport : Destination
+
+    // --- 动态传参页面 ---
+    @Serializable
+    data class AdapterSelection(
+        /**
+         * 目标学校的**全部**索引记录 id（v4.73.0）。
+         *
+         * 同一所学校在索引里可能有本科、研究生两条独立记录（各有各的
+         * `resource_folder` 与适配器），选校页已按校名合并为一行；此处把组内所有 id
+         * 一并传下去，二级页才能把两类适配器一起列出。绝大多数学校只有 1 个 id。
+         */
+        val schoolIds: List<String>,
+        val schoolName: String,
+        /**
+         * 分类口径：`SchoolCategoryTab` 的 ordinal（v4.70.0 起本科/专科与研究生合并为
+         * 「教务系统」，故只取「教务系统」/「通用工具」两个值，反解见 `SchoolCategoryTab.fromNumber`）。
+         *
+         * 序列化名沿用旧的 `categoryNumber`：字段语义在 v4.70.0 由「单个 AdapterCategory」
+         * 改为「分类口径」，改名只为让代码自洽，不改动已保存返回栈的解码。
+         */
+        @SerialName("categoryNumber") val tabNumber: Int,
+        /** 用途，原样透传给 [WebView.mode]，保证「导入课表」与「抓取成绩」走各自的脚本。 */
+        val purpose: String = WebPagePurpose.COURSE
+    ) : Destination
+
+    @Serializable
+    data class WebView(
+        val initialUrl: String? = "about:blank",
+        val assetJsPath: String? = null,
+        val forceDesktopMode: Boolean = false,
+        /**
+         * 内嵌页用途：
+         * - [WebPagePurpose.COURSE]（默认）：注入适配仓库里该学校的适配脚本，抓取课表；
+         * - [WebPagePurpose.GRADE]：注入应用内置的通用成绩表格识别脚本，抓取成绩；
+         * - [WebPagePurpose.CERT]：纯浏览器模式（考证查分等），不注入脚本、不显示识别按钮；
+         * - [WebPagePurpose.EMPTY_CLASSROOM]：定位空教室页并读取空教室结果；
+         * - [WebPagePurpose.STUDY]：读取培养方案学分要求（走适配脚本钩子）。
+         *
+         * 三种抓取用途（GRADE / EMPTY_CLASSROOM / STUDY）都会先试适配脚本钩子，
+         * 钩子缺失或失败时成绩与空教室回落内置通用脚本，学业则明确提示未适配。
+         */
+        val mode: String = WebPagePurpose.COURSE
+    ) : Destination
+
+    @Serializable
+    data class AddEditCourse(
+        val courseId: String? = null,
+        /** 显式指定编辑目标课表（叠加模式下编辑情侣课程时传其所在情侣课表 ID）。 */
+        val targetCourseTableId: String? = null
+    ) : Destination
+
+    @Serializable
+    data class CourseManagementDetail(
+        val courseName: String
+    ) : Destination
+}
+
+val Destination.isMainScreen: Boolean
+    get() = this is Destination.MainDestination
+
+/**
+ * 内嵌教务页面的用途（v4.66.0）。
+ *
+ * 课表导入依赖适配仓库里每个学校各自的适配脚本；成绩抓取则用应用内置的通用
+ * 成绩表格识别脚本（学校页面结构千差万别，但成绩页基本都是一张 `table`）。
+ * 两者共用同一套 WebView 容器与登录态，靠这个标记区分注入内容与回写目标。
+ */
+object WebPagePurpose {
+    /** 导入课表（原有行为，默认值）。 */
+    const val COURSE = "COURSE"
+
+    /** 抓取成绩。 */
+    const val GRADE = "GRADE"
+
+    /** 考证查分等「纯浏览器」用途：不显示课表导入 / 成绩识别按钮。 */
+    const val CERT = "CERT"
+
+    /**
+     * 空教室查询（v4.66.0）：底部显示「定位空教室页 / 读取本页空教室」，
+     * 由应用内置的通用脚本解析教务页里的空教室结果表，识别结果可一键复制。
+     *
+     * v4.73.0 起，成绩 / 空教室 / 学业三个用途都会**先尝试适配脚本钩子**
+     * （`window.shangkeScanEmptyClassrooms` 等），钩子缺失或失败时再回落内置通用脚本。
+     */
+    const val EMPTY_CLASSROOM = "EMPTY_CLASSROOM"
+
+    /**
+     * 学业情况（v4.73.0）：底部显示「读取培养方案学分要求」，向适配脚本钩子
+     * `window.shangkeScanStudy()` 要各类别的应修学分。
+     *
+     * 这个用途**没有通用回落脚本**：培养方案格式各校千差万别，硬猜出来的要求学分
+     * 比没有更糟（用户会照着错的要求规划选课），所以钩子缺失时明确提示未适配。
+     */
+    const val STUDY = "STUDY"
+}
+
+/**
+ * 配置并生成包含所有 Destination 派生类的 SerializersModule
+ */
+val navSerializersModule = SerializersModule {
+    polymorphic(NavKey::class) {
+        // 一级主界面
+        subclass(Destination.CourseSchedule::class)
+        subclass(Destination.Settings::class)
+        subclass(Destination.TodaySchedule::class)
+        subclass(Destination.Schedule::class)
+
+        // 普通功能页面
+        subclass(Destination.TimeSlotSettings::class)
+        subclass(Destination.ManageCourseTables::class)
+        subclass(Destination.SchoolSelectionListScreen::class)
+        subclass(Destination.CourseTableConversion::class)
+        subclass(Destination.NotificationSettings::class)
+        subclass(Destination.SemesterSettings::class)
+        subclass(Destination.CoupleScheduleSettings::class)
+        subclass(Destination.CoupleFreeTime::class)
+        subclass(Destination.MoreOptions::class)
+        subclass(Destination.OpenSourceLicenses::class)
+        subclass(Destination.TweakSchedule::class)
+        subclass(Destination.QuickDelete::class)
+        subclass(Destination.CourseManagementList::class)
+        subclass(Destination.AppearanceSettings::class)
+        subclass(Destination.ThemeSettings::class)
+        subclass(Destination.ProfileInfo::class)
+        subclass(Destination.ScheduleStyleSettings::class)
+        subclass(Destination.PersonalizedDisplay::class)
+        subclass(Destination.GlassBlurSettings::class)
+        subclass(Destination.AnimationSettings::class)
+        subclass(Destination.CourseColorSettings::class)
+        subclass(Destination.NextCardSettings::class)
+        subclass(Destination.BackupAndRestore::class)
+        subclass(Destination.LanguageSettings::class)
+        subclass(Destination.Feedback::class)
+        subclass(Destination.LegalDocument::class)
+        subclass(Destination.Grade::class)
+        subclass(Destination.CertExam::class)
+        subclass(Destination.AdapterStatus::class)
+        subclass(Destination.StudyProgress::class)
+        subclass(Destination.CourseNote::class)
+        subclass(Destination.CourseShare::class)
+        subclass(Destination.ThemeShare::class)
+subclass(Destination.WidgetTroubleshoot::class)
+
+        // 导入体系（v4.80.0 整合）
+        subclass(Destination.ImportEntry::class)
+        subclass(Destination.AiImport::class)
+        // 旧导入页：仅为解码升级前保存的返回栈，不再作为入口
+        @Suppress("DEPRECATION")
+        subclass(Destination.FileImportHub::class)
+        @Suppress("DEPRECATION")
+        subclass(Destination.ExcelImport::class)
+        @Suppress("DEPRECATION")
+        subclass(Destination.JsonFileImport::class)
+        @Suppress("DEPRECATION")
+        subclass(Destination.TextFileImport::class)
+        @Suppress("DEPRECATION")
+        subclass(Destination.TextImportHub::class)
+        @Suppress("DEPRECATION")
+        subclass(Destination.TextImportFormatPage::class)
+        @Suppress("DEPRECATION")
+        subclass(Destination.ShareTextImport::class)
+        @Suppress("DEPRECATION")
+        subclass(Destination.AiImageImport::class)
+
+        // 带参数据类
+        subclass(Destination.AdapterSelection::class)
+        subclass(Destination.WebView::class)
+        subclass(Destination.AddEditCourse::class)
+        subclass(Destination.CourseManagementDetail::class)
+    }
+}
+
+/**
+ * 使用官方 DSL 构建器创建 SavedStateConfiguration
+ */
+val navSavedStateConfig = SavedStateConfiguration {
+    serializersModule = navSerializersModule
+}

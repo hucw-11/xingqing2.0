@@ -1,0 +1,611 @@
+package com.shangkeschedule.ui.schedule.components
+
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.shangkeschedule.data.db.main.CourseWithWeeks
+import com.shangkeschedule.data.db.main.TimeSlot
+import com.shangkeschedule.data.time.currentTimeFlow
+import com.shangkeschedule.ui.schedule.MergedCourseBlock
+import com.shangkeschedule.ui.theme.AppTypeGrid
+import com.shangkeschedule.ui.theme.LocalAppMotion
+import com.shangkeschedule.ui.theme.appColors
+import com.shangkeschedule.ui.theme.appScheduleHighlight
+import com.shangkeschedule.ui.theme.appShapes
+import com.shangkeschedule.ui.theme.appType
+import com.shangkeschedule.ui.theme.softFeatherRim
+import kotlin.math.roundToInt
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
+
+/**
+ * 课表项统一调度接口
+ */
+interface ISingleSchedulable {
+    val columnIndex: Int
+    val subColumnIndex: Int
+    val subColumnCount: Int
+    val startSection: Float
+    val endSection: Float
+    val courseWrapper: CourseWithWeeks
+    val parentBlock: MergedCourseBlock
+}
+
+/**
+ * 核心设计：移动意图（Move Intent）
+ */
+data class CourseMoveIntent(
+    val parentBlock: MergedCourseBlock,     // 原始被拖拽的块
+    val initialStartSection: Float,        // 拖拽前的起始节次/时间
+    val duration: Float                    // 课程跨越的时间/节次长度 (end - start)
+)
+
+/**
+ * 1. 数据收拢：外部向课表传递的纯展示数据与基础配置
+ */
+@Immutable
+data class ScheduleGridViewState(
+    val dates: List<String>,
+    val currentYear: String,
+    val currentWeek: String? = null,
+    val timeSlots: List<TimeSlot>,
+    val mergedCourses: List<MergedCourseBlock>,
+    val showWeekends: Boolean,
+    val todayIndex: Int,
+    val firstDayOfWeek: Int,
+    val currentSectionIndex: Int = -1
+)
+
+/**
+ * 2. 动作收拢：外部业务逻辑响应的交互回调接口
+ */
+interface ScheduleGridActions {
+    fun onCourseBlockClicked(block: MergedCourseBlock)
+    fun onGridCellClicked(day: Int, section: Int)
+    fun onTimeSlotClicked()
+    fun onHoldStateChanged(isHolding: Boolean) {}
+    fun onCourseMovedWithinGrid(block: MergedCourseBlock, newDay: Int, newStartSection: Float, newEndSection: Float) {}
+    fun onCourseTimeAdjusted(block: MergedCourseBlock, newStart: Float, newEnd: Float) {}
+    fun onInitiateFloatingMode(block: MergedCourseBlock) {}
+}
+
+/**
+ * 3. 运行状态收拢：课表内部手势运行时的临时状态管理类
+ */
+@Stable
+class ScheduleGridState(
+    val gridScrollState: ScrollState
+) {
+    var expandedItem by mutableStateOf<ISingleSchedulable?>(null)
+
+    var activeMoveIntent by mutableStateOf<CourseMoveIntent?>(null)
+    var bodyDragOffsetX by mutableStateOf(0f)
+    var bodyDragOffsetY by mutableStateOf(0f)
+
+    var isTopHandleDragging by mutableStateOf(false)
+    var isBottomHandleDragging by mutableStateOf(false)
+
+    var topHandleDragOffsetY by mutableStateOf(0f)
+    var bottomHandleDragOffsetY by mutableStateOf(0f)
+
+    var gridWidthPx by mutableStateOf(0f)
+    var viewportHeightPx by mutableStateOf(0f)
+
+    val isEditingActive: Boolean
+        get() = expandedItem != null && (activeMoveIntent != null || isTopHandleDragging || isBottomHandleDragging)
+
+    fun resetAllStates() {
+        expandedItem = null
+        activeMoveIntent = null
+        isTopHandleDragging = false
+        isBottomHandleDragging = false
+        topHandleDragOffsetY = 0f
+        bottomHandleDragOffsetY = 0f
+        bodyDragOffsetX = 0f
+        bodyDragOffsetY = 0f
+    }
+}
+
+/**
+ * 方便在 Composable 中创建并记住 ScheduleGridState 实例的快捷函数
+ */
+@Composable
+fun rememberScheduleGridState(
+    gridScrollState: ScrollState = rememberScrollState()
+): ScheduleGridState {
+    return remember(gridScrollState) {
+        ScheduleGridState(gridScrollState)
+    }
+}
+
+/**
+ * 课表顶部日期/星期标头组件
+ */
+@Composable
+fun DayHeader(
+    style: ScheduleGridStyleComposed,
+    displayDays: List<String>,
+    dates: List<String>,
+    currentYear: String,
+    currentWeek: String?,
+    todayIndex: Int,
+    lineColor: Color,
+    textColor: Color,
+    subTextColor: Color,
+    strokeWidthPx: Float
+) {
+    // A1/V2 第二批（v3.69.0）：今天列淡底浓度 + 圆角形态收口为角色 token
+    // （原为 LocalIsSoftTheme.current + if (isSoft)）。
+    val highlight = appScheduleHighlight()
+    BoxWithConstraints(Modifier.fillMaxWidth().height(style.dayHeaderHeight)) {
+        val shouldShowDate = !style.hideDateUnderDay && maxHeight >= 42.dp
+
+        Row(Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .width(style.timeColumnWidth)
+                    .fillMaxHeight()
+                    .drawBehind {
+                        if (!style.hideGridLines) {
+                            drawLine(lineColor, Offset(size.width, 0f), Offset(size.width, size.height), strokeWidthPx)
+                            drawLine(lineColor, Offset(0f, size.height), Offset(size.width, size.height), strokeWidthPx)
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = currentYear,
+                        fontSize = AppTypeGrid.timeLabel,
+                        fontWeight = appType().titleWeight,
+                        color = subTextColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = TextStyle.Default
+                    )
+
+                    if (!currentWeek.isNullOrEmpty()) {
+                        Spacer(modifier = Modifier.height(1.dp))
+                        Text(
+                            text = currentWeek,
+                            fontSize = AppTypeGrid.timeSmall,
+                            fontWeight = appType().captionWeight,
+                            color = subTextColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = TextStyle.Default
+                        )
+                    }
+                }
+            }
+
+            val displayDaysCount = displayDays.size
+
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .drawBehind {
+                        if (!style.hideGridLines) {
+                            val cellWidth = size.width / displayDaysCount
+                            for (i in 1..displayDaysCount) {
+                                val x = i * cellWidth
+                                drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = strokeWidthPx)
+                            }
+                            drawLine(lineColor, Offset(0f, size.height), Offset(size.width, size.height), strokeWidthPx)
+                        }
+                    }
+            ) {
+                displayDays.forEachIndexed { index, day ->
+                    val isToday = index == todayIndex
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .background(
+                                // 今天列：8% 主色淡底标记（通透 / iOS 26 与书卷共用同一语义）；
+                                // 柔绘：主色本身已低饱和，淡底再压一档（0.4 → 0.28），
+                                // 「今天」靠更薄的涂色表达，不额外加描边（表头列是通栏色块，
+                                // 羽化环会在列缝处留下一条竖向亮带）。
+                                if (isToday) {
+                                    appColors().primarySoft.copy(alpha = highlight.todayColumnAlpha)
+                                } else {
+                                    Color.Transparent
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .padding(vertical = 2.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = day,
+                                fontSize = AppTypeGrid.dayHeader,
+                                fontWeight = appType().emphasisWeight,
+                                // 壁纸模式下所有表头文字统一跟随 textColor（黑/白自动切换）——
+                                // 「今天」列原先用固定主色，会在同一天同一行里与其它列不一致；
+                                // 今天的标识仍由该列的淡底 + 加粗承担。
+                                color = textColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = TextStyle(
+                                    lineHeight = 18.sp
+                                )
+                            )
+
+                            if (shouldShowDate && dates.size > index) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = dates[index],
+                                    fontSize = AppTypeGrid.timeSmall,
+                                    color = subTextColor,
+                                    fontWeight = appType().bodyWeight,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = TextStyle(
+                                        lineHeight = 13.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 课表左侧时间轴/节次轴组件
+ */
+@Composable
+fun TimeColumn(
+    style: ScheduleGridStyleComposed,
+    timeSlots: List<TimeSlot>,
+    maxGridSections: Int,
+    is24HourMode: Boolean,
+    onTimeSlotClicked: () -> Unit,
+    modifier: Modifier,
+    lineColor: Color,
+    currentSectionIndex: Int = -1,
+    textColor: Color,
+    subTextColor: Color,
+    strokeWidthPx: Float,
+    activeDragHour: Int? = null,
+    activeDragMinuteStr: String? = null
+) {
+    // 当前小时按分钟刷新；24H 模式不依赖普通节次的 currentSectionIndex
+    val currentHour by produceState(
+        initialValue = try {
+            Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).hour
+        } catch (_: Exception) {
+            -1
+        }
+    ) {
+        currentTimeFlow().collect { time -> value = time.hour }
+    }
+
+    // 当前节次高亮：主色淡底（通透 / iOS 26 与书卷共用同一语义）
+    // 柔绘：主色淡底再压一档 + 虚化圆角 + 羽化描边环，
+    // 并把原来 2dp 的主色左侧竖条换成「内侧竖条（无外描边）」——柔绘不允许实色硬边描边。
+    // A1/V2 第二批（v3.69.0）：上述差异收口为 AppScheduleHighlightTokens。
+    val highlight = appScheduleHighlight()
+    val activeSectionBackground = appColors().primarySoft.copy(alpha = highlight.activeSectionAlpha)
+    val activeLeftBorderColor = MaterialTheme.colorScheme.primary
+    val motion = LocalAppMotion.current
+
+    Column(modifier.width(style.timeColumnWidth)) {
+        for (index in 0 until maxGridSections) {
+            val isCurrentHourActive = if (is24HourMode) {
+                currentHour == index
+            } else {
+                index + 1 == currentSectionIndex
+            }
+
+            // v3.43.0（《交互动效审查》P2）：当前节次高亮由「整块瞬切」改为令牌化渐变——
+            // 淡底、节次数字颜色、字重、柔绘内侧竖条浓度四者同步补间，时长取
+            // [MotionTokens.colorDurationMs]。跨节次的那一分钟不再是一帧硬跳。
+            val highlightFraction by animateFloatAsState(
+                targetValue = if (isCurrentHourActive) 1f else 0f,
+                animationSpec = tween(motion.tokens.colorDurationMs, easing = motion.tokens.expandEasing),
+                label = "currentSlotHighlight"
+            )
+            val slotBackground by animateColorAsState(
+                targetValue = if (isCurrentHourActive) activeSectionBackground else Color.Transparent,
+                animationSpec = tween(motion.tokens.colorDurationMs, easing = motion.tokens.expandEasing),
+                label = "currentSlotBackground"
+            )
+            val slotTextColor by animateColorAsState(
+                // 当前节次原先用固定主色，壁纸模式下会与自动切换的黑/白文字色不一致
+                // （同列里其余时间已跟随壁纸，当前节次却仍是主题色）⇒ 改为跟随传入的 textColor，
+                // 高亮语义改由淡底 + 字重承担，颜色不再承担「区分当前节次」的职责。
+                targetValue = textColor,
+                animationSpec = tween(motion.tokens.colorDurationMs, easing = motion.tokens.expandEasing),
+                label = "currentSlotTextColor"
+            )
+
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(style.sectionHeight)
+                    .clickable { onTimeSlotClicked() }
+                    // 柔绘：当前节次淡底块换成 10dp（appShapes().chipSmall）虚化圆角薄涂块；
+                    // 其它主题保持直角通栏淡底（未选中时不加任何图层装饰）
+                    .then(
+                        if (highlight.useRoundedHighlight && isCurrentHourActive) {
+                            Modifier.clip(appShapes().chipSmall)
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .background(slotBackground)
+                    .then(
+                        // 当前节次左缘主色指示条：原有区块样式里没有这条竖条（节次高亮只靠主色淡底），
+                        // 这里只在柔绘下新增一根「内侧渐变竖条」——因为柔绘把淡底换成了圆角薄涂块，
+                        // 需要一个不依赖描边的定位锚点。
+                        if (highlight.useInnerBar && isCurrentHourActive) {
+                            Modifier.drawBehind {
+                                val barWidth = 3.dp.toPx()
+                                drawRect(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(activeLeftBorderColor.copy(alpha = highlightFraction), Color.Transparent),
+                                        startX = 0f,
+                                        endX = barWidth
+                                    ),
+                                    topLeft = Offset.Zero,
+                                    size = Size(barWidth, size.height)
+                                )
+                            }
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .then(if (highlight.featherRim) Modifier.softFeatherRim(appShapes().chipSmall) else Modifier)
+                    .drawBehind {
+                        if (!style.hideGridLines) {
+                            drawLine(lineColor, Offset(size.width, 0f), Offset(size.width, size.height), strokeWidthPx)
+                            if (!is24HourMode) {
+                                drawLine(lineColor, Offset(0f, size.height), Offset(size.width, size.height), strokeWidthPx)
+                            }
+                        }
+
+                    },
+                contentAlignment = if (is24HourMode) Alignment.TopCenter else Alignment.Center
+            ) {
+                val h = maxHeight
+                if (is24HourMode && activeDragMinuteStr != null && index == activeDragHour) {
+                    Box(
+                        modifier = Modifier.matchParentSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = ":$activeDragMinuteStr",
+                            fontSize = if (h < 32.dp) AppTypeGrid.timeCompact else AppTypeGrid.timeLabel,
+                            fontWeight = appType().emphasisWeight,
+                            color = textColor
+                        )
+                    }
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = if (is24HourMode) Arrangement.Top else Arrangement.Center,
+                    modifier = Modifier
+                        .padding(horizontal = 1.dp)
+                        .then(if (is24HourMode) Modifier.offset(y = (-7).dp) else Modifier)
+                ) {
+                    if (is24HourMode) {
+                        val formatHourStr = "${index.toString().padStart(2, '0')}:00"
+                        Text(
+                            text = formatHourStr,
+                            fontSize = if (h < 32.dp) AppTypeGrid.timeCompact else AppTypeGrid.timeLabel,
+                            fontWeight = appType().captionWeight,
+                            color = slotTextColor
+                        )
+                    } else {
+                        val slot = timeSlots.find { it.number == index + 1 }
+                        if (slot != null) {
+                            Text(
+                                text = slot.alias ?: slot.number.toString(),
+                                fontSize = if (h < 32.dp) AppTypeGrid.timeCompact else 13.sp,
+                                // 字重也随高亮补间（Bold 700 → ExtraBold 800），避免颜色渐变时字重突兀跳档
+                                fontWeight = FontWeight((700f + 100f * highlightFraction).roundToInt().coerceIn(1, 1000)),
+                                color = slotTextColor,
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 1,
+                                style = TextStyle(
+                                    lineHeight = 15.sp
+                                )
+                            )
+                            if (!style.hideSectionTime) {
+                                when {
+                                    h >= 52.dp -> {
+                                        Spacer(Modifier.height(1.dp))
+                                        TimeText(slot.startTime, subTextColor)
+                                        TimeText(slot.endTime, subTextColor)
+                                    }
+                                    h >= 38.dp -> {
+                                        Text(
+                                            text = "${slot.startTime}-${slot.endTime}",
+                                            fontSize = 9.sp,
+                                            color = subTextColor,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 课表编辑状态下的拉伸手柄（上下边界调整）
+ */
+@Composable
+fun BoxScope.CourseEditHandles(
+    onDragStart: (isTop: Boolean) -> Unit,
+    onDragging: (deltaY: Float) -> Unit,
+    onDragEnd: () -> Unit
+) {
+    val handleBoxSize = 32.dp
+
+    Box(
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .offset(x = (-16).dp, y = (-16).dp)
+            .size(handleBoxSize)
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { onDragStart(true) },
+                    onDragEnd = { onDragEnd() },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        onDragging(dragAmount.y)
+                    }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        EditHandleDot()
+    }
+
+    Box(
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .offset(x = 16.dp, y = 16.dp)
+            .size(handleBoxSize)
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { onDragStart(false) },
+                    onDragEnd = { onDragEnd() },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        onDragging(dragAmount.y)
+                    }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        EditHandleDot()
+    }
+}
+
+@Composable
+private fun EditHandleDot() {
+    Box(
+        modifier = Modifier
+            .size(12.dp)
+            .background(appColors().info, CircleShape)
+    )
+}
+
+@Composable
+fun TimeText(text: String, color: Color) {
+    Text(
+        text = text,
+        fontSize = 9.sp,
+        color = color,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        style = TextStyle(lineHeight = 10.sp)
+    )
+}
+
+/**
+ * 计算扁平化的可调度项列表
+ */
+fun calculateSingleSchedulables(
+    mergedCourses: List<MergedCourseBlock>,
+    firstDayOfWeek: Int,
+    showWeekends: Boolean
+): List<ISingleSchedulable> {
+    val list = mutableListOf<ISingleSchedulable>()
+    mergedCourses.forEach { block ->
+        val displayIdx = mapDayToDisplayIndex(block.day, firstDayOfWeek, showWeekends)
+        if (displayIdx != -1) {
+            val layoutInfo = block.nonActiveRanges.firstOrNull() ?: (0f to 1f)
+            block.courses.firstOrNull()?.let { course ->
+                list.add(object : ISingleSchedulable {
+                    override val columnIndex = displayIdx
+                    override val subColumnIndex = layoutInfo.first.toInt()
+                    override val subColumnCount = layoutInfo.second.toInt()
+                    override val startSection = block.startSection
+                    override val endSection = block.endSection
+                    override val courseWrapper = course
+                    override val parentBlock = block.copy(courses = listOf(course))
+                })
+            }
+        }
+    }
+    return list
+}
+
+fun rearrangeDays(originalDays: List<String>, firstDayOfWeek: Int): List<String> {
+    val startIndex = (firstDayOfWeek - 1).coerceIn(0, 6)
+    return originalDays.subList(startIndex, originalDays.size) + originalDays.subList(0, startIndex)
+}
+
+fun mapDayToDisplayIndex(courseDay: Int, firstDayOfWeek: Int, showWeekends: Boolean): Int {
+    val idx = (courseDay - firstDayOfWeek + 7) % 7
+    return if (idx >= if (showWeekends) 7 else 5) -1 else idx
+}
+
+fun mapDisplayIndexToDay(idx: Int, firstDayOfWeek: Int): Int = (firstDayOfWeek - 1 + idx) % 7 + 1

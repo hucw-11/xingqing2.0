@@ -1,0 +1,120 @@
+package com.shangkeschedule.ui.schedule.components
+
+import androidx.compose.ui.graphics.Color
+import com.shangkeschedule.data.model.AppThemePreset
+import com.shangkeschedule.data.model.DualColor
+import com.shangkeschedule.data.model.ScheduleGridStyle
+
+/**
+ * 根据课程块背景色自动计算文字颜色。
+ *
+ * 参考 sleep 的 CourseColorUtil 思路：
+ *  - 计算相对亮度 (0.299R + 0.587G + 0.114B)
+ *  - 亮度 &gt; 0.6 说明是浅色背景，返回黑字
+ *  - 亮度 &lt;= 0.6 说明是深色背景，返回白字
+ *  - 背景 alpha &lt; 0.5 时说明背景几乎透明，无法保证对比度，回退到调用方提供的固定颜色
+ */
+fun adaptiveTextColor(background: Color, fallback: Color): Color {
+    if (background.alpha < 0.5f) return fallback
+
+    val luminance = 0.299f * background.red +
+        0.587f * background.green +
+        0.114f * background.blue
+
+    return if (luminance > 0.6f) Color.Black else Color.White
+}
+
+/**
+ * 色条主题（通透 IOS / 柔绘 SOFT）课程方块的**填充**不透明度系数。
+ *
+ * 为什么需要它：色条主题的方块底色由「深色档强调色 × 系数」得到，系数过小时填充与页面底几乎
+ * 同色，方块视觉上就是**透明**的——只剩 4dp 左侧色条与文字可见。离屏渲染真实 CourseBlock 实测
+ * （反解实际填充 alpha）：
+ *   · 柔绘浅色 0.12：填充 `#E9E9F4` vs 页底 `#F4F3F7`，差 ≈10/255 ⇒ 基本看不见；
+ *   · 通透浅色 0.12：填充 `#D4E3F8` vs 页底 `#F2F2F7`，差 ≈(31,15,0) ⇒ 很淡；
+ *   · 通透深色 0.25：填充 `#001F40` 叠纯黑页底 ⇒ 等同黑（真机截图复现）。
+ * 现提高到浅色 0.30 / 深色 0.44：色条语言（4dp 色条 + 淡同色底）不变，方块本身成为可辨识的淡色
+ * 卡片；深色档刻意低于浅色档的视觉当量，保证深色下文字（= 深色档强调色）仍压得住底色。
+ *
+ * ⚠️ 这是**填充**系数，不是色板令牌：色板自带 alpha（书卷 `0x40` / 柔绘 `0x33` / 通透 `0x1F`）
+ * 仍由 [scaleAlpha] 原样保留，本系数只在其上缩放。
+ */
+internal const val STRIP_FILL_ALPHA_LIGHT = 0.30f
+internal const val STRIP_FILL_ALPHA_DARK = 0.44f
+
+/**
+ * 课程块最终渲染色：背景、强调色和内容由同一个解析器产出。
+ *
+ * 主题语言只决定“基础填充系数”；用户设置的「课程块不透明度」始终作为最后一层乘算。
+ * 这样网格、列表和后续新增入口不会出现同一份色板/同一设置渲染出不同透明度的问题。
+ */
+data class CourseBlockColors(
+    val background: Color,
+    val accent: Color,
+    val content: Color
+)
+
+/**
+ * 解析课程块颜色。
+ *
+ * - 通透 / 柔绘：使用深色强调色做淡底，主题填充系数为浅色 0.30、深色 0.44；
+ * - 书卷 / 用户自定义实底：直接使用当前深浅模式对应的色板色；
+ * - **课表设了自定义背景图（壁纸）：一律改走「书卷深色模式」口径**——深色档强调色作**实色**底、
+ *   文字按底色亮度自适应黑 / 白。原因：色条主题的淡底（0.30/0.44）设计前提是页面底为纯色，
+ *   叠在照片上会直接透出壁纸纹理、视觉上等同「课程块变透明」；且淡底 + 深色档文字的组合在
+ *   照片上也压不住对比度。实色块是唯一在任意照片上都稳定的方案，用户仍可用「不透明度」滑块
+ *   缩放整体不透明程度（1.0 = 实色，下限 0.5 = 半透，壁纸按比例透出）；
+ * - 色板自带 alpha 必须保留，用户不透明度只做乘算，不覆盖。
+ */
+fun resolveCourseBlockColors(
+    themePreset: AppThemePreset,
+    isDarkTheme: Boolean,
+    colorPair: DualColor?,
+    blockAlpha: Float,
+    fallbackContent: Color,
+    preferredContent: Color? = null,
+    hasWallpaper: Boolean = false
+): CourseBlockColors {
+    val safeColorPair = colorPair
+        ?: ScheduleGridStyle.DEFAULT_COLOR_MAPS.firstOrNull()
+        ?: DualColor(Color(0xFF6C5CE7), Color(0xFF6C5CE7))
+    val safeAlpha = blockAlpha.coerceIn(ScheduleGridStyle.MIN_BLOCK_ALPHA, 1f)
+    val isStripTheme = themePreset == AppThemePreset.IOS || themePreset == AppThemePreset.SOFT
+    // 壁纸模式 = 书卷深色模式口径：实底色块（不参与「淡底」语言）
+    val isSolidBlock = hasWallpaper
+    val baseColor = when {
+        isSolidBlock -> safeColorPair.dark
+        isStripTheme -> safeColorPair.dark
+        isDarkTheme -> safeColorPair.dark
+        else -> safeColorPair.light
+    }
+    val themeFillAlpha = when {
+        isSolidBlock -> 1f
+        isStripTheme && isDarkTheme -> STRIP_FILL_ALPHA_DARK
+        isStripTheme -> STRIP_FILL_ALPHA_LIGHT
+        else -> 1f
+    }
+    val background = baseColor.scaleAlpha(themeFillAlpha * safeAlpha)
+    val content = preferredContent
+        ?: if (isStripTheme && !isSolidBlock) {
+            safeColorPair.dark
+        } else {
+            adaptiveTextColor(background, fallbackContent)
+        }
+
+    return CourseBlockColors(
+        background = background,
+        accent = safeColorPair.dark,
+        content = content
+    )
+}
+
+/**
+ * 在颜色自带的 alpha 之上再做一次乘算，得到最终不透明度。
+ *
+ * 颜色池里的颜色自带 alpha，且该 alpha 是**设计令牌**：书卷浅色池 = `0x40` 淡底、通透浅色池 = `0x1F`
+ * 淡底（深色池与经典 / 云舒 / 利落的浅色池为 `0xFF` 实色）。因此「课程块不透明度」这类设置必须与
+ * 颜色自带的 alpha **相乘**，而不是用 `copy(alpha = x)` 直接覆盖——覆盖会让淡底令牌失效，
+ * 页面渲染出的颜色与颜色池里显示的颜色对不上（历史问题：周课表网格把书卷浅色池渲染成了实色）。
+ */
+fun Color.scaleAlpha(scale: Float): Color = copy(alpha = (alpha * scale).coerceIn(0f, 1f))

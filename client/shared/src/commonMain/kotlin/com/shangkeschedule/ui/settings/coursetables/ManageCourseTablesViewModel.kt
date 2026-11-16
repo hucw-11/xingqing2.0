@@ -1,0 +1,341 @@
+package com.shangkeschedule.ui.settings.coursetables
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.shangkeschedule.data.db.main.CourseTable
+import com.shangkeschedule.data.db.main.CourseTableConfig
+import com.shangkeschedule.data.repository.AppSettingsRepository
+import com.shangkeschedule.data.repository.CourseTableRepository
+import com.shangkeschedule.tool.AppLog
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import org.koin.core.annotation.KoinViewModel
+import kotlin.time.Clock
+
+/**
+ * 负责管理课表管理界面的所有状态和业务逻辑。
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+@KoinViewModel
+class ManageCourseTablesViewModel(
+    private val appSettingsRepository: AppSettingsRepository,
+    private val courseTableRepository: CourseTableRepository
+) : ViewModel() {
+
+    private companion object {
+        private const val TAG = "ManageCourseTablesVM"
+    }
+
+    // 组合课表列表 + 当前选中 ID + 每张课表的配置/课程数，产出一个完整的 UI 状态
+    val uiState: StateFlow<ManageCourseTablesUiState> = combine(
+        courseTableRepository.getAllCourseTables(),
+        appSettingsRepository.getAppSettings().map { it.currentCourseTableId }.distinctUntilChanged()
+    ) { courseTables, activeTableId ->
+        courseTables to activeTableId
+    }
+        // 设置里无关字段的写入不再触发 N 张表 × 2 条 Room 流全量重订阅
+        .distinctUntilChanged()
+        .flatMapLatest { (courseTables, activeTableId) ->
+        if (courseTables.isEmpty()) {
+            flowOf(buildUiState(courseTables, activeTableId, emptyList()))
+        } else {
+            combine(
+                courseTables.map { table ->
+                    combine(
+                        appSettingsRepository.getCourseTableConfigFlow(table.id),
+                        courseTableRepository.getCoursesWithWeeksByTableId(table.id)
+                    ) { config, courses ->
+                        SemesterInfo(table = table, config = config, courseCount = courses.size)
+                    }
+                }
+            ) { infos ->
+                buildUiState(courseTables, activeTableId, infos.toList())
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ManageCourseTablesUiState()
+    )
+
+    /**
+     * 根据课表列表、当前选中 ID 与各课表信息，组装学年分组与学期进度。
+     */
+    private fun buildUiState(
+        courseTables: List<CourseTable>,
+        activeTableId: String?,
+        infos: List<SemesterInfo>
+    ): ManageCourseTablesUiState {
+        // 情侣课表不作为独立学期展示：按配对关系附挂到本人课表右侧（并排滑动查看）
+        val coupleInfos = infos.filter { it.table.isCouple }
+        val selfInfos = infos.map { info ->
+            if (info.table.isCouple) return@map info
+            info.copy(couple = coupleInfos.firstOrNull { it.table.pairedCourseTableId == info.table.id })
+        }.filter { !it.table.isCouple }
+
+        // 当前学期按「本人课表」判定：正在单独显示情侣课表时，其本人表仍是当前学期
+        val activeEntity = infos.firstOrNull { it.table.id == activeTableId }
+        val activeSelfId = activeEntity?.let { entity ->
+            if (entity.table.isCouple) entity.table.pairedCourseTableId else entity.table.id
+        } ?: activeTableId
+
+        val current = selfInfos.firstOrNull { it.table.id == activeSelfId }
+            ?: selfInfos.firstOrNull()
+
+        // 历史学期 = 除当前学期外的所有本人课表，按学年分组（组内保持创建时间倒序）
+        val historyCurrentId = current?.table?.id
+        val history = selfInfos.filter { it.table.id != historyCurrentId }
+        val groups = history
+            .groupBy { it.schoolYearStart() }
+            .map { (startYear, semesters) ->
+                // 学年内按学期开始日期自动排序：第一学期（秋）在前、第二学期（春）在后
+                YearGroup(
+                    startYear = startYear,
+                    semesters = semesters.sortedWith(
+                        compareBy(nullsLast()) { it.startDate }
+                    )
+                )
+            }
+            .sortedByDescending { it.startYear }
+
+        // 当前学期进度（未设置开学日期时为 null）
+        var currentWeek: Int? = null
+        var currentWeekPercent: Int? = null
+        val config = current?.config
+        if (current != null && config != null && !config.semesterStartDate.isNullOrEmpty()) {
+            val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+            val rawWeek = appSettingsRepository.getWeekIndexAtDate(
+                targetDate = today,
+                startDateStr = config.semesterStartDate,
+                firstDayOfWeekInt = config.firstDayOfWeek
+            )
+            // 与数据层语义对齐（AppSettingsRepository：`if (rawWeek in 1..totalWeeks) rawWeek else null`）：
+            // 开学前 rawWeek ≤ 0、学期结束后 rawWeek > totalWeeks，二者都应视为「无当前周」。
+            // 原实现用 coerceIn 钳到边界，会让未开学的学期显示「第 1 周 / 5%」、
+            // 已结束的显示「第 20 周 / 100%」，与课表页/今日页的「未开始 / 学期未设置」自相矛盾。
+            val totalWeeks = current.totalWeeks.coerceAtLeast(1)
+            if (rawWeek != null && rawWeek in 1..totalWeeks) {
+                currentWeek = rawWeek
+                currentWeekPercent = (rawWeek * 100) / totalWeeks
+            }
+        }
+
+        return ManageCourseTablesUiState(
+            courseTables = courseTables,
+            semesterCount = selfInfos.size,
+            currentActiveTableId = activeTableId,
+            currentSemester = current,
+            currentWeek = currentWeek,
+            currentWeekPercent = currentWeekPercent,
+            historyGroups = groups
+        )
+    }
+
+    /**
+     * 创建一个新的课表。
+     *
+     * P2-44（2026-10-06）：原实现是 fire-and-forget，调用方（ManageCourseTablesScreen）
+     * 紧跟一句**无条件**「新建成功」toast —— 写库失败时用户仍看到成功，且异常会由
+     * viewModelScope 的默认处理吞掉（界面无任何反馈）。现改为**先落库、再回报结果**，
+     * 由返回值驱动提示语。
+     *
+     * @return true 表示已成功写入库
+     */
+    suspend fun createNewCourseTableNow(newTableName: String): Boolean = runCatching {
+        courseTableRepository.createNewCourseTable(newTableName)
+        true
+    }.getOrElse { e ->
+        AppLog.e(TAG, "新建课表失败", e)
+        false
+    }
+
+    /**
+     * 创建课表的兼容入口（保留原调用点语义）。
+     */
+    fun createNewCourseTable(newTableName: String) {
+        viewModelScope.launch { createNewCourseTableNow(newTableName) }
+    }
+
+    /**
+     * 更新一个课表。同 [createNewCourseTableNow]：改为可等待结果，供界面按真实结果提示。
+     *
+     * @return true 表示已成功写入库
+     */
+    suspend fun updateCourseTableNow(updatedCourseTable: CourseTable): Boolean = runCatching {
+        courseTableRepository.updateCourseTable(updatedCourseTable)
+        true
+    }.getOrElse { e ->
+        AppLog.e(TAG, "重命名课表失败", e)
+        false
+    }
+
+    /**
+     * 更新课表的兼容入口（保留原调用点语义）。
+     */
+    fun updateCourseTable(updatedCourseTable: CourseTable) {
+        viewModelScope.launch { updateCourseTableNow(updatedCourseTable) }
+    }
+
+    /**
+     * 切换当前激活的课表。
+     * @param tableId 要切换到的课表ID。
+     */
+    fun switchCourseTable(tableId: String) {
+        viewModelScope.launch { switchCourseTableNow(tableId) }
+    }
+
+    /**
+     * 挂起式切表：写库完成才返回。
+     * 「查看 / 设为当前」等先切表后导航的场景必须用本方法——页面弹出后
+     * viewModelScope 会被取消，fire-and-forget 版本可能永远不落库，导致落在旧课表。
+     */
+    suspend fun switchCourseTableNow(tableId: String) {
+        val currentSettings = appSettingsRepository.getAppSettingsOnce()
+        appSettingsRepository.insertOrUpdateAppSettings(
+            currentSettings.copy(currentCourseTableId = tableId)
+        )
+    }
+
+    /** 为指定本人课表创建配对情侣课表（挂起式，供 UI 结果化提示）。 */
+    suspend fun createCoupleTableForNow(selfTableId: String): Boolean {
+        return try {
+            courseTableRepository.createCoupleTable(selfTableId)
+            true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // CancellationException 是 Exception 子类：吞掉会把「用户离开页面导致的正常取消」
+            // 误报成「创建情侣课表失败」，且被取消的协程不再向上传播取消。
+            throw e
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * 复制学期为新学期模板（课程 / 作息 / 学期配置整体带过来）。
+     *
+     * 挂起式：调用方需等写库完成再提示，避免页面弹出后 viewModelScope 被取消导致静默失败。
+     *
+     * @param sourceTableId 源课表（学期）ID
+     * @param newName 新名称（重名判定已由 UI 层完成）
+     * @return 新建成功返回 true
+     */
+    suspend fun duplicateSemester(sourceTableId: String, newName: String): Boolean {
+        return try {
+            courseTableRepository.duplicateCourseTable(sourceTableId, newName)
+            true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * 删除一个课表。
+     * @param courseTable 要删除的课表对象。
+     */
+    /** 删除课表（本人表级联其情侣表）；返回是否实际删除（剩余表不足时拒绝）。 */
+    suspend fun deleteCourseTable(courseTable: CourseTable): Boolean {
+        return courseTableRepository.deleteCourseTableAndResolveCurrent(courseTable)
+    }
+}
+
+/**
+ * 单个学期（课表）的展示信息：实体 + 配置 + 课程数。
+ */
+data class SemesterInfo(
+    val table: CourseTable,
+    val config: CourseTableConfig?,
+    val courseCount: Int,
+    /** 配对情侣课表（独立 CourseTable，isCouple=true）；未创建时为 null。 */
+    val couple: SemesterInfo? = null
+) {
+    /** 学期总周数（未配置时回退到默认 20）。 */
+    val totalWeeks: Int get() = config?.semesterTotalWeeks ?: 20
+
+    /** 学期开始日期（未设置为 null）。 */
+    val startDate: LocalDate?
+        get() = config?.semesterStartDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+
+    /** 学期结束日期（开始日期 + 总周数 - 1 天；未设置开始日期为 null）。 */
+    val endDate: LocalDate?
+        get() = startDate?.let { LocalDate.fromEpochDays(it.toEpochDays() + totalWeeks * 7 - 1) }
+
+    /**
+     * 所属学年起始年：优先按学期开始日期推算（9 月及以后归入下一学年），
+     * 未设置开始日期时回退到课表创建时间。
+     */
+    fun schoolYearStart(): Int {
+        val base = startDate ?: runCatching {
+            Instant.fromEpochMilliseconds(table.createdAt)
+                .toLocalDateTime(TimeZone.currentSystemDefault()).date
+        }.getOrNull()
+        return if (base == null) {
+            0
+        } else if (base.monthNumber >= 9) {
+            base.year
+        } else {
+            base.year - 1
+        }
+    }
+}
+
+/**
+ * 按学年分组的历史学期。
+ */
+data class YearGroup(
+    val startYear: Int,
+    val semesters: List<SemesterInfo>
+)
+
+/**
+ * 封装 UI 状态的数据类，减少 UI 层的复杂性。
+ */
+data class ManageCourseTablesUiState(
+    val courseTables: List<CourseTable> = emptyList(),
+    /** 学期数（仅本人课表，不含情侣课表——情侣表附挂在本人卡右侧，不是独立学期）。 */
+    val semesterCount: Int = 0,
+    val currentActiveTableId: String? = null,
+    /** 当前学期（激活课表）信息。 */
+    val currentSemester: SemesterInfo? = null,
+    /** 当前周（1..总周数）；未设置开学日期时为 null。 */
+    val currentWeek: Int? = null,
+    /** 学期进度百分比（0..100）；未设置开学日期时为 null。 */
+    val currentWeekPercent: Int? = null,
+    /** 历史学期学年分组（学年起始年倒序）。 */
+    val historyGroups: List<YearGroup> = emptyList()
+)
+
+/**
+ * 生成「复制学期」的新名称。
+ *
+ * 不重名时直接用 [baseName]；否则从 2 开始依次向 [duplicatedName] 取候选，
+ * 直到不再与 [existingNames] 冲突。名称模板由调用方给出（UI 层持有 stringResource）。
+ *
+ * 抽成纯函数：把重名递推从可组合函数体里挪出来，可独立单测覆盖。
+ */
+fun copySemesterName(
+    baseName: String,
+    existingNames: Set<String>,
+    duplicatedName: (Int) -> String
+): String {
+    if (baseName !in existingNames) return baseName
+    var index = 2
+    while (true) {
+        val candidate = duplicatedName(index)
+        if (candidate !in existingNames) return candidate
+        index++
+    }
+}

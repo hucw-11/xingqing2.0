@@ -1,4 +1,4 @@
-﻿param(
+param(
     [Parameter(Mandatory = $true)][string]$UnsignedApk,
     [Parameter(Mandatory = $true)][string]$ApkSignerJar,
     [string]$KeyPath = '',
@@ -23,7 +23,7 @@ if (-not $Java) {
 }
 
 if (-not $OutputApk) {
-    $gradleFile = Join-Path $repoRoot 'androidApp/build.gradle.kts'
+    $gradleFile = Join-Path $repoRoot 'client/androidApp/build.gradle.kts'
     $versionName = 'unknown'
     if (Test-Path -LiteralPath $gradleFile) {
         $gradleContent = Get-Content -LiteralPath $gradleFile -Raw

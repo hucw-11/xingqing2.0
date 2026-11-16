@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+   Sample backup rules file; uncomment and customize as necessary.
+   See https://developer.android.com/guide/topics/data/autobackup
+   for details.
+   Note: This file is ignored for devices older than API 31
+   See https://developer.android.com/about/versions/12/backup-restore
+-->
+<full-backup-content>
+    <!--
+   <include domain="sharedpref" path="."/>
+   <exclude domain="sharedpref" path="device.xml"/>
+-->
+    <!--
+      FIX: WebDAV 凭据所在的 DataStore 不参与自动备份。
+      密文本身由 AndroidKeyStore 的设备绑定密钥保护，但服务器地址与用户名
+      没有上传到云端的必要；换机恢复后重新填写即可。
+    -->
+    <exclude domain="file" path="datastore/api_config.preferences_pb" />
+    <!--
+      FIX: DataStore 写入时先生成同目录伴生文件 <path>.tmp 再原子改名，崩溃或被系统杀死
+      会残留内容与正本相同的副本。AOSP 对 domain="file" 的排除是精确路径匹配，只在
+      database 域补 -journal/-wal、sharedpref 域补 .xml，不会连带排除伴生文件。
+    -->
+    <exclude domain="file" path="datastore/api_config.preferences_pb.tmp" />
+    <!--
+      FIX（第 47 轮）：以下四项都不该进自动备份。
+      1) repo/ 是离线学校仓库（195 个适配脚本 + 索引，解压后约 3.1 MB），
+         内置包可重放、启动期还会远程补齐，属于可再生的体积大户；
+      2) temp_offline_schools.zip 只在解压窗口内存在，可随时重建；
+      3) share/ 是反馈截图的临时交接目录（用户点出口才写、同名覆盖）；
+      4) glass_fallback.flag 是玻璃特效的崩溃降级锁存（内容=versionCode），
+         设备/版本特定，跨设备恢复会把降级状态带过去。
+      目录级排除剪整棵子树：AOSP 的遍历命中排除即 continue，且不再入队子项。
+    -->
+    <exclude domain="file" path="repo" />
+    <exclude domain="file" path="temp_offline_schools.zip" />
+    <exclude domain="file" path="share" />
+    <exclude domain="file" path="glass_fallback.flag" />
+</full-backup-content>

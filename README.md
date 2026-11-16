@@ -1,50 +1,52 @@
 # 心晴 2.0
 
-个人使用的安卓 + Windows 桌面生活安排与记录应用。
+个人使用的安卓与 Windows 生活安排、日记和心情应用。
 
-当前处于 **P1：跨平台骨架与数据基础**。本阶段只交付可构建的骨架、数据库迁移机制、导航与主题、凭据存储适配和 CI；课程、时间轴、日记、同步、AI、微信提醒均未实现，界面中的占位页已明确标注。
+2026-11-16：已按用户确认路线导入固定版本“上课”的完整客户端。**当前构建入口是 client/**。保留原版课程、日程、时间轴、主题及文件导入。根部旧 shared/androidApp/desktopApp 是迁移前代码，暂留作规则与测试参考，不再用于发布。
 
-## 结构
+来源：[client/UPSTREAM.md](client/UPSTREAM.md)。路线：[纠偏方案](docs/复用路线纠偏方案.md)。
+
+## 当前批次
+
+- Android：包名 com.hucw.xinqing2，版本 0.3.0 / code 3，内部源码包名保留上游。
+- 默认打开原版日程页，保留月历、日期轴、课程/日程/待办及创建交互。
+- Windows 数据：%APPDATA%/Xinqing2/UpstreamBase，与原版上课及旧心晴dev数据隔离。
+- 旧dev安卓数据留在原有目录；本批不迁移、不删除，新页面不会自动显示旧dev记录。
+- 设置主页隐藏情侣课表、成绩、学业、考证、空教室入口；无关底层代码暂保留。
+- 日记、心情统计、DeepSeek、坚果云双向同步和微信云提醒仍待开发。现有 WebDAV 是原版备份恢复。
+
+## 构建与检查
+
+本机不要求安装 Android Studio。GitHub Actions 从 client/ 执行：
 
 ```text
-shared/       Kotlin Multiplatform：领域模型、数据库、共享 Compose UI
-androidApp/   Android 壳与清单
-desktopApp/   Compose Desktop 入口与打包
-docs/         需求调查、技术方案、进度与交接记录
-scripts/      APK 签名脚本
+./gradlew :shared:jvmTest -PuseMirror=false
+./gradlew :androidApp:assembleDebug :androidApp:lintDebug -PuseMirror=false
+.\gradlew.bat :desktopApp:createDistributable -PuseMirror=false
 ```
 
-- 包名：`com.hucw.xinqing2`
-- 桌面数据目录：`%APPDATA%/Xinqing2`
-- 安卓数据目录：应用私有 `files/xinqing`
-- 数据库：SQLite（`androidx.sqlite` bundled 驱动），手写迁移，当前 schema 版本 1
-- 凭据：安卓 Android Keystore；Windows DPAPI
-
-## 构建
-
-本机不要求安装 Android Studio。GitHub Actions 会执行：
-
-- Android：`./gradlew :shared:jvmTest :androidApp:lintDebug :androidApp:assembleDebug`
-- Windows：`.\gradlew.bat :shared:jvmTest :desktopApp:createDistributable`
-
-CI 产出的 APK 是 **未签名** 的，不能直接安装。下载 artifact 后在本机签名：
+Windows CI 只生成并检查产物，不启动程序。静态核对：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\sign-apk.ps1 -UnsignedApk <APK绝对路径> -ApkSignerJar <apksigner.jar绝对路径>
+pwsh -File scripts/check-client-source.ps1
 ```
 
-脚本默认复用相邻旧版仓库的固定密钥 `../xinqing/.local/xinqing-signing.p12`，并校验证书指纹；密钥不在本仓库、不复制、不上传。签名结果默认输出到 `.local/xinqing2-<versionName>-signed.apk`，例如 `.local/xinqing2-0.1.0-p1-signed.apk`。升版本后文件名会跟着变，避免新旧安装包混淆。
+## APK 签名
 
-## P1 自检路径
+CI artifact xinqing2-ci-apk 包含各 ABI 开发 APK 和 apksigner。开发包带运行器临时调试签名，交付前必须用固定密钥重新签名，不直接安装临时签名包。
 
-1. 安装已签名 APK，或运行桌面产物。
-2. 在“今天”页点击“写入一条自检记录”，数字加一。
-3. 关闭应用再打开，数字应保留。
-4. 点击“写入并读回测试值”，应显示“读回成功”。
-5. 其余页面显示“占位页”，并标注计划阶段。
+```powershell
+pwsh -File scripts/sign-apk.ps1 -UnsignedApk <所需ABI的APK绝对路径> -ApkSignerJar <apksigner.jar绝对路径>
+```
 
-## 已知限制
+脚本沿用本机固定密钥并校验证书，版本从 client/androidApp/build.gradle.kts 读取。输出 .local/xinqing2-0.3.0-signed.apk；每次只选择一个 ABI，arm64 手机通常使用 arm64-v8a，不要将不同 ABI 当成多个版本轮流覆盖输出。
 
-- 未提交 CI 结果前，不能宣称构建通过。
-- 尚未实现通知权限、精确闹钟、同步、AI 与微信提醒。
-- 桌面端当前仅支持 Windows。
+## 用户验收
+
+1. 安装固定密钥签名包，确认名称“心晴 2.0”。
+2. 确认默认原版日程页，日期面板、时间轴与原版交互一致。
+3. 在“我的”设置学期、作息和课程，或通过文件导入课表。
+4. 添加当天日程、待办，检查课程与日程同屏，完成状态重启保留。
+5. Windows 包由用户手动启动；本批没有双向同步，不会自动出现手机记录。
+
+构建以当前提交 CI 为准。源码导入、静态检查、编译和用户体验分别记录。

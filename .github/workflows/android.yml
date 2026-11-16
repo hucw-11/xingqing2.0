@@ -3,7 +3,9 @@ name: Android CI
 on:
   push:
     branches: [master, main]
+    paths: ['client/**', '.github/workflows/android.yml']
   pull_request:
+    paths: ['client/**', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:
@@ -12,6 +14,10 @@ permissions:
 jobs:
   android:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: client
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -32,17 +38,17 @@ jobs:
       - name: Shared JVM tests
         run: |
           set -o pipefail
-          ./gradlew :shared:jvmTest --stacktrace --no-daemon --console=plain 2>&1 | tee shared-test.log
+          ./gradlew :shared:jvmTest -PuseMirror=false --stacktrace --no-daemon --console=plain 2>&1 | tee shared-test.log
 
-      - name: Build unsigned debug APK
+      - name: Build development APK for fixed-key re-signing
         run: |
           set -o pipefail
-          ./gradlew :androidApp:assembleDebug --stacktrace --no-daemon --console=plain 2>&1 | tee apk.log
+          ./gradlew :androidApp:assembleDebug -PuseMirror=false --stacktrace --no-daemon --console=plain 2>&1 | tee apk.log
 
       - name: Lint
         run: |
           set -o pipefail
-          ./gradlew :androidApp:lintDebug --stacktrace --no-daemon --console=plain 2>&1 | tee lint.log
+          ./gradlew :androidApp:lintDebug -PuseMirror=false --stacktrace --no-daemon --console=plain 2>&1 | tee lint.log
 
       - name: Upload CI diagnostics
         if: always()
@@ -50,17 +56,17 @@ jobs:
         with:
           name: android-ci-diagnostics
           path: |
-            shared-test.log
-            apk.log
-            lint.log
-            shared/build/reports/tests/**
-            shared/build/test-results/**
-            androidApp/build/reports/**
-            androidApp/build/outputs/logs/**
+            client/shared-test.log
+            client/apk.log
+            client/lint.log
+            client/shared/build/reports/tests/**
+            client/shared/build/test-results/**
+            client/androidApp/build/reports/**
+            client/androidApp/build/outputs/logs/**
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Collect unsigned APK and apksigner
+      - name: Collect development APKs and apksigner
         run: |
           mkdir -p artifacts
           cp androidApp/build/outputs/apk/debug/*.apk artifacts/
@@ -68,9 +74,9 @@ jobs:
           test -n "$APKSIGNER"
           cp "$APKSIGNER" artifacts/apksigner.jar
 
-      - name: Upload unsigned APK
+      - name: Upload APKs requiring fixed-key re-signing
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: xinqing2-unsigned-apk
-          path: artifacts/
+          name: xinqing2-ci-apk
+          path: client/artifacts/
           retention-days: 7

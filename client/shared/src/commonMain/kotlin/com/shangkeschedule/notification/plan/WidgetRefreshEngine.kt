@@ -1,0 +1,234 @@
+package com.shangkeschedule.notification.plan
+
+import com.shangkeschedule.data.db.widget.WidgetCourse
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
+
+/**
+ * 小组件「课表边界刷新时刻」计算引擎（纯逻辑，无平台依赖，v4.67.36）。
+ *
+ * ## 要解决什么
+ *
+ * 本仓此前的小组件刷新**只有一条固定 15 分钟 tick**
+ * （`WorkManagerHelper.schedulePeriodicWork` 的 `WidgetUiUpdateWorker`）。
+ * 而小组件上有两类**状态型**内容会随时间翻转：
+ * 「下一节课 / 正在上课」与倒计时。若用户在 10:14 上课下课，
+ * 组件要等到下一个 tick（最坏 15:00 之后）才会把「正在上课」翻成「下一节课」。
+ * 这段时间里用户看到的桌面是**错的**，而组件恰恰是「不用打开 App 就看课表」的地方。
+ *
+ * ## 借鉴
+ *
+ * 竞品「星链课表」的做法（`WidgetRefreshScheduler.addWeekTodayBoundaries`）：
+ * 不做固定 tick，而是从课表快照反解出**当天每个状态翻转点**，
+ * 用 `AlarmManager` 精确闹钟在那一刻直接刷新组件。
+ *
+ * ## 为什么仍然保留 15 分钟 tick
+ *
+ * 精确闹钟**不覆盖**下列情形，故 tick 仍是必需的兜底而非冗余：
+ * 课表被改（重排会重新计算，故其实能覆盖）、用户跳课/换课表（重排覆盖）、
+ * 精确闹钟权限被撤销（此时降级为不精确，见 `AlarmScheduler`）、
+ * 以及**当天没有课**时的倒计时归零。
+ * tick 负责「保证至少每 15 分钟正确一次」，精确闹钟负责「在关键点准时」。
+ * 两者是**主路径 + 兜底**的关系，不是重复。
+ *
+ * ## 设计约束
+ *
+ * 与 [ReminderEngine] 同：本文件属 `commonMain`，不引用任何 Android / java.time API，
+ * 全部用 kotlinx-datetime 表达，可在 JVM 直接单测。
+ */
+object WidgetRefreshEngine {
+
+    /**
+     * 每节课在**开始前**多久预刷新一次（分钟）。
+     *
+     * 覆盖「快上课了」这个状态：组件从「还有 X 分钟」变成「正在上课」之前，
+     * 应先把倒计时刷新到位（例如 09:55 刷新出「10:00 上课」）。
+     */
+    const val PRE_CLASS_LEAD_MINUTES = 15
+
+    /**
+     * 每节课在**开始后**多久再刷新一次（分钟）。
+     *
+     * 覆盖「刚下课」：任一节课结束时刻都已由 [endMinutes] 覆盖，这里补的是
+     * 「晚开始」的场景 —— 例如同一时段有 A(08:00-09:40) 与 B(08:00-09:50) 两门课，
+     * 09:40 时 A 结束但 B 仍在进行中，组件不应把「正在上课」清掉；到 08:06 才翻转是错的，
+     * 而 09:40 的刷新也来不及纠正它。补这一刷让「最晚结束的那门课」在结束时能触发刷新。
+     */
+    const val POST_CLASS_OFFSET_MINUTES = 6
+
+    /**
+     * 跨天锚点时刻：每日 **00:00:20**（本地时区）。
+     *
+     * 为什么单独要一个「跨天锚点」：[refreshPoints] 产出的点全部**相对课程**，
+     * 一天的首个点 = 首节课开始前 15 分（早八 08:00 ⇒ 07:45）。于是从零点到
+     * 07:45 之间**不存在任何刷新点**：设备夜间进入 Doze、WorkManager 的 15 分钟 tick
+     * 与 00:05 每日自愈都被推迟时，桌面会一直保留「昨天」的那份 RemoteViews
+     * （早八前打开手机看到的是昨天的课表）。跨天锚点就是补上「零点后必须刷新一次」
+     * 这个与课程无关的确定性时刻。
+     *
+     * 取 20 秒而不是 00:00:00：零点整是系统广播 / 各类每日任务的拥塞点，
+     * 错开几秒可避开争抢，也不影响「跨天」语义。
+     */
+    val DAY_BOUNDARY_TIME: LocalTime = LocalTime(0, 0, 20)
+
+    /**
+     * 计算**严格晚于** [now] 的下一个跨天锚点（每日 [anchor]，默认 [DAY_BOUNDARY_TIME]）。
+     *
+     * 平台层（`WidgetDayBoundaryAlarmScheduler`）用它挂跨天精确闹钟。为什么必须「严格晚于」：
+     * 若 [now] 正好等于锚点时刻，返回同一时刻会排出一个立即触发的闹钟，
+     * 醒来做的事与「刚排完就该做」完全重合，白白多唤醒一次。
+     *
+     * 纯逻辑：不读系统时钟、不碰 Android API，可在 JVM 直接单测。
+     */
+    fun nextDayBoundary(
+        now: LocalDateTime,
+        anchor: LocalTime = DAY_BOUNDARY_TIME
+    ): LocalDateTime {
+        val todayAnchor = LocalDateTime(now.date, anchor)
+        return if (todayAnchor > now) {
+            todayAnchor
+        } else {
+            LocalDateTime(now.date.plus(1, DateTimeUnit.DAY), anchor)
+        }
+    }
+
+    /** 一次刷新请求。 */
+    data class RefreshPoint(
+        val date: LocalDate,
+        val time: LocalTime,
+        /** 该刷新点对应的课程 id，仅用于调试与自证（同一课程可能产生多个点）。 */
+        val courseId: String
+    )
+
+    /**
+     * 从课表算出小组件需要精确刷新的一天内的时刻集合。
+     *
+     * 每节课产生 **4 个点**（与竞品一致）：
+     * `开始前 15 分` / `开始` / `开始后 6 分` / `结束`。
+     *
+     * - `开始前 15 分` 与 `开始`：让「即将上课 / 正在上课」准时翻转；
+     * - `开始后 6 分`：覆盖「晚结束的那门课」导致的最长在读窗口（见 [POST_CLASS_OFFSET_MINUTES]）；
+     * - `结束`：让「下一节课」在下课那一刻就出现，不必等 tick。
+     *
+     * @param courses 已由 [ReminderEngine.effectiveCourses] 过滤过的有效课程
+     * @param date    只取这一天的课程
+     * @return 按时刻升序去重后的刷新点；当天无有效课程时为空列表
+     */
+    fun refreshPoints(
+        courses: List<WidgetCourse>,
+        date: LocalDate
+    ): List<RefreshPoint> {
+        val raw = mutableListOf<RefreshPoint>()
+
+        for (course in courses) {
+            if (course.date != date.toString()) continue
+            val start = ReminderEngine.parseTime(course.startTime) ?: continue
+
+            // 结束时间缺失 / 结束不晚于开始的课程**整条丢弃**，而不是只丢结束点。
+            //
+            // 与 [ReminderEngine.effectiveCourses] 的 R4-001 同口径，但那里是「没有结束时间
+            // 仍保留」（提醒只需开始时刻），本引擎不同：结束时刻本身就是四个刷新点之一，
+            // 且它同时是「下一节课该换了」的唯一依据。放行一条 end <= start 的课，等于排下
+            // 一个只会让组件跳回错误状态的闹钟（首版实现正是踩了这个坑，
+            // 被 `dirtyDataIsSkipped` 抓出）。
+            val end = ReminderEngine.parseTime(course.endTime)
+            if (end == null || end <= start) continue
+
+            // 开始 / 开始前 15 分
+            raw += RefreshPoint(date, start, course.id)
+            val pre = ReminderEngine.shiftMinutes(start, -PRE_CLASS_LEAD_MINUTES)
+            if (pre != null && !pre.crossedBackward) {
+                // 跨到前一天的点交给前一天的排程负责，不在本日重复排（否则会漏）
+                raw += RefreshPoint(date, pre.time, course.id)
+            }
+
+            // 开始后 6 分
+            val post = ReminderEngine.shiftMinutes(start, POST_CLASS_OFFSET_MINUTES)
+            if (post != null) {
+                raw += RefreshPoint(date, post.time, course.id)
+            }
+
+            // 结束时刻
+            raw += RefreshPoint(date, end, course.id)
+        }
+
+        // 去重（同一时刻可能多门课）+ 排序；同一时刻不同课程没有区别，渲染结果一致。
+        return raw
+            .distinctBy { it.time }
+            .sortedBy { it.time }
+    }
+
+    /**
+     * 排程用的课程状态翻转点。
+     *
+     * refreshPoints 只生成课程边界，不在空档生成周期点；按间隔删点会误删
+     * 长课结束或下一节课开始时刻。夜间无课时自然没有额外课程闹钟。
+     */
+    fun scheduleFor(
+        courses: List<WidgetCourse>,
+        date: LocalDate
+    ): List<RefreshPoint> = refreshPoints(courses, date)
+
+    /**
+     * 一个刷新点的最终排程结果：请求码 + 触发时刻。
+     *
+     * @property requestCode [requestCodes] 分配的请求码
+     * @property triggerAt 触发时刻（日期 + 时刻）
+     */
+    data class ScheduledRefresh(
+        val requestCode: Int,
+        val triggerAt: LocalDateTime
+    )
+
+    /**
+     * 把刷新点分配成请求码（v4.67.36）。
+     *
+     * ## 为什么请求码分配必须是纯逻辑
+     *
+     * 平台层（`WidgetBoundaryAlarmScheduler`）的注销是「扫 [codeBase]–[codeBase]+[limit]」
+     * 这一整段（`AlarmManager.cancel` 没有「按前缀批量删」的 API，只能逐码试）。
+     * 于是**只要有任何一个请求码落到该段之外，它就永远撤不掉** ——
+     * 每轮重排（课表每次变更、开 App、每日零点自愈）都会再叠一批孤儿闹钟，
+     * 且它们仍会在原定时刻触发刷新，直到进程被系统清理。
+     *
+     * 首版实现踩了两个坑，都由本函数的单测钉死：
+     * ① 按天加了偏移（`offset * limit + count`）⇒ 第二天的码全落到段外，永远撤不掉；
+     * ② **按天各调一次本函数** ⇒ 每天都从 [codeBase] 重新开始 ⇒ 跨天**码重复**，
+     *    两个刷新点互相覆盖（`FLAG_UPDATE_CURRENT`）⇒ 一天里的闹钟被另一天顶掉而漏刷。
+     *
+     * 因此正确用法是：**把整个排程窗口的刷新点合并成一份**再调一次本函数，
+     * 让请求码在全局连续分配。调用方（`WidgetBoundaryAlarmScheduler`）已按此接线。
+     *
+     * @param points  已按时刻升序的刷新点（可跨多天，跨天时必须是**整体升序**）
+     * @param now     当前时刻；**早于它的点直接剔除**（排一个已过去的闹钟只会立刻触发一次无用刷新）
+     * @param codeBase 请求码基址
+     * @param codeLimit 该命名空间的槽位上限；超出部分**截断**（不越界分配）
+     * @return 按序分配的排程结果
+     */
+    fun allocate(
+        points: List<RefreshPoint>,
+        now: LocalDateTime,
+        codeBase: Int,
+        codeLimit: Int
+    ): List<ScheduledRefresh> {
+        val out = mutableListOf<ScheduledRefresh>()
+        // 全局升序后再分配：调用方可能把多天的刷新点拼在一起，
+        // 若不排序，跨天的先后顺序不确定，而请求码必须按「触发顺序」递增才便于核对。
+        val ordered = points.sortedWith(compareBy({ it.date }, { it.time }))
+        for (point in ordered) {
+            if (out.size >= codeLimit) break
+            val triggerAt = LocalDateTime(point.date, point.time)
+            if (triggerAt <= now) continue
+            // 关键：连续分配（base + 已用槽位数），绝不按天分段 ——
+            // 任何落在 [codeBase, codeBase+codeLimit) 之外的码都撤不掉。
+            out += ScheduledRefresh(
+                requestCode = codeBase + out.size,
+                triggerAt = triggerAt
+            )
+        }
+        return out
+    }
+}

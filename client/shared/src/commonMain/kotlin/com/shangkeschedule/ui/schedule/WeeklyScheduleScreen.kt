@@ -1,0 +1,1443 @@
+package com.shangkeschedule.ui.schedule
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
+import com.shangkeschedule.Destination
+import com.shangkeschedule.data.db.main.Course
+import com.shangkeschedule.data.db.main.CourseTable
+import com.shangkeschedule.data.model.schedule_style.ScheduleModeProto
+import com.shangkeschedule.data.model.ScheduleGridStyle
+import com.shangkeschedule.data.time.currentDateFlow
+import com.shangkeschedule.navigation.AddEditCourseChannel
+import com.shangkeschedule.navigation.PresetCourseData
+import com.shangkeschedule.ui.components.AdaptiveNavigationScaffold
+import com.shangkeschedule.ui.components.AppSnackbarHost
+import com.shangkeschedule.ui.components.CourseTablePickerDialog
+import com.shangkeschedule.ui.components.TelegramMenu
+import com.shangkeschedule.ui.components.TelegramMenuDivider
+import com.shangkeschedule.ui.components.TelegramMenuItem
+import com.shangkeschedule.ui.components.rememberFabPressedScale
+import com.shangkeschedule.ui.schedule.components.AddScheduleGuide
+import com.shangkeschedule.ui.settings.import.ImportSource
+import com.shangkeschedule.ui.schedule.components.CourseDetailBottomSheet
+import com.shangkeschedule.ui.schedule.components.FloatingCourseBar
+import com.shangkeschedule.ui.schedule.components.ScheduleGrid
+import com.shangkeschedule.ui.schedule.components.ScheduleGridActions
+import com.shangkeschedule.ui.schedule.components.ScheduleGridStyleComposed
+import com.shangkeschedule.ui.schedule.components.ScheduleGridViewState
+import com.shangkeschedule.ui.schedule.components.WeekSelectorBottomSheet
+import com.shangkeschedule.ui.schedule.components.rememberScheduleGridState
+import com.shangkeschedule.ui.schedule.components.rememberWallpaperLuminance
+import com.shangkeschedule.ui.schedule.components.resolveCourseBlockColors
+import com.shangkeschedule.ui.schedule.components.textColorForWallpaper
+import com.shangkeschedule.ui.theme.AppAlpha
+import com.shangkeschedule.ui.theme.appIconSize
+import com.shangkeschedule.ui.theme.appShapes
+import com.shangkeschedule.ui.theme.appSpacing
+import com.shangkeschedule.ui.theme.appType
+import com.shangkeschedule.ui.theme.AnimationGroup
+import com.shangkeschedule.ui.theme.LocalAppMotion
+import com.shangkeschedule.ui.theme.LocalIsDarkTheme
+
+import com.shangkeschedule.data.model.AppThemePreset
+import com.shangkeschedule.ui.theme.LocalThemePreset
+import com.shangkeschedule.ui.theme.appWeekPager
+import com.shangkeschedule.ui.theme.WeekPagerSheen
+import com.shangkeschedule.ui.theme.appCourseBlock
+import com.shangkeschedule.ui.theme.CourseBlockShadow
+import com.shangkeschedule.ui.theme.appColors
+import com.shangkeschedule.ui.theme.LiquidGlass
+import com.shangkeschedule.ui.theme.softFeatherRim
+import com.shangkeschedule.ui.theme.softShadow
+import com.shangkeschedule.ui.theme.systemBottomInset
+import com.shangkeschedule.ui.glass.GlassBackdrop
+import com.shangkeschedule.ui.components.LocalNavigationGlassBackdrop
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
+import kotlinx.datetime.plus
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
+import org.koin.compose.viewmodel.koinViewModel
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.a11y_back_to_current_week
+import shangkeschedule.shared.generated.resources.snackbar_course_move_failed
+import shangkeschedule.shared.generated.resources.action_select_table
+import shangkeschedule.shared.generated.resources.arrow_drop_down_24px
+import shangkeschedule.shared.generated.resources.calendar_today_24px
+import shangkeschedule.shared.generated.resources.format_week_display
+import shangkeschedule.shared.generated.resources.label_view_mode_list
+import shangkeschedule.shared.generated.resources.label_view_mode_week
+import shangkeschedule.shared.generated.resources.more_vert_24px
+import shangkeschedule.shared.generated.resources.add_24px
+import shangkeschedule.shared.generated.resources.item_more_options
+import shangkeschedule.shared.generated.resources.class_24px
+import shangkeschedule.shared.generated.resources.item_school_system_import
+import shangkeschedule.shared.generated.resources.palette_24px
+import shangkeschedule.shared.generated.resources.school_24px
+import shangkeschedule.shared.generated.resources.schedule_24px
+import shangkeschedule.shared.generated.resources.title_manage_course_tables
+import shangkeschedule.shared.generated.resources.title_add_course
+import shangkeschedule.shared.generated.resources.item_appearance_settings
+import shangkeschedule.shared.generated.resources.item_time_slot_customization
+import shangkeschedule.shared.generated.resources.course_section_range
+import shangkeschedule.shared.generated.resources.snackbar_add_course_within_semester
+import shangkeschedule.shared.generated.resources.swap_horiz_24px
+import shangkeschedule.shared.generated.resources.toast_delete_occurrence_failed
+import shangkeschedule.shared.generated.resources.toast_delete_success
+import shangkeschedule.shared.generated.resources.title_current_week
+import shangkeschedule.shared.generated.resources.title_semester_not_set
+import shangkeschedule.shared.generated.resources.title_vacation
+import shangkeschedule.shared.generated.resources.title_vacation_until_start
+import shangkeschedule.shared.generated.resources.view_agenda_24px
+import shangkeschedule.shared.generated.resources.view_week_24px
+import shangkeschedule.shared.generated.resources.week_days_full_names
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.time.Clock
+
+/**
+ * 无限时间轴的中值锚点。
+ */
+private const val INFINITE_PAGER_CENTER = Int.MAX_VALUE / 2
+
+/**
+ * 周课表主屏幕组件
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun WeeklyScheduleScreen(
+    onNavigate: (Destination) -> Unit,
+    onBack: () -> Unit,
+    viewModel: WeeklyScheduleViewModel = koinViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // today 是可刷新状态：订阅 currentDateFlow，跨天（午夜）自动更新，
+    // 修复长驻页面跨午夜后「今日高亮 / 周次标题 / Pager 锚定周」停留在昨天的问题
+    var today by remember {
+        mutableStateOf(Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date)
+    }
+    LaunchedEffect(Unit) {
+        currentDateFlow().collect { newDate -> today = newDate }
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    val snackbarMsg = stringResource(Res.string.snackbar_add_course_within_semester)
+
+    val pagerState = rememberPagerState(
+        initialPage = INFINITE_PAGER_CENTER,
+        pageCount = { Int.MAX_VALUE }
+    )
+
+    // 辅助函数：计算基于目标星期几的上一周/本周对应日期偏移
+    fun getPreviousOrSameDay(date: LocalDate, targetDayOfWeek: DayOfWeek): LocalDate {
+        var current = date
+        while (current.dayOfWeek != targetDayOfWeek) {
+            current = current.plus(-1, DateTimeUnit.DAY)
+        }
+        return current
+    }
+
+    LaunchedEffect(pagerState.currentPage, uiState.firstDayOfWeek, today) {
+        fun syncPagerDate(pageIndex: Int) {
+            val offsetWeeks = (pageIndex - INFINITE_PAGER_CENTER).toLong()
+            val firstDay = DayOfWeek(uiState.firstDayOfWeek)
+            val thisMonday = getPreviousOrSameDay(today, firstDay)
+            val targetMonday = thisMonday.plus(offsetWeeks * 7, DateTimeUnit.DAY)
+            viewModel.updatePagerDate(targetMonday)
+        }
+
+        // effect 启动时立即同步，不能只依赖 snapshotFlow 的后续发射
+        syncPagerDate(pagerState.currentPage)
+        snapshotFlow { pagerState.currentPage }
+            .distinctUntilChanged()
+            .collect { pageIndex -> syncPagerDate(pageIndex) }
+    }
+
+    // UI 交互控制弹窗标志位
+    var showWeekSelector by remember { mutableStateOf(false) }
+    var showTableSwitcher by remember { mutableStateOf(false) }
+    var showOverflowMenu by remember { mutableStateOf(false) }
+    var isGridHolding by remember { mutableStateOf(false) }
+    // v4.62.0：点击课表内的课程 → 仍弹原来的课程详情弹窗，但弹窗内各字段可直接编辑、就地保存
+    // （不再点「编辑课程」跳转课程编辑整页）；crush 课程保持只读版式
+    var selectedBlockForDetail by remember { mutableStateOf<MergedCourseBlock?>(null) }
+
+    // 悬浮圆钮与玻璃底栏同步隐藏（同一套下滑手势语义；v3.26.0 起时长/缓动读全局动效令牌，
+    // 与底栏同源同值——关掉「底栏隐藏」分组时两端一起瞬切）
+    val motion = LocalAppMotion.current
+    var isNavBarHidden by remember { mutableStateOf(false) }
+    val backToWeekHideSpec = remember(motion) {
+        tween<Float>(durationMillis = motion.tokens.hideDurationMs, easing = motion.tokens.hideEasing)
+    }
+    val backToWeekHideFraction by animateFloatAsState(
+        targetValue = if (isNavBarHidden) 1f else 0f,
+        animationSpec = backToWeekHideSpec,
+        label = "backToCurrentWeekHide"
+    )
+
+    // 圆钮停靠位：紧贴玻璃底栏容器上沿之上（语义与 AdaptiveNavigationScaffold 的
+    // barInsetBottom 一致：胶囊高 touchMin+14 + 上下 navBarBottom + 系统手势区）；
+    // 宽屏 Rail 形态无底部胶囊栏，直接贴屏幕右下，无需顶起预留高度。
+    val isRailLayout = NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(
+        currentWindowAdaptiveInfo()
+    ) == NavigationSuiteType.NavigationRail
+    val navBarReserve = if (isRailLayout) {
+        0.dp
+    } else {
+        // v4.63.5：系统底部安全区统一走 systemBottomInset()（见 SystemInsets.kt），
+        // 与底栏自身占位保持同一口径，避免圆钮停在系统导航栏上。
+        appSpacing().touchMin + 14.dp + appSpacing().navBarBottom * 2 + systemBottomInset()
+    }
+
+    val composedStyle = uiState.style
+
+    val floatingCourse = uiState.floatingCourse
+
+    // 「回到本周」判定：无限分页以 INFINITE_PAGER_CENTER 承载「本周」，
+    // 因此页码离开中心页即代表用户已滑到非本周课程（拖动过程中即时显隐）。
+    // 课程挂起态（floatingCourse）下让位给 FloatingCourseBar，不显示圆钮。
+    val isOnCurrentWeekPage by remember {
+        derivedStateOf { pagerState.currentPage == INFINITE_PAGER_CENTER }
+    }
+    val showBackToCurrentWeek = floatingCourse == null && !isOnCurrentWeekPage
+
+    // 悬浮面板玻璃：主内容 hazeSource（含壁纸），周选择面板背板模糊
+    val hazeState = rememberHazeState()
+
+    val floatingDuration by remember(floatingCourse, composedStyle.scheduleMode) {
+        derivedStateOf {
+            if (floatingCourse != null) {
+                val start = floatingCourse.course.startSection?.toFloat() ?: 1f
+                val end = floatingCourse.course.endSection?.toFloat() ?: 1f
+
+                if (composedStyle.scheduleMode == ScheduleModeProto.TIME_24H_MODE) {
+                    (end - start).coerceAtLeast(1.0f)
+                } else {
+                    (end - start + 1f).coerceAtLeast(1.0f)
+                }
+            } else {
+                1.0f
+            }
+        }
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+    // 手势调课落库失败提示（v3.54.0）：此前写库失败静默，课程会「弹回」原位无解释。
+    // key 带上文案（终审 P3）：语言热切换后用新文案，不残留旧语言
+    val moveFailedMsg = stringResource(Res.string.snackbar_course_move_failed)
+    LaunchedEffect(viewModel, moveFailedMsg) {
+        viewModel.gestureSaveFailed.collect {
+            snackbarHostState.showSnackbar(moveFailedMsg)
+        }
+    }
+
+    // 「只删本次课」删除结果提示（v4.63.0）：课表详情弹窗内的删除按钮 → 本地库写入结果
+    val deleteOccurrenceSuccessMsg = stringResource(Res.string.toast_delete_success)
+    val deleteOccurrenceFailedMsg = stringResource(Res.string.toast_delete_occurrence_failed)
+    LaunchedEffect(viewModel, deleteOccurrenceSuccessMsg, deleteOccurrenceFailedMsg) {
+        viewModel.deleteOccurrenceResult.collect { succeeded ->
+            snackbarHostState.showSnackbar(
+                if (succeeded) deleteOccurrenceSuccessMsg else deleteOccurrenceFailedMsg
+            )
+        }
+    }
+
+    val gridScrollState = rememberScrollState()
+
+    // 页面文字色：用户显式设过就用用户的；否则在「设了壁纸」时按壁纸明暗自动取黑/白
+    // （v4.77.0）——浅色模式配深色图、深色模式配浅色图都会让顶栏标题/图标、侧边时间读不出来。
+    // 这里与 ScheduleGrid 共用同一个亮度采样与判定，避免两处口径分叉（顶栏亮、网格暗之类）。
+    val themePageTextColor = MaterialTheme.colorScheme.onSurface
+    val wallpaperLuminance by rememberWallpaperLuminance(composedStyle.backgroundImagePath)
+    val customTextColor = composedStyle.pageTextColor
+        ?: textColorForWallpaper(wallpaperLuminance, themePageTextColor)
+    val customSubTextColor = customTextColor.copy(alpha = 0.7f)
+
+    val displayTitle = when {
+        !uiState.isSemesterSet || uiState.semesterStartDate == null -> {
+            stringResource(Res.string.title_semester_not_set)
+        }
+        uiState.daysUntilStart > 0 -> {
+            stringResource(Res.string.title_vacation_until_start, uiState.daysUntilStart.toString())
+        }
+        uiState.weekIndexInPager != null && uiState.weekIndexInPager!! in 1..uiState.totalWeeks -> {
+            stringResource(Res.string.title_current_week, uiState.weekIndexInPager.toString())
+        }
+        else -> {
+            stringResource(Res.string.title_vacation)
+        }
+    }
+
+    val scheduleViewMode by viewModel.scheduleViewModeState.collectAsStateWithLifecycle()
+
+    AdaptiveNavigationScaffold(
+        currentDestination = Destination.CourseSchedule,
+        onTabSelected = { dest -> onNavigate(dest) },
+        showNavigation = floatingCourse == null,
+        isTransparent = composedStyle.backgroundImagePath.isNotEmpty(),
+        contentColor = customTextColor,
+        onNavBarHiddenChange = { hidden -> isNavBarHidden = hidden },
+        // P2-6 去除独立的 navigationModifier 滚动隐藏：AdaptiveNavigationScaffold 已内置
+        // 统一的滚动隐藏连接（下滑累积隐藏 / 上滑 / 切 Tab / 顶部动画恢复），
+        // 此处再叠加 collapseFraction 平移+alpha 会和内置隐藏产生双重位移/淡出叠加。
+        // 统一由 Scaffold 的 NestedScrollConnection 接管，避免底栏位移叠加异常。
+        modifier = Modifier.fillMaxSize()
+    ) { innerPadding ->
+        // v3.49.1：不再自建背景快照，直接复用脚手架录制的那一份（LocalNavigationGlassBackdrop），
+        // 避免「页面 + 脚手架」各录一份（全页重复录制 / 玻璃取样玻璃）。
+        // v3.51.2 诊断实验：置 null 断开「页内玻璃件采样包含自身的页面 backdrop」这条边，
+        // 用于定位切周 RenderThread 栈溢出的残余环（悬浮件暂走色调面板分支）。
+        val pageGlassBackdrop = null // v3.51.2 诊断实验：断开页内玻璃件采样页面 backdrop 的边
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeSource(hazeState)
+        ) {
+            if (composedStyle.backgroundImagePath.isNotEmpty()) {
+                AsyncImage(
+                    model = composedStyle.backgroundImagePath,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Scaffold(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                // 白块修复：无壁纸时此页底色走 pageBg（原 Transparent 透出窗口白色，
+                // 底栏下方留白带呈现为「白块」）；壁纸模式保持透明以透出壁纸。
+                containerColor = if (composedStyle.backgroundImagePath.isEmpty()) {
+                    appColors().pageBg
+                } else {
+                    Color.Transparent
+                },
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = {
+                            // 周切换入口：Telegram 胶囊形态（浅灰胶囊底，含标题 + 下拉箭头）
+                            val hasBackgroundImage = composedStyle.backgroundImagePath.isNotEmpty()
+                            val weekChipBg = if (hasBackgroundImage) {
+                                // 壁纸上的半透明遮罩，保证周次胶囊文字可读。
+                                // v4.77.0：底色改为**跟随文字色反向**——文字为白（深色壁纸）时用半透明黑底，
+                                // 文字为黑（浅色壁纸）时用半透明白底。此前固定黑底，遇上浅色壁纸
+                                // 自动切成黑字后就成了「黑底黑字」，反而读不出来。
+                                if (customTextColor == Color.White) {
+                                    Color.Black.copy(alpha = 0.25f)
+                                } else {
+                                    Color.White.copy(alpha = 0.45f)
+                                }
+                            } else {
+                                appColors().inputBg
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clip(appShapes().capsule)
+                                    .background(weekChipBg)
+                                    .clickable {
+                                        if (!uiState.isSemesterSet || uiState.semesterStartDate == null) {
+                                            // 学期未设置直达学期设置页（v3.54.0）：不再绕道「我的」再找一层
+                                            onNavigate(Destination.SemesterSettings)
+                                        } else {
+                                            showWeekSelector = true
+                                        }
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = displayTitle,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontSize = appType().sectionTitle),
+                                    fontWeight = appType().titleWeight,
+                                    color = customTextColor
+                                )
+                                Icon(
+                                    imageVector = vectorResource(Res.drawable.arrow_drop_down_24px),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .offset(y = (-2).dp),
+                                    tint = customSubTextColor
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = {
+                                val newMode = if (scheduleViewMode == ScheduleViewMode.WEEK) {
+                                    ScheduleViewMode.LIST
+                                } else {
+                                    ScheduleViewMode.WEEK
+                                }
+                                viewModel.updateScheduleViewMode(newMode)
+                            }) {
+                                Icon(
+                                    imageVector = vectorResource(
+                                        if (scheduleViewMode == ScheduleViewMode.WEEK) {
+                                            Res.drawable.view_agenda_24px
+                                        } else {
+                                            Res.drawable.view_week_24px
+                                        }
+                                    ),
+                                    contentDescription = stringResource(
+                                        if (scheduleViewMode == ScheduleViewMode.WEEK) {
+                                            Res.string.label_view_mode_list
+                                        } else {
+                                            Res.string.label_view_mode_week
+                                        }
+                                    ),
+                                    tint = customTextColor
+                                )
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { showTableSwitcher = true }) {
+                                Icon(
+                                    imageVector = vectorResource(Res.drawable.swap_horiz_24px),
+                                    contentDescription = stringResource(Res.string.action_select_table),
+                                    tint = customTextColor
+                                )
+                            }
+                            // ⋮ 溢出菜单（Telegram 形态）：承载既有操作入口，不新增流程
+                            IconButton(onClick = { showOverflowMenu = !showOverflowMenu }) {
+                                Icon(
+                                    imageVector = vectorResource(Res.drawable.more_vert_24px),
+                                    contentDescription = stringResource(Res.string.item_more_options),
+                                    tint = customTextColor
+                                )
+                                TelegramMenu(
+                                    expanded = showOverflowMenu,
+                                    onDismissRequest = { showOverflowMenu = false }
+                                ) {
+                                    TelegramMenuItem(
+                                        icon = vectorResource(Res.drawable.school_24px),
+                                        text = stringResource(Res.string.item_school_system_import),
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            onNavigate(Destination.SchoolSelectionListScreen())
+                                        }
+                                    )
+                                    TelegramMenuDivider()
+                                    TelegramMenuItem(
+                                        icon = vectorResource(Res.drawable.add_24px),
+                                        text = stringResource(Res.string.title_add_course),
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            // 必须发送预设事件：AddEditCourseViewModel 在 courseId == null 时
+                                            // 会阻塞等待 AddEditCourseChannel.presetDataFlow.firstOrNull()。
+                                            // 漏发会让编辑器永久停在未加载态（空表单：无方案卡/无节次/无颜色），
+                                            // 保存时 schemes 为空 → 一条数据都不写却提示「保存成功」。
+                                            // 其余入口（同文件空网格入口、课程名列表、课程实例列表）均已发送。
+                                            AddEditCourseChannel.sendEvent(
+                                                PresetCourseData(startSection = 1, endSection = 2)
+                                            )
+                                            onNavigate(Destination.AddEditCourse())
+                                        }
+                                    )
+                                    TelegramMenuDivider()
+                                    TelegramMenuItem(
+                                        icon = vectorResource(Res.drawable.class_24px),
+                                        text = stringResource(Res.string.title_manage_course_tables),
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            onNavigate(Destination.ManageCourseTables)
+                                        }
+                                    )
+                                    TelegramMenuItem(
+                                        icon = vectorResource(Res.drawable.palette_24px),
+                                        text = stringResource(Res.string.item_appearance_settings),
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            onNavigate(Destination.AppearanceSettings)
+                                        }
+                                    )
+                                    TelegramMenuItem(
+                                        icon = vectorResource(Res.drawable.schedule_24px),
+                                        text = stringResource(Res.string.item_time_slot_customization),
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            onNavigate(Destination.TimeSlotSettings())
+                                        }
+                                    )
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            scrolledContainerColor = Color.Transparent,
+                        ),
+                        scrollBehavior = scrollBehavior
+                    )
+                },
+                snackbarHost = { AppSnackbarHost(hostState = snackbarHostState) }
+            ) { scaffoldInnerPadding ->
+
+                val dynamicBottomPadding = remember(innerPadding, floatingCourse) {
+                    if (floatingCourse != null) {
+                        0.dp
+                    } else {
+                        // 底部占位修复：innerPadding.bottom = 玻璃底栏完整占位（已含系统手势区，
+                        // 且随底栏隐藏动画同步收缩）。原实现再叠加 scaffoldInnerPadding.bottom
+                        // 造成系统 inset 双算（底部留白带偏高），又与顶栏 collapseFraction 联动——
+                        // 底栏不再随 collapse 平移后会出现玻璃条压住网格末行。
+                        innerPadding.calculateBottomPadding()
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            start = scaffoldInnerPadding.calculateStartPadding(LayoutDirection.Ltr),
+                            top = scaffoldInnerPadding.calculateTopPadding(),
+                            end = scaffoldInnerPadding.calculateEndPadding(LayoutDirection.Ltr)
+                            // 底部遮挡修复：不再整体缩进——网格视口延伸到玻璃底栏之下（与「我的」页
+                            // 内容穿越形态一致），底部留白改由各页滚动内容内部承担（bottomInset）
+                        )
+                ) {
+                    // v3.26.0 C+.16：切周玻璃滑动过渡层与 Pager 同容器叠放（不拦截触摸）
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize(),
+                            beyondViewportPageCount = 1,
+                            userScrollEnabled = !isGridHolding
+                        ) { pageIndex ->
+
+                    val pageMondayDate = remember(pageIndex, uiState.firstDayOfWeek, today) {
+                        val offsetWeeks = (pageIndex - INFINITE_PAGER_CENTER).toLong()
+                        val firstDay = DayOfWeek(uiState.firstDayOfWeek)
+                        getPreviousOrSameDay(today, firstDay).plus(offsetWeeks * 7, DateTimeUnit.DAY)
+                    }
+
+                    val pageYearString = remember(pageMondayDate) {
+                        pageMondayDate.year.toString()
+                    }
+
+                    val pageDateStrings = remember(pageMondayDate) {
+                        (0..6).map { i ->
+                            val d = pageMondayDate.plus(i.toLong(), DateTimeUnit.DAY)
+                            val month = d.month.number.toString().padStart(2, '0')
+                            val day = d.day.toString().padStart(2, '0')
+                            "$month-$day"
+                        }
+                    }
+
+                    val pageTodayIndex = remember(pageMondayDate, today) {
+                        val weekDates = (0..6).map { pageMondayDate.plus(it.toLong(), DateTimeUnit.DAY) }
+                        weekDates.indexOf(today)
+                    }
+
+                    val pageCourses = uiState.courseCache[pageMondayDate.toString()] ?: emptyList()
+
+                    if (scheduleViewMode == ScheduleViewMode.LIST) {
+                        ScheduleListView(
+                            pageCourses = pageCourses,
+                            pageMondayDate = pageMondayDate,
+                            timeSlots = uiState.timeSlots,
+                            showWeekends = uiState.showWeekends,
+                            firstDayOfWeek = uiState.firstDayOfWeek,
+                            composedStyle = composedStyle,
+                            bottomInset = dynamicBottomPadding,
+                            onClickedBlock = { block -> selectedBlockForDetail = block },
+                            onLongClickedBlock = { block ->
+                                val targetCourseWrapper = block.courses.firstOrNull()
+                                val currentWeek = uiState.weekIndexInPager ?: uiState.currentWeekNumber
+                                if (targetCourseWrapper != null && currentWeek != null) {
+                                    viewModel.enterFloatingMode(
+                                        course = targetCourseWrapper,
+                                        sourceWeek = currentWeek
+                                    )
+                                }
+                            },
+                            onNavigate = onNavigate,
+                            pageTextColor = customTextColor
+                        )
+                    } else {
+                        val gridState = rememberScheduleGridState(gridScrollState = gridScrollState)
+
+                        val weekIndex = uiState.weekIndexInPager
+                        val totalWeeks = uiState.totalWeeks
+                        val weekStr = if (weekIndex != null && weekIndex in 1..totalWeeks) {
+                            stringResource(Res.string.format_week_display, weekIndex)
+                        } else {
+                            null
+                        }
+
+                        // key 收窄（v3.54.0）：uiState 每分钟随 currentSectionIndex tick 重建，
+                        // 宽 key 会让 ViewState 每分钟重建实例并重跑下游 LaunchedEffect；
+                        // 这里只依赖实际读取的四个字段
+                        val gridViewState = remember(
+                            pageDateStrings, pageYearString,
+                            uiState.timeSlots, uiState.showWeekends, uiState.firstDayOfWeek,
+                            uiState.currentSectionIndex, pageCourses, pageTodayIndex, weekStr
+                        ) {
+                            ScheduleGridViewState(
+                                dates = pageDateStrings,
+                                currentYear = pageYearString,
+                                currentWeek = weekStr,
+                                timeSlots = uiState.timeSlots,
+                                mergedCourses = pageCourses,
+                                showWeekends = uiState.showWeekends,
+                                todayIndex = pageTodayIndex,
+                                firstDayOfWeek = uiState.firstDayOfWeek,
+                                currentSectionIndex = if (pageTodayIndex >= 0) uiState.currentSectionIndex else -1
+                            )
+                        }
+
+                        // key 收窄（v3.54.0）：Actions 闭包读取的是周次字段 / 挂起课程 / 模式，
+                        // 以具体字段为 key，避免随每分钟 tick 或无关 uiState 变化重建
+                        val gridActions = remember(
+                            uiState.weekIndexInPager, uiState.totalWeeks, uiState.currentWeekNumber,
+                            floatingCourse, composedStyle, floatingDuration, snackbarMsg
+                        ) {
+                        object : ScheduleGridActions {
+                            override fun onCourseBlockClicked(block: MergedCourseBlock) {
+                                selectedBlockForDetail = block
+                            }
+
+                            override fun onGridCellClicked(day: Int, section: Int) {
+                                if (floatingCourse != null) {
+                                    val targetWeek = uiState.weekIndexInPager ?: uiState.currentWeekNumber ?: return
+                                    val startSec = section.toFloat()
+                                    val endSec = if (composedStyle.scheduleMode == ScheduleModeProto.TIME_24H_MODE) {
+                                        startSec + floatingDuration
+                                    } else {
+                                        startSec + floatingDuration - 1f
+                                    }
+
+                                    coroutineScope.launch {
+                                        viewModel.updateCourseTimeByFloatingGesture(
+                                            targetWeek = targetWeek,
+                                            targetDay = day,
+                                            startSection = startSec,
+                                            endSection = endSec
+                                        )
+                                    }
+                                } else {
+                                    val currentWeek = uiState.weekIndexInPager ?: 0
+                                    val isCurrentPageValid = currentWeek in 1..uiState.totalWeeks
+
+                                    if (isCurrentPageValid) {
+                                        coroutineScope.launch {
+                                            val currentWeekSet = setOf(currentWeek)
+                                            val presetData = if (composedStyle.scheduleMode == ScheduleModeProto.TIME_24H_MODE) {
+                                                val startHour = section.coerceIn(0, 23)
+                                                // 23 点点格不再回绕到次日 00:00（会产生跨天负时长课）：
+                                                // 末小时收在 23:00–23:59
+                                                val endHour = if (startHour >= 23) 23 else startHour + 1
+
+                                                val startTimeStr = "${startHour.toString().padStart(2, '0')}:00"
+                                                val endTimeStr = if (startHour >= 23) "23:59" else "${endHour.toString().padStart(2, '0')}:00"
+
+                                                PresetCourseData(
+                                                    day = day,
+                                                    isCustomTime = true,
+                                                    customStartTime = startTimeStr,
+                                                    customEndTime = endTimeStr,
+                                                    presetWeeks = currentWeekSet
+                                                )
+                                            } else {
+                                                PresetCourseData(
+                                                    day = day,
+                                                    startSection = section,
+                                                    endSection = section,
+                                                    isCustomTime = false,
+                                                    presetWeeks = currentWeekSet
+                                                )
+                                            }
+
+                                            AddEditCourseChannel.sendEvent(presetData)
+                                            onNavigate(Destination.AddEditCourse())
+                                        }
+                                    } else {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(snackbarMsg)
+                                        }
+                                    }
+                                }
+                            }
+
+                            override fun onTimeSlotClicked() {
+                                onNavigate(Destination.TimeSlotSettings())
+                            }
+
+                            override fun onHoldStateChanged(isHolding: Boolean) {
+                                isGridHolding = isHolding
+                            }
+
+                            override fun onCourseMovedWithinGrid(
+                                block: MergedCourseBlock,
+                                newDay: Int,
+                                newStartSection: Float,
+                                newEndSection: Float
+                            ) {
+                                val currentWeek = uiState.weekIndexInPager ?: 0
+                                if (currentWeek in 1..uiState.totalWeeks) {
+                                    block.courses.firstOrNull()?.course?.id?.let { courseId ->
+                                        coroutineScope.launch {
+                                            viewModel.updateCourseTimeByGesture(
+                                                courseId = courseId,
+                                                targetDay = newDay,
+                                                startSection = newStartSection,
+                                                endSection = newEndSection
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    coroutineScope.launch { snackbarHostState.showSnackbar(snackbarMsg) }
+                                }
+                            }
+
+                            override fun onCourseTimeAdjusted(
+                                block: MergedCourseBlock,
+                                newStart: Float,
+                                newEnd: Float
+                            ) {
+                                val currentWeek = uiState.weekIndexInPager ?: 0
+                                if (currentWeek in 1..uiState.totalWeeks) {
+                                    block.courses.firstOrNull()?.course?.id?.let { courseId ->
+                                        coroutineScope.launch {
+                                            viewModel.updateCourseTimeByGesture(
+                                                courseId = courseId,
+                                                targetDay = block.day,
+                                                startSection = newStart,
+                                                endSection = newEnd
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    coroutineScope.launch { snackbarHostState.showSnackbar(snackbarMsg) }
+                                }
+                            }
+
+                            override fun onInitiateFloatingMode(block: MergedCourseBlock) {
+                                val targetCourseWrapper = block.courses.firstOrNull()
+                                val currentWeek = uiState.weekIndexInPager ?: uiState.currentWeekNumber
+                                if (targetCourseWrapper != null && currentWeek != null) {
+                                    viewModel.enterFloatingMode(
+                                        course = targetCourseWrapper,
+                                        sourceWeek = currentWeek
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    ScheduleGrid(
+                        state = gridState,
+                        viewState = gridViewState,
+                        actions = gridActions,
+                        style = composedStyle,
+                        bottomInset = dynamicBottomPadding,
+                        modifier = Modifier
+                    )
+                    } // end HorizontalPager page lambda
+                    } // end else
+
+                        // C+.16 周切换玻璃滑动过渡：页码落定时一道玻璃光泽斜扫课程区
+                        WeekPagerGlassSheen(pagerState = pagerState, modifier = Modifier.fillMaxSize())
+                    } // end 叠放 Box
+                } // end Column
+            } // end Scaffold content
+        } // end 背板内容层（hazeSource）
+
+        // 悬浮玻璃件层：必须与上面的 hazeSource **平级**，不能写成它的子节点。
+        // haze 计算背板区域时会按「area.zIndex < 祖先 source 的 zIndex」过滤：玻璃件若位于
+        // 自身 source 子树内，唯一的背板 area 会被判为不通过（Included=false），于是 blur 与
+        // tint 一并跳过绘制——表现为「底栏雾化、圆钮清晰」，即使 blurRadius 完全相同。
+        // 真机日志实锤：底栏 Included=true / Size(132) 圆钮 Included=false。
+        Box(modifier = Modifier.fillMaxSize()) {
+            FloatingCourseBar(
+                floatingCourse = floatingCourse,
+                onCancelClick = { viewModel.exitFloatingMode() },
+                glassBackdrop = pageGlassBackdrop,
+                // 玻璃上的文字/图标跟随页面自定义文字色（壁纸模式下保证可读）
+                contentColor = customTextColor,
+                isTransparent = composedStyle.backgroundImagePath.isNotEmpty(),
+                hazeState = hazeState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    // v4.63.5：挂起态底栏隐藏，此时内容已让开底栏占位，挂起条必须自己
+                    // 抬到系统导航栏之上（原先只留 cardGap，Android 10 三键导航下整条
+                    // 挂起条会正好落在系统导航栏里被压住）。
+                    .padding(bottom = systemBottomInset() + appSpacing().cardGap)
+            )
+            BackToCurrentWeekFab(
+                visible = showBackToCurrentWeek,
+                hideFraction = backToWeekHideFraction,
+                hideRange = navBarReserve + appSpacing().cardGap + appSpacing().touchMin,
+                glassBackdrop = pageGlassBackdrop,
+                hasWallpaper = composedStyle.backgroundImagePath.isNotEmpty(),
+                hazeState = hazeState,
+                onClick = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(INFINITE_PAGER_CENTER)
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(
+                        end = appSpacing().navBarHorizontal,
+                        bottom = navBarReserve + appSpacing().cardGap
+                    )
+            )
+        }
+    }
+
+    // 周次选择弹窗（毛玻璃面板）
+    if (showWeekSelector) {
+        WeekSelectorBottomSheet(
+            hazeState = hazeState,
+            totalWeeks = uiState.totalWeeks,
+            currentWeek = uiState.currentWeekNumber ?: 1,
+            selectedWeek = uiState.weekIndexInPager ?: (uiState.currentWeekNumber ?: 1),
+            onWeekSelected = { week ->
+                // P1-10 周次选择器错位修复：weekIndexInPager 尚未就绪时，不能假定当前页是第 1 周；
+                // 应按无限分页模型换算：周次 = 当前周 + (页码 - 中心页)，否则从非首页选择会跳错周。
+                val currentWeekAtPage = uiState.weekIndexInPager
+                    ?: (uiState.currentWeekNumber?.plus(pagerState.currentPage - INFINITE_PAGER_CENTER) ?: 1)
+                val offset = week - currentWeekAtPage
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(pagerState.currentPage + offset)
+                }
+                showWeekSelector = false
+            },
+            onDismissRequest = { showWeekSelector = false }
+        )
+    }
+
+    // 课表切换弹窗
+    if (showTableSwitcher) {
+        CourseTablePickerDialog(
+            title = stringResource(Res.string.action_select_table),
+            onDismissRequest = { showTableSwitcher = false },
+            onTableSelected = { table: CourseTable ->
+                viewModel.switchCourseTable(table.id)
+                showTableSwitcher = false
+            }
+        )
+    }
+
+    // 课程详情弹窗（v4.62.0 起：非 crush 课程在该弹窗内直接编辑并保存，crush 课程保持只读）
+    if (selectedBlockForDetail != null) {
+        CourseDetailBottomSheet(
+            block = selectedBlockForDetail!!,
+            onDismissRequest = { selectedBlockForDetail = null },
+            onSaved = { selectedBlockForDetail = null },
+            // 当前展示的周次即「本次」：只删这一周的这一次课（v4.63.0）
+            currentWeek = uiState.weekIndexInPager ?: uiState.currentWeekNumber,
+            onDeleteOccurrence = { week ->
+                selectedBlockForDetail?.courses?.firstOrNull()?.course?.id?.let { courseId ->
+                    viewModel.deleteCourseWeekOccurrence(courseId, week)
+                }
+                selectedBlockForDetail = null
+            },
+            // 课堂笔记（v4.66.0）：先关弹窗再跳，避免返回时详情弹窗仍浮在课表上。
+            // 节次预填用裸数字区间（"1-2"），不引入本地化文案（三语言都要维护）。
+            onOpenNotes = { course ->
+                selectedBlockForDetail = null
+                val sectionLabel = if (course.startSection != null && course.endSection != null) {
+                    "${course.startSection}-${course.endSection}"
+                } else {
+                    ""
+                }
+                onNavigate(Destination.CourseNote(course.id, course.name, sectionLabel))
+            }
+            // v3.57.4（原 v3.54.0 传 hazeState 走玻璃透明分支）：玻璃分支内层蒙层未裁剪到 sheetTop
+            // 圆角、且透明容器在底部 inset 露出透明块，顶部圆角被方角蒙糊 —— 与今日日程详情弹窗
+            // （纯色分支）观感不一致。改为与日程完全一致、不传 hazeState，消除圆角丢失与透明块。
+        )
+    }
+}
+
+
+/**
+ * 「回到本周」悬浮圆钮：仅在用户滑动到非本周课程时出现（右下角小圆圈），
+ * 点击回到本周所处页。
+ *
+ * 隐藏行为与玻璃底栏一致：[hideFraction] 由 AdaptiveNavigationScaffold 的滚动隐藏
+ * 状态驱动，圆钮随之下沉 + 淡出：[hideRange] 覆盖「底栏预留高度 + 自身高度」，
+ * 保证隐藏动画结束时完全移出屏幕，不会残留半截圆钮。
+ */
+@Composable
+private fun BackToCurrentWeekFab(
+    visible: Boolean,
+    hideFraction: Float,
+    hideRange: Dp,
+    glassBackdrop: GlassBackdrop?,
+    hasWallpaper: Boolean,
+    hazeState: HazeState?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hideRangePx = with(LocalDensity.current) { hideRange.toPx() }
+    // v3.26.0 动效收口：出现/消失读全局令牌；关掉「玻璃悬浮件」分组 ⇒ 瞬切
+    val fabMotion = LocalAppMotion.current
+    val glassAnimEnabled = fabMotion.isEnabled(AnimationGroup.GLASS_FLOATING)
+    Box(
+        modifier = modifier.graphicsLayer {
+            translationY = hideFraction * hideRangePx
+            // 过冲缓动会让 hideFraction 短暂 >1，alpha 必须钳制（负 padding 崩溃同源教训）
+            alpha = (1f - hideFraction).coerceIn(0f, 1f)
+        }
+    ) {
+        AnimatedVisibility(
+            visible = visible,
+            enter = if (glassAnimEnabled) {
+                fadeIn(fabMotion.tokens.emphasisFadeSpec) +
+                    scaleIn(fabMotion.tokens.emphasisScaleSpec, initialScale = fabMotion.tokens.emphasisInitialScale)
+            } else {
+                EnterTransition.None
+            },
+            exit = if (glassAnimEnabled) {
+                fadeOut(fabMotion.tokens.emphasisFadeSpec) +
+                    scaleOut(fabMotion.tokens.emphasisScaleSpec, targetScale = fabMotion.tokens.emphasisInitialScale)
+            } else {
+                ExitTransition.None
+            }
+        ) {
+            val interaction = remember { MutableInteractionSource() }
+            val pressedScale = rememberFabPressedScale(interaction)
+            Box(
+                modifier = Modifier
+                    .size(appSpacing().touchMin)
+                    .graphicsLayer {
+                        scaleX = pressedScale
+                        scaleY = pressedScale
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                LiquidGlass(
+                    modifier = Modifier.fillMaxSize(),
+                    glassBackdrop = null,
+                    shape = CircleShape,
+                    containerColor = appColors().inputBg,
+                    // 壁纸模式下玻璃透出壁纸并补一层暗 scrim，保证图标可读
+                    isTransparent = hasWallpaper,
+                    shadowElevation = 8.dp,
+                    // v3.51.2：页内悬浮件改走 Haze 玻璃（自研玻璃采样页面 backdrop 会成环）
+                    hazeState = hazeState
+                )
+                Icon(
+                    imageVector = vectorResource(Res.drawable.calendar_today_24px),
+                    contentDescription = stringResource(Res.string.a11y_back_to_current_week),
+                    tint = appColors().primary,
+                    modifier = Modifier.size(appIconSize().medium)
+                )
+                // 点击层独立成内层覆盖 Box：只裁水波纹（圆形扩散），不影响外层玻璃
+                // 向节点外绘制的阴影/高光（父级 clip 会把它们一并裁掉，玻璃钮会变"平"）
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(CircleShape)
+                        .clickable(
+                            interactionSource = interaction,
+                            // 走主题化按压指示（v3.54.0）：硬编码 ripple 与全站语言不一致
+                            indication = LocalIndication.current,
+                            onClick = onClick
+                        )
+                )
+            }
+        }
+    }
+}
+
+/**
+ * v3.26.0 C+.16 周切换玻璃滑动过渡：
+ * 页码落定（ currentPage 变化）时，一道斜向玻璃光泽扫过课程区，
+ * 用「光」而不是位移来强化翻页的方向感——不干扰 Pager 原生手势。
+ *
+ * 规则：
+ * - 仅页码变化触发（首次组合不触发），一次变化只扫一遍；
+ * - 时长/缓动读全局令牌 entranceDurationMs/entranceEasing（随风格变化）；
+ * - 关掉「周翻页」分组或时长为 0 ⇒ 整层不组合，零开销。
+ */
+@Composable
+private fun WeekPagerGlassSheen(
+    pagerState: PagerState,
+    modifier: Modifier = Modifier
+) {
+    val motion = LocalAppMotion.current
+    val enabled = motion.isEnabled(AnimationGroup.WEEK_PAGER) &&
+        motion.tokens.entranceDurationMs > 0
+    if (!enabled) return
+
+    // A1/V2 第二批（v3.69.0）：「整屏换气 vs 斜向扫光」是**两种过渡**，收口为角色枚举
+    // （原为 LocalThemePreset.current == AppThemePreset.SOFT 的身份布尔）。
+    // 柔绘改为**无方向的整屏换气**：落定后整体亮度做一次正弦式起伏，
+    // 没有任何边界与方向（v3.45.1 起时长跟随「动效速度」）。
+    val pager = appWeekPager()
+    val breathe = pager.sheen == WeekPagerSheen.BREATHE
+    // 深色档换气不叠白（见下方绘制分支）
+    val isDark = LocalIsDarkTheme.current
+
+    // 首次组合（App 启动落在本周页）不算「切周」，不扫光（协程内 settled 标记承担）
+    val sheenFraction = remember { Animatable(0f) }
+    var sheenVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        // 单协程 + snapshotFlow：currentPage 连续变化（跨多页返回）时中间发射被 conflate，
+        // 上一道光未扫完（isRunning）就跳过——不会像 LaunchedEffect(key) 那样每页取消重启造成频闪
+        var settled = false
+        snapshotFlow { pagerState.currentPage }.collect {
+            if (!settled) {
+                settled = true
+                return@collect
+            }
+            if (sheenFraction.isRunning) return@collect
+            sheenVisible = true
+            sheenFraction.snapTo(0f)
+            sheenFraction.animateTo(
+                1f,
+                tween(
+                    // v3.45.1：柔绘档的换气时长改为**跟随「动效速度」**（此前写死 600ms，
+                    // 动效速度旋钮对它完全无效 —— 正是"速度感知不强"的来源之一）。
+                    // 取 2× entranceDurationMs：柔绘的换气仍比其它主题的扫光长一档，但不再与用户设置脱钩。
+                    durationMillis = (motion.tokens.entranceDurationMs * pager.durationScale).roundToInt(),
+                    // 柔绘：fraction 必须走**线性**——sin(π·f) 本身已是单峰曲线，外面再套一条
+                    // ease-in-out 会把亮度峰值压进中段极窄区间，观感变成"停顿—突亮—停顿"
+                    // 三段（正是柔绘规格明令禁止的"折点"）。
+                    easing = if (pager.linearEasing) LinearEasing else motion.tokens.entranceEasing
+                )
+            )
+            sheenVisible = false
+        }
+    }
+
+    if (sheenVisible) {
+        val fraction = sheenFraction.value
+        Box(
+            modifier = modifier
+                // 纯绘制层：不消费任何指针事件，手势完全穿透到 Pager / 课程格
+                .drawBehind {
+                    if (breathe) {
+                        // 整屏换气档：sin 曲线一次明度起伏，无方向、无边界。
+                        // 深色档**不叠白**：暖炭薄涂底上一层白蒙版会被读成"打闪"，
+                        // 改为极淡的压暗；浅色档提亮幅度也从 0.03 降到 0.018
+                        // （柔绘底色本身已接近白，白上加白的容忍度更低）。
+                        //
+                        // 批 2（规范 R7 · 装饰降级优先于删除）：换气幅度 ×0.7
+                        // （0.020/0.018 → 0.014/0.0126）—— 换气是柔绘的材质语言，
+                        // 不断崖删除，只把它压到"几乎察觉不到但仍存在"的程度。
+                        val breathe = sin(fraction * Math.PI).toFloat()
+                        val breatheColor = if (isDark) {
+                            Color.Black.copy(alpha = 0.014f * breathe)
+                        } else {
+                            Color.White.copy(alpha = 0.0126f * breathe)
+                        }
+                        drawRect(color = breatheColor)
+                    } else {
+                        // Apple HIG 风格：收窄光带 + 低峰值透明度，效果克制如镜面反光，
+                        // 而非扫光特效。
+                        //
+                        // 批 2（规范 R7 · 装饰降级优先于删除）：光带宽度 ×0.7
+                        // （屏宽 28% → 20%）、峰值 alpha ×0.6（0.07 → 0.042）
+                        val bandWidth = size.width * 0.20f
+                        val travel = size.width + bandWidth * 2f
+                        val x = -bandWidth + travel * fraction
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                colorStops = arrayOf(
+                                    0f to Color.Transparent,
+                                    0.5f to Color.White.copy(alpha = 0.042f),
+                                    1f to Color.Transparent
+                                ),
+                                start = Offset(x, 0f),
+                                end = Offset(x + bandWidth, size.height)
+                            )
+                        )
+                    }
+                }
+        )
+    }
+}
+
+/**
+ * 参考 sleepy 的列表视图：按天分组展示本周课程。
+ *
+ * 直接接收当前 pager 页的课程与日期，与 [HorizontalPager] 共用同一周次位置，
+ * 因此列表视图同样支持左右滑动切周。仅渲染有课的天，空天不显示占位文案。
+ */
+@Composable
+private fun ScheduleListView(
+    pageCourses: List<MergedCourseBlock>,
+    pageMondayDate: LocalDate,
+    timeSlots: List<com.shangkeschedule.data.db.main.TimeSlot>,
+    showWeekends: Boolean,
+    firstDayOfWeek: Int,
+    composedStyle: ScheduleGridStyleComposed,
+    bottomInset: Dp = 0.dp,
+    onClickedBlock: (MergedCourseBlock) -> Unit,
+    onLongClickedBlock: (MergedCourseBlock) -> Unit,
+    onNavigate: (Destination) -> Unit,
+    // v4.77.0：列表视图的日期表头也需跟随壁纸明暗（与周视图同一套文字色），
+    // 否则切到列表后星期名仍是固定主色，在壁纸上读不出来。
+    pageTextColor: Color = MaterialTheme.colorScheme.onSurface
+) {
+    val weekDays = stringArrayResource(Res.array.week_days_full_names)
+    val dayCount = if (showWeekends) 7 else 5
+    val firstDay = firstDayOfWeek.coerceIn(1, 7)
+    val orderedDays = (0 until dayCount).map { offset ->
+        (firstDay - 1 + offset) % 7 + 1
+    }
+    // v3.26.0 C+.17 列表块入场错峰：按「天序 + 天内序」递增延迟
+    // （在 LazyColumn 外读取 LocalAppMotion：LazyListScope 不是 composable 作用域）
+    val listEntranceMotion = LocalAppMotion.current
+    // PF3（v3.69.0）：按星期预分组并缓存 —— 原写法每个星期几都对全量课程做一次
+    // filter（7 次 O(n)）且随重组重复执行；改为一次 groupBy，仅在 pageCourses 变化时重算。
+    // ⚠️ 必须放在 LazyColumn **外**：LazyListScope 不是 @Composable 作用域（同上条注释）。
+    val coursesByDay = remember(pageCourses) { pageCourses.groupBy { it.day } }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        // 底部留白走 contentPadding：列表视口延伸到玻璃底栏之下，末项可滚动到导航条上方
+        contentPadding = PaddingValues(bottom = bottomInset),
+        // 列表节奏使用主题卡片间距，避免三套主题之间出现固定留白差异。
+        verticalArrangement = Arrangement.spacedBy(appSpacing().cardGap)
+    ) {
+        // 整周无课时显示空态占位（v3.54.0）：与今日页/日程页空态同语言
+        // IA5（方案 B · 增强空态）：由「一句话 + 一个按钮」升级为「三步引导 +
+        // 主入口 + 其他添加方式」。主入口只指教务系统导入（覆盖面最广），
+        // 文件/粘贴导入与手动添加收在展开项里 —— 路径平铺首屏正是"不知道点哪个"的
+        // 来源。触发条件是**课表为空**而非"首次启动"，故无需首启 flag、对老用户零干扰。
+        if (pageCourses.isEmpty()) {
+            item(key = "empty-week") {
+                AddScheduleGuide(
+                    // 空课表引导顶部留白使用主题卡片内边距，避免固定值破坏不同主题节奏。
+                    modifier = Modifier.padding(top = appSpacing().cardInner * 2),
+                    onSchoolImport = { onNavigate(Destination.SchoolSelectionListScreen()) },
+                    onFileImport = { onNavigate(Destination.ImportEntry(ImportSource.AUTO)) },
+                    onManualAdd = { onNavigate(Destination.AddEditCourse()) }
+                )
+            }
+        }
+        orderedDays.forEach { day ->
+            val dayBlocks = coursesByDay[day].orEmpty()
+            if (dayBlocks.isEmpty()) return@forEach
+
+            val dayOffset = (day - firstDay + 7) % 7
+            val dayDate = pageMondayDate.plus(dayOffset.toLong(), DateTimeUnit.DAY)
+
+            item(key = "day-header-$day") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = weekDays.getOrNull((day - 1).coerceAtLeast(0)).orEmpty(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = appType().emphasisWeight,
+                        color = pageTextColor
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${dayDate.month.number.toString().padStart(2, '0')}-${dayDate.day.toString().padStart(2, '0')}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = pageTextColor.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            // v3.26.0 C+.17 列表块入场错峰：按「天序 + 天内序」递增延迟。
+            // key 用业务复合键（v3.54.0）：hashCode 在「同周同天同时段同名课」时冲突、
+            // 且随字段漂移，会导致 LazyColumn 复用错乱
+            itemsIndexed(
+                items = dayBlocks,
+                key = { _, block ->
+                    "${day}-${block.startSection}-${block.endSection}-" +
+                        block.courses.joinToString("_") { it.course.id }
+                }
+            ) { blockIdx, block ->
+                ScheduleListViewBlock(
+                    block = block,
+                    timeSlots = timeSlots,
+                    composedStyle = composedStyle,
+                    // v3.43.0：错峰总延迟设上限，避免长列表后排条目等待过久
+                    entranceDelayMs = (listEntranceMotion.tokens.entranceStaggerMs * (dayOffset * 3 + blockIdx))
+                        .coerceAtMost(listEntranceMotion.tokens.entranceStaggerCapMs),
+                    onClick = { onClickedBlock(block) },
+                    onLongClick = { onLongClickedBlock(block) }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ScheduleListViewBlock(
+    block: MergedCourseBlock,
+    timeSlots: List<com.shangkeschedule.data.db.main.TimeSlot>,
+    composedStyle: ScheduleGridStyleComposed,
+    entranceDelayMs: Int = 0,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val isDark = LocalIsDarkTheme.current
+    // A1/V2 第二批（v3.69.0）：投影语言 / 羽化环 / 分隔线粗细浓度收口为角色 token
+    // （原为 LocalThemePreset.current == AppThemePreset.SOFT 的身份布尔）。
+    val blockLook = appCourseBlock()
+    val firstCourse = block.courses.firstOrNull()?.course
+    val colorIndex = firstCourse?.colorInt ?: 0
+    val colorPair = composedStyle.courseColorMaps.getOrElse(colorIndex) {
+        composedStyle.courseColorMaps.firstOrNull() ?: ScheduleGridStyle.DEFAULT_COLOR_MAPS[0]
+    }
+
+    val blockColors = resolveCourseBlockColors(
+        themePreset = LocalThemePreset.current,
+        isDarkTheme = isDark,
+        colorPair = colorPair,
+        blockAlpha = composedStyle.courseBlockAlpha,
+        fallbackContent = MaterialTheme.colorScheme.onSurface,
+        // 与网格同一口径：壁纸模式下改走「书卷深色模式」口径（实色底 + 自适应文字）
+        hasWallpaper = composedStyle.backgroundImagePath.isNotEmpty()
+    )
+    val bg = blockColors.background
+    val textColor = blockColors.content
+    val demotedAlpha = if (block.isVisualDemoted) AppAlpha.dimmed else 1f
+    val cornerRadius = composedStyle.courseBlockCornerRadius
+    val shape = RoundedCornerShape(cornerRadius)
+
+    // 课程块投影：通透（iOS 26）与书卷均不加投影，靠材质与留白分层；
+    // 柔绘：列表行改用软模糊投影（elevation 8dp）替代 elevation 硬边投影，并加羽化描边环。
+    val shadowModifier = if (blockLook.shadow == CourseBlockShadow.SOFT_BLUR) {
+        Modifier.softShadow(shape = shape, elevation = 8.dp)
+    } else {
+        Modifier
+    }
+
+    // 左侧色条用 drawBehind 绘制，不参与测量
+    // （fillMaxHeight 子 Box 在宽松/无限高度约束下会失效或撑爆父容器）
+    // 已删除利落主题色条支持，iOS 主题由 CourseBlock 统一处理
+    val stripDrawModifier = Modifier
+
+    // v3.26.0 C+.17 页面入场错峰淡入：rememberSaveable 记住结果——LazyColumn 会回收
+    // 滚出视口的 item，普通 remember 会导致每次滚回来都重播淡入；存入 saveable 后
+    // 滚动往返与页面重进都不重播。关掉「页面入场」分组 ⇒ 直接显示不动画
+    val entranceMotion = LocalAppMotion.current
+    val entranceEnabled = entranceMotion.isEnabled(AnimationGroup.PAGE_ENTRANCE) &&
+        entranceMotion.tokens.entranceDurationMs > 0
+    var entranceEntered by rememberSaveable { mutableStateOf(!entranceEnabled) }
+    LaunchedEffect(Unit) {
+        if (!entranceEntered) {
+            delay(entranceDelayMs.toLong())
+            entranceEntered = true
+        }
+    }
+    val entranceFraction by animateFloatAsState(
+        targetValue = if (entranceEntered) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = entranceMotion.tokens.entranceDurationMs,
+            easing = entranceMotion.tokens.entranceEasing
+        ),
+        label = "listBlockEntrance"
+    )
+    val entranceSlidePx = with(LocalDensity.current) { entranceMotion.tokens.entranceSlideDp.toPx() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(shadowModifier)
+            .graphicsLayer {
+                val entranceAlpha = entranceMotion.tokens.entranceInitialAlpha +
+                    (1f - entranceMotion.tokens.entranceInitialAlpha) * entranceFraction
+                alpha = (demotedAlpha * entranceAlpha).coerceIn(0f, 1f)
+                translationY = entranceSlidePx * (1f - entranceFraction)
+            }
+            .clip(shape)
+            .background(color = bg)
+            .then(stripDrawModifier)
+            // 柔绘：羽化描边环替代任何实色描边（无锐利硬边缘）
+            .then(if (blockLook.featherRim) Modifier.softFeatherRim(shape) else Modifier)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+    ) {
+
+        val startPadding = 12.dp
+        Column(
+            modifier = Modifier.padding(
+                start = startPadding,
+                end = 12.dp,
+                top = 10.dp,
+                bottom = 10.dp
+            )
+        ) {
+            block.courses.forEachIndexed { index, courseWrapper ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 6.dp),
+                        // 柔绘：块内分隔线降到 0.5dp 且更淡（低对比），避免在晕染底上出现硬线
+                        thickness = blockLook.metaDividerThickness,
+                        color = textColor.copy(alpha = blockLook.metaDividerAlpha)
+                    )
+                }
+
+                val course = courseWrapper.course
+                Text(
+                    text = course.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = appType().emphasisWeight,
+                    color = textColor
+                )
+
+                val timeText = buildCourseTimeText(course, timeSlots)
+                if (timeText.isNotBlank()) {
+                    Text(
+                        text = timeText,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = textColor.copy(alpha = 0.82f),
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+
+                // 节次模式显示「第 x-y 节」；自定义时间课程不显示节次
+                if (course.customStartTime == null && course.startSection != null && course.endSection != null) {
+                    Text(
+                        text = stringResource(
+                            Res.string.course_section_range,
+                            course.startSection.toString(),
+                            course.endSection.toString()
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = textColor.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+
+                val infoParts = buildList {
+                    if (course.position.isNotBlank()) {
+                        add(if (composedStyle.removeLocationAt) course.position else "@${course.position}")
+                    }
+                    if (!composedStyle.hideTeacher && course.teacher.isNotBlank()) add(course.teacher)
+                }
+                if (infoParts.isNotEmpty()) {
+                    Text(
+                        text = infoParts.joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textColor.copy(alpha = 0.78f),
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 根据 TimeSlot 或自定义时间生成列表视图中的时间字符串。
+ */
+private fun buildCourseTimeText(
+    course: com.shangkeschedule.data.db.main.Course,
+    timeSlots: List<com.shangkeschedule.data.db.main.TimeSlot>
+): String {
+    val customStart = course.customStartTime
+    val customEnd = course.customEndTime
+    if (customStart != null && customEnd != null) return "$customStart - $customEnd"
+
+    val first = course.startSection ?: return ""
+    val last = course.endSection ?: return ""
+    val startSlot = timeSlots.find { it.number == first }
+    val endSlot = timeSlots.find { it.number == last }
+    return if (startSlot != null && endSlot != null) {
+        "${startSlot.startTime} - ${endSlot.endTime}"
+    } else {
+        ""
+    }
+}

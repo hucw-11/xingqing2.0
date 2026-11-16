@@ -1,0 +1,306 @@
+package com.shangkeschedule.ui.schoolselection.list
+
+import com.shangkeschedule.ui.components.AppCard
+import com.shangkeschedule.ui.components.AppEmptyState
+import com.shangkeschedule.ui.components.AppErrorState
+import com.shangkeschedule.ui.theme.appColors
+import com.shangkeschedule.ui.theme.appSpacing
+import com.shangkeschedule.ui.theme.appType
+import com.shangkeschedule.ui.components.ThemedLoadingIndicator
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.shangkeschedule.Destination
+import com.shangkeschedule.WebPagePurpose
+import com.shangkeschedule.data.model.SchoolCategoryTab
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
+import org.koin.compose.viewmodel.koinViewModel
+import school_index.Adapter
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.error_load_failed
+import shangkeschedule.shared.generated.resources.a11y_back_to_school_list
+import shangkeschedule.shared.generated.resources.arrow_back_24px
+import shangkeschedule.shared.generated.resources.category_academic_system
+import shangkeschedule.shared.generated.resources.category_general_tool
+import shangkeschedule.shared.generated.resources.info_24px
+import shangkeschedule.shared.generated.resources.label_contributor_format
+import shangkeschedule.shared.generated.resources.label_contributor_unknown
+import shangkeschedule.shared.generated.resources.text_no_adapter_for_category_school
+import shangkeschedule.shared.generated.resources.text_no_detailed_description
+
+/**
+ * 一条待展示的适配器 + 它**自己那条索引记录**的资源目录（v4.73.0）。
+ *
+ * 为什么必须逐条带目录：同一所学校的本科与研究生记录分属不同 `resource_folder`
+ * （南开：本科 `qiangzhi/`、研究生 `NANKAI_YJS/`），而适配脚本路径按
+ * `<resource_folder>/<脚本名>` 拼接 —— 用统一目录会让其中一半指向不存在的路径。
+ */
+data class AdapterWithFolder(
+    val adapter: Adapter,
+    val resourceFolder: String
+)
+
+/**
+ * 需要强制以「电脑版」进入的学校 ID 集合。
+ *
+ * 这些学校的教务 / 门户页面是**固定宽度的桌面布局**，在手机 UA + `width=device-width` 视口下会被压扁，
+ * 表现为左侧菜单点不开、看不到课表网格、验证码难以输入等。
+ * 强制桌面模式会同时启用桌面 UA 与 1280px 视口修正（见 `WebCompatDelegate.injectDesktopViewportFix`），
+ * 后者会移除页面自带的 `width=device-width` 并改写为 `width=1280`，桌面布局才恢复正常比例。
+ *
+ * 以「学校 ID」而非适配器 ID 判定：一所学校下的所有适配器共享同一套前端页面。
+ */
+private val FORCE_DESKTOP_MODE_SCHOOL_IDS = setOf(
+    // 汕头大学：门户 xsMainV.htmlx 自带 width=device-width，但实际是固定宽度桌面布局
+    // （左侧 edu-sideMenu 侧栏 + 内容 iframe），手机 UA 下被压缩，登录后进不去课表
+    "u_15f498f5",
+    // 武汉纺织大学外经贸学院：手机端教务菜单无法打开课表
+    "u_c0a22802",
+    // 沈阳农业大学：手机端课表页渲染不完整，桌面 UA 下解析稳定
+    "u_26bd7359",
+    // 西安医学院：金智 ehall 手机端入口登录 / 验证码体验差，桌面版登录后进教务稳定
+    "u_308bdd18",
+    // 国科大：xkgo 老选课系统手机端布局错乱，且拦截器仅桌面模式生效
+    "MANUAL_UCAS",
+    // 滁州学院：金智 EAMS 老版手机端页面布局错乱，无法看到课表网格
+    "MANUAL_CHZU",
+    // 湖北职业技术学院：教务系统 jwgl.hbvtc.edu.cn/jsxsd 为固定宽度桌面布局，
+    // 手机视口下横向溢出、课表压缩，需桌面 UA + 1280 视口修正（入口 jwc.hbvtc.edu.cn → 服务大厅 → 教务）
+    "u_c654f04a",
+)
+
+/**
+ * 二级页面：显示某所学校在当前分类口径下的所有适配器。
+ *
+ * v4.70.0：「教务系统」口径覆盖本科/专科与研究生，这两类适配器在**同一页**一起列出。
+ * v4.73.0：改收 [schoolIds]（**全部**索引记录 id）而非单个 id —— 同一所学校在索引里
+ * 可能拆成本科、研究生两条记录，合并成一行后要把两边的适配器一起列出来；
+ * 且每条适配器要用**它自己那条记录**的 `resource_folder` 拼脚本路径（南开本科是
+ * `qiangzhi/`、研究生是 `NANKAI_YJS/`，用同一个目录必然有一半找不到脚本）。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdapterSelectionScreen(
+    onNavigate: (Destination) -> Unit,
+    onBack: () -> Unit,
+    schoolIds: List<String>,
+    schoolName: String,
+    tabNumber: Int,
+    /** 用途（COURSE = 导入课表 / GRADE = 抓取成绩 / EMPTY_CLASSROOM = 查询空教室），原样透传给内嵌 WebView。 */
+    purpose: String = WebPagePurpose.COURSE,
+    viewModel: SchoolSelectionViewModel = koinViewModel()
+) {
+    // 异步加载状态
+    var adapters by remember { mutableStateOf<List<AdapterWithFolder>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    // 区分「加载失败」与「该分类下确实没有适配器」（v3.54.0）：失败给重试入口
+    var loadFailed by remember { mutableStateOf(false) }
+    var retryKey by remember { mutableIntStateOf(0) }
+
+    // 从传入的 number 计算当前的分类口径
+    val currentTab = remember(tabNumber) { SchoolCategoryTab.fromNumber(tabNumber) }
+
+    @Composable
+    fun getTabDisplayName(): String {
+        return when (currentTab) {
+            SchoolCategoryTab.ACADEMIC_SYSTEM -> stringResource(Res.string.category_academic_system)
+            SchoolCategoryTab.GENERAL_TOOL -> stringResource(Res.string.category_general_tool)
+        }
+    }
+
+    // 数据加载逻辑：跨该校的每条索引记录汇总，每条适配器带上自己那条记录的资源目录
+    LaunchedEffect(schoolIds, currentTab, retryKey) {
+        isLoading = true
+        loadFailed = false
+        try {
+            adapters = viewModel.adaptersWithFolders(schoolIds, currentTab)
+        } catch (e: Exception) {
+            adapters = emptyList()
+            loadFailed = true
+        } finally {
+            isLoading = false
+        }
+    }
+
+    val tabDisplayName = getTabDisplayName()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(schoolName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            vectorResource(Res.drawable.arrow_back_24px),
+                            contentDescription = stringResource(Res.string.a11y_back_to_school_list)
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when {
+                isLoading -> {
+                    ThemedLoadingIndicator(Modifier.align(Alignment.Center))
+                }
+                // 加载失败：给错误提示与重试按钮，不再与「无适配器」空态混同（v3.54.0）
+                loadFailed -> {
+                    AppErrorState(
+                        hint = stringResource(Res.string.error_load_failed),
+                        modifier = Modifier.align(Alignment.Center),
+                        onRetry = { retryKey++ }
+                    )
+                }
+                adapters.isEmpty() -> {
+                    AppEmptyState(
+                        hint = stringResource(Res.string.text_no_adapter_for_category_school, tabDisplayName),
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                else -> {
+                    LazyColumn(
+                        // 适配器列表使用主题页面边距与卡片间距，保持三套主题的舒适节奏。
+                        contentPadding = PaddingValues(
+                            horizontal = appSpacing().pageHorizontal,
+                            vertical = appSpacing().cardGap
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(appSpacing().cardGap)
+                    ) {
+                        items(adapters, key = { it.adapter.adapter_id }) { item ->
+                            AdapterCard(
+                                adapter = item.adapter,
+                                onClick = { selectedAdapter ->
+                                    val rawUrl = (selectedAdapter.import_url ?: "").ifBlank { "about:blank" }
+                                    // 学校数据中的 import_url 可能不带协议（如 ehall.szit.edu.cn/...），
+                                    // 而 WebView 对无协议地址会按 http 发起，会被 network_security_config
+                                    // 的"禁止明文 HTTP"策略拦截，导致"浏览器能进、App 进不去"。
+                                    // 这里统一补全为 https，与地址栏手动输入的行为保持一致。
+                                    val initialUrl = if (rawUrl != "about:blank" &&
+                                        !rawUrl.startsWith("http://") &&
+                                        !rawUrl.startsWith("https://")
+                                    ) {
+                                        "https://$rawUrl"
+                                    } else {
+                                        rawUrl
+                                    }
+                                    val jsFileName = selectedAdapter.asset_js_path
+
+                                    // v4.73.0：脚本路径必须用**该适配器自己那条索引记录**的
+                                    // resource_folder，不能用入参的 resourceFolder —— 后者是主
+                                    // 记录（本科那条）的目录，用它拼研究生适配器会指向
+                                    // 不存在的路径，报「适配脚本文件不存在」。
+                                    val assetJsPath = if (jsFileName.isNotBlank()) {
+                                        "${item.resourceFolder}/$jsFileName"
+                                    } else {
+                                        "${item.resourceFolder}/${selectedAdapter.adapter_id}.js"
+                                    }
+                                    onNavigate(
+                                        Destination.WebView(
+                                            initialUrl = initialUrl,
+                                            assetJsPath = assetJsPath,
+                                            // 名单与判定理由见文件顶部 FORCE_DESKTOP_MODE_SCHOOL_IDS
+                                            forceDesktopMode = schoolIds.any { it in FORCE_DESKTOP_MODE_SCHOOL_IDS },
+                                            mode = purpose
+                                        )
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 适配器信息卡片 Composable。
+ */
+@Composable
+fun AdapterCard(
+    adapter: Adapter,
+    onClick: (Adapter) -> Unit
+) {
+    AppCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = { onClick(adapter) }
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = appSpacing().cardInner, vertical = appSpacing().cardInner)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = adapter.adapter_name,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = appType().emphasisWeight,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Spacer(Modifier.height(appSpacing().listGap))
+
+            // 描述
+            Text(
+                text = adapter.description.ifBlank { stringResource(Res.string.text_no_detailed_description) },
+                style = MaterialTheme.typography.bodyMedium,
+                color = appColors().textSecondary,
+                modifier = Modifier.padding(bottom = appSpacing().listGap)
+            )
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = vectorResource(Res.drawable.info_24px),
+                    contentDescription = null,
+                    tint = appColors().divider,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = stringResource(
+                        Res.string.label_contributor_format,
+                        adapter.maintainer.ifBlank { stringResource(Res.string.label_contributor_unknown) }
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = appColors().divider
+                )
+            }
+        }
+    }
+}

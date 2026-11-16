@@ -1,0 +1,438 @@
+package com.shangkeschedule.ui.settings.course
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.shangkeschedule.data.db.main.Course
+import com.shangkeschedule.data.db.main.TimeSlot
+import com.shangkeschedule.data.model.DualColor
+import com.shangkeschedule.data.repository.AppSettingsRepository
+import com.shangkeschedule.data.repository.CourseTableRepository
+import com.shangkeschedule.data.repository.StyleSettingsRepository
+import com.shangkeschedule.data.repository.TimeSlotRepository
+import com.shangkeschedule.navigation.AddEditCourseChannel
+import com.shangkeschedule.navigation.PresetCourseData
+import com.shangkeschedule.tool.TimeTextUtils
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import org.jetbrains.compose.resources.getString
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.toast_save_failed
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import org.koin.core.annotation.KoinViewModel
+import kotlin.uuid.Uuid
+
+data class CourseScheme(
+    val id: String = Uuid.random().toString(),
+    val dbId: String? = null,
+    val teacher: String = "",
+    val position: String = "",
+    val remark: String = "",
+    val day: Int = 1,
+    val startSection: Int = 1,
+    val endSection: Int = 1,
+    val isCustomTime: Boolean = false,
+    val customStartTime: String = TimeTextUtils.DEFAULT_CUSTOM_START_TIME,
+    val customEndTime: String = "09:35",
+    val weeks: Set<Int> = emptySet(),
+    val colorIndex: Int = 0
+)
+
+@OptIn(ExperimentalCoroutinesApi::class)
+@KoinViewModel
+class AddEditCourseViewModel(
+    private val courseTableRepository: CourseTableRepository,
+    private val timeSlotRepository: TimeSlotRepository,
+    private val appSettingsRepository: AppSettingsRepository,
+    private val styleSettingsRepository: StyleSettingsRepository
+) : ViewModel() {
+
+    private var _courseId: String? = null
+    private val courseId: String? get() = _courseId
+
+    /** 显式指定的编辑目标课表（叠加模式下编辑情侣课程时传入其所在表）。 */
+    private var _targetTableId: String? = null
+
+    private val _uiState = MutableStateFlow(AddEditCourseUiState())
+    val uiState: StateFlow<AddEditCourseUiState> = _uiState.asStateFlow()
+
+    private val _uiEvent = Channel<UiEvent>(Channel.BUFFERED)
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    private var originalDbIds = setOf<String>()
+    private var initialName: String = ""
+    private var initialSchemes: List<CourseScheme> = emptyList()
+    private var initialCredit: String = ""
+    private var initialAssessmentMethod: String = ""
+    private var initialIsLab: Boolean = false
+
+    /** 当前进行中的数据加载协程；[reload] 需要先取消它，避免旧协程持续写入界面状态。 */
+    private var loadJob: Job? = null
+
+    fun initWithId(id: String?, targetCourseTableId: String? = null) {
+        if (_uiState.value.isDataLoaded) return
+
+        _courseId = id
+        _targetTableId = targetCourseTableId
+        loadData()
+    }
+
+    /**
+     * 强制重新加载指定课程（v4.62.0，供课表内快速编辑弹层使用）。
+     *
+     * 与 [initWithId] 的「已加载即忽略」语义不同：弹层每次打开都必须回到数据库最新值。
+     * 否则复用同一 ViewModel 实例时，上一次会话的未保存编辑、以及保存后新增方案
+     * （[CourseScheme.dbId] 仍为 null）会被再次写库，造成重复课程行。
+     */
+    fun reload(id: String, targetCourseTableId: String? = null) {
+        _courseId = id
+        _targetTableId = targetCourseTableId
+        originalDbIds = emptySet()
+        initialName = ""
+        initialSchemes = emptyList()
+        initialCredit = ""
+        initialAssessmentMethod = ""
+        initialIsLab = false
+        _uiState.value = AddEditCourseUiState()
+        loadData()
+    }
+
+    private fun loadData() {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            val initialPresetData: PresetCourseData? = if (courseId == null) {
+                AddEditCourseChannel.presetDataFlow.firstOrNull()
+            } else { null }
+
+            // 编辑目标课表：显式指定 > 按课程 ID 反查所在表 > 当前选中表（叠加模式下
+            // 编辑情侣课程必须落到情侣课表，而不是当前显示的本人课表）
+            val effectiveTableId = _targetTableId
+                ?: courseId?.let { courseTableRepository.findTableIdOfCourse(it) }
+                ?: appSettingsRepository.getAppSettingsOnce().currentCourseTableId
+
+            // 新建课程时的默认配色：在当前课表已有颜色中挑「全局占用最少」的索引，
+            // 让不同课程尽量拿到不同颜色（颜色池用尽后才复用），避免旧实现随机分配造成撞色。
+            val defaultNewColorIndex: Int = if (courseId == null && initialPresetData?.colorIndex == null) {
+                runCatching {
+                    val usedColors = courseTableRepository.getCoursesWithWeeksByTableId(effectiveTableId).first()
+                        .filter { !it.course.isCrush }
+                        .map { it.course.colorInt }
+                    styleSettingsRepository.styleFlow.first().pickLeastUsedColorIndex(usedColors)
+                }.getOrElse { 0 }
+            } else {
+                0
+            }
+
+            val appSettingsFlow = appSettingsRepository.getAppSettings()
+            val styleFlow = styleSettingsRepository.styleFlow
+
+            val courseConfigFlow = appSettingsRepository.getCourseTableConfigFlow(effectiveTableId)
+
+            val timeSlotsFlow = timeSlotRepository.getActiveTimeSlotsByConfigFlow(
+                effectiveTableId,
+                courseConfigFlow
+            )
+
+            combine(
+                timeSlotsFlow,
+                appSettingsFlow,
+                courseConfigFlow,
+                styleFlow,
+                if (courseId != null) {
+                    courseTableRepository.getCoursesWithWeeksByTableId(effectiveTableId)
+                        .flatMapLatest { all ->
+                            val current = all.find { it.course.id == courseId }
+                            if (current != null) {
+                                flowOf(all.filter { it.course.name == current.course.name })
+                            } else {
+                                flowOf(emptyList())
+                            }
+                        }
+                } else {
+                    flowOf(emptyList())
+                }
+            ) { timeSlots, appSettings, courseConfig, currentStyle, relatedCourseWithWeeks ->
+                _uiState.update { currentState ->
+                    val totalWeeks = courseConfig?.semesterTotalWeeks ?: 20
+                    val currentColorMaps = currentStyle.courseColorMaps
+
+                    if (currentState.schemes.isEmpty() && !currentState.isDataLoaded) {
+                        // 仅在初次加载数据时进行排序，确保进入页面时列表是整齐的
+                        val schemes = if (courseId == null) {
+                            val newColor = defaultNewColorIndex
+                            listOf(
+                                CourseScheme(
+                                    teacher = initialPresetData?.teacher.orEmpty(),
+                                    position = initialPresetData?.position.orEmpty(),
+                                    remark = initialPresetData?.remark.orEmpty(),
+                                    day = initialPresetData?.day ?: 1,
+                                    startSection = initialPresetData?.startSection ?: 1,
+                                    endSection = initialPresetData?.endSection ?: 1,
+                                    isCustomTime = initialPresetData?.isCustomTime ?: false,
+                                    customStartTime = initialPresetData?.customStartTime ?: TimeTextUtils.DEFAULT_CUSTOM_START_TIME,
+                                    customEndTime = initialPresetData?.customEndTime ?: "09:35",
+                                    weeks = initialPresetData?.presetWeeks ?: (1..totalWeeks).toSet(),
+                                    colorIndex = initialPresetData?.colorIndex ?: newColor
+                                )
+                            )
+                        } else {
+                            originalDbIds = relatedCourseWithWeeks.map { it.course.id }.toSet()
+                            relatedCourseWithWeeks.map { cw ->
+                                CourseScheme(
+                                    id = cw.course.id,
+                                    dbId = cw.course.id,
+                                    teacher = cw.course.teacher,
+                                    position = cw.course.position,
+                                    remark = cw.course.remark.orEmpty(),
+                                    day = cw.course.day,
+                                    startSection = cw.course.startSection ?: 1,
+                                    endSection = cw.course.endSection ?: 1,
+                                    isCustomTime = cw.course.isCustomTime,
+                                    customStartTime = cw.course.customStartTime.orEmpty(),
+                                    customEndTime = cw.course.customEndTime.orEmpty(),
+                                    weeks = cw.weeks.map { it.weekNumber }.toSet(),
+                                    colorIndex = cw.course.colorInt.coerceIn(0, currentColorMaps.size - 1)
+                                )
+                            }.sortedWith(schemeComparator())
+                        }
+
+                        // 保存备份
+                        initialName = initialPresetData?.name ?: relatedCourseWithWeeks.firstOrNull()?.course?.name.orEmpty()
+                        initialSchemes = schemes
+                        initialCredit = relatedCourseWithWeeks.firstOrNull()?.course?.credit.orEmpty()
+                        initialAssessmentMethod = relatedCourseWithWeeks.firstOrNull()?.course?.assessmentMethod.orEmpty()
+                        initialIsLab = relatedCourseWithWeeks.firstOrNull()?.course?.isLab ?: false
+
+                        currentState.copy(
+                            isEditing = courseId != null,
+                            isDataLoaded = true,
+                            name = initialName,
+                            schemes = schemes,
+                            timeSlots = timeSlots,
+                            currentCourseTableId = effectiveTableId,
+                            semesterTotalWeeks = totalWeeks,
+                            courseColorMaps = currentColorMaps,
+                            credit = initialCredit,
+                            assessmentMethod = initialAssessmentMethod,
+                            isLab = initialIsLab
+                        )
+                    } else {
+                        currentState.copy(
+                            timeSlots = timeSlots,
+                            semesterTotalWeeks = totalWeeks,
+                            courseColorMaps = currentColorMaps
+                        )
+                    }
+                }
+            }.collect()
+        }
+    }
+
+    fun onNameChange(name: String) { _uiState.update { it.copy(name = name) } }
+
+    fun onCreditChange(credit: String) { _uiState.update { it.copy(credit = credit) } }
+
+    fun onAssessmentMethodChange(method: String) { _uiState.update { it.copy(assessmentMethod = method) } }
+
+    fun onIsLabChange(isLab: Boolean) { _uiState.update { it.copy(isLab = isLab) } }
+
+    /**
+     * 判断是否有未保存的内容变更
+     */
+    fun hasUnsavedChanges(): Boolean {
+        val state = uiState.value
+        // 如果数据还没加载好，认为没有变更
+        if (!state.isDataLoaded) return false
+
+        // 比较名称、方案列表及课程级字段是否发生变化（CourseScheme 是 data class，支持内容比较）
+        return state.name != initialName ||
+            state.schemes != initialSchemes ||
+            state.credit != initialCredit ||
+            state.assessmentMethod != initialAssessmentMethod ||
+            state.isLab != initialIsLab
+    }
+
+    /**
+     * 直接追加到末尾，不触发自动重排，方便用户立即编辑
+     */
+    fun addScheme() {
+        _uiState.update { state ->
+            val lastScheme = state.schemes.lastOrNull()
+            val newScheme = CourseScheme(
+                teacher = lastScheme?.teacher.orEmpty(),
+                position = lastScheme?.position.orEmpty(),
+                remark = lastScheme?.remark.orEmpty(),
+                colorIndex = lastScheme?.colorIndex ?: 0,
+                weeks = (1..state.semesterTotalWeeks).toSet()
+            )
+            state.copy(schemes = state.schemes + newScheme)
+        }
+    }
+
+    fun removeScheme(schemeId: String) {
+        _uiState.update { state ->
+            if (state.schemes.size <= 1) return@update state
+            state.copy(schemes = state.schemes.filter { it.id != schemeId })
+        }
+    }
+
+    fun updateScheme(schemeId: String, transform: (CourseScheme) -> CourseScheme) {
+        _uiState.update { state ->
+            state.copy(schemes = state.schemes.map {
+                if (it.id == schemeId) transform(it) else it
+            })
+        }
+    }
+
+    fun onSchemeRemarkChange(schemeId: String, remark: String) {
+        if (remark.length <= 300) {
+            updateScheme(schemeId) { it.copy(remark = remark) }
+        }
+    }
+
+    /**
+     * 切换自定义时间
+     */
+    fun toggleCustomTime(schemeId: String, isCustom: Boolean) {
+        updateScheme(schemeId) { scheme ->
+            scheme.copy(
+                isCustomTime = isCustom,
+                customStartTime = if (isCustom && scheme.customStartTime.isBlank()) TimeTextUtils.DEFAULT_CUSTOM_START_TIME else scheme.customStartTime,
+                customEndTime = if (isCustom && scheme.customEndTime.isBlank()) "09:35" else scheme.customEndTime
+            )
+        }
+    }
+
+    fun onSave() {
+        val state = uiState.value
+        if (!state.isDataLoaded || state.name.isBlank() || state.isSaving) return
+        if (!_uiState.compareAndSet(state, state.copy(isSaving = true))) return
+        viewModelScope.launch {
+            var result: UiEvent? = null
+            try {
+
+                // 保存目标课表：优先当前选中；新装/未选择课表时 currentCourseTableId 可能为空，
+                // 空 id 落库会因外键引用不存在的课表而闪退，故兜底为第一个有效（本人）课表。
+                val tableId = state.currentCourseTableId.orEmpty()
+                    .ifBlank { courseTableRepository.getAllCourseTables().first().firstOrNull { !it.isCouple }?.id.orEmpty() }
+                // 数据库尚无任何课表时拒绝落库，避免写入空 courseTableId 触发外键约束异常
+                check(tableId.isNotBlank())
+                val savedSchemes = state.schemes.map { it.copy(dbId = it.dbId ?: Uuid.random().toString()) }
+                val courses = savedSchemes.map { scheme ->
+                    val course = Course(
+                        id = checkNotNull(scheme.dbId),
+                        courseTableId = tableId,
+                        name = state.name,
+                        teacher = scheme.teacher,
+                        position = scheme.position,
+                        remark = scheme.remark,
+                        day = scheme.day,
+                        startSection = if (scheme.isCustomTime) null else scheme.startSection,
+                        endSection = if (scheme.isCustomTime) null else scheme.endSection,
+                        isCustomTime = scheme.isCustomTime,
+                        customStartTime = if (scheme.isCustomTime) scheme.customStartTime else null,
+                        customEndTime = if (scheme.isCustomTime) scheme.customEndTime else null,
+                        colorInt = scheme.colorIndex,
+                        credit = state.credit.ifBlank { null },
+                        assessmentMethod = state.assessmentMethod.ifBlank { null },
+                        isLab = state.isLab
+                    )
+                    course to scheme.weeks.toList()
+                }
+                courseTableRepository.saveCourseSchemes(tableId, originalDbIds, courses)
+                originalDbIds = savedSchemes.mapNotNull { it.dbId }.toSet()
+                initialName = state.name
+                initialSchemes = savedSchemes
+                initialCredit = state.credit
+                initialAssessmentMethod = state.assessmentMethod
+                initialIsLab = state.isLab
+                val savedIds = savedSchemes.associate { it.id to it.dbId }
+                // 保存期间新增的编辑继续保留，只回填这次成功提交的持久化身份。
+                _uiState.update { current -> current.copy(
+                    schemes = current.schemes.map { scheme ->
+                        savedIds[scheme.id]?.let { scheme.copy(dbId = it) } ?: scheme
+                    },
+                ) }
+                result = if (hasUnsavedChanges()) UiEvent.SavedWithChanges else UiEvent.SaveSuccess
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                result = UiEvent.SaveError(getString(Res.string.toast_save_failed))
+            } finally {
+                _uiState.update { it.copy(isSaving = false) }
+            }
+            result?.let { _uiEvent.send(it) }
+        }
+    }
+
+    fun onDelete() {
+        if (uiState.value.isSaving) return
+        viewModelScope.launch {
+            val tableId = uiState.value.currentCourseTableId.orEmpty()
+            originalDbIds.forEach { id ->
+                courseTableRepository.deleteCourse(createEmptyCourseForDelete(id, tableId))
+            }
+            _uiEvent.send(UiEvent.DeleteSuccess)
+        }
+    }
+
+    fun onCancel() {
+        viewModelScope.launch { _uiEvent.send(UiEvent.Cancel) }
+    }
+
+    private fun createEmptyCourseForDelete(id: String, tableId: String) = Course(
+        id = id,
+        courseTableId = tableId,
+        name = "",
+        teacher = "",
+        position = "",
+        remark = null,
+        day = 1,
+        startSection = null,
+        endSection = null,
+        isCustomTime = false,
+        customStartTime = null,
+        customEndTime = null,
+        colorInt = 0
+    )
+
+    private fun schemeComparator() = compareBy<CourseScheme>(
+        { it.day },
+        { if (it.isCustomTime) it.customStartTime else it.startSection.toString().padStart(2, '0') }
+    )
+}
+
+sealed interface UiEvent {
+    data object SaveSuccess : UiEvent
+    data object SavedWithChanges : UiEvent
+    data class SaveError(val message: String) : UiEvent
+    data object DeleteSuccess : UiEvent
+    data object Cancel : UiEvent
+}
+
+data class AddEditCourseUiState(
+    val isEditing: Boolean = false,
+    val isSaving: Boolean = false,
+    val isDataLoaded: Boolean = false,
+    val name: String = "",
+    val schemes: List<CourseScheme> = emptyList(),
+    val timeSlots: List<TimeSlot> = emptyList(),
+    val currentCourseTableId: String? = null,
+    val semesterTotalWeeks: Int = 20,
+    val courseColorMaps: List<DualColor> = emptyList(),
+    val credit: String = "",
+    val assessmentMethod: String = "",
+    val isLab: Boolean = false
+)

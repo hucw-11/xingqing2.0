@@ -1,0 +1,408 @@
+package com.shangkeschedule.data.model
+
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import com.shangkeschedule.data.model.schedule_style.BorderTypeProto
+import com.shangkeschedule.data.model.schedule_style.DualColorProto
+import com.shangkeschedule.data.model.schedule_style.ScheduleGridStyleProto
+import com.shangkeschedule.data.model.schedule_style.ScheduleModeProto
+
+// 1. Compose 业务模型
+
+/**
+ * 浅色和深色模式下的颜色对。
+ */
+data class DualColor(val light: Color, val dark: Color)
+
+/**
+ * 课表网格样式配置的业务模型
+ * 所有尺寸（Dp）属性使用 Float，颜色（Color）属性使用 Long。
+ */
+data class ScheduleGridStyle(
+    // Grid 尺寸 (单位: Float/Dp)
+    val timeColumnWidthDp: Float = DEFAULT_TIME_COLUMN_WIDTH,
+    val dayHeaderHeightDp: Float = DEFAULT_DAY_HEADER_HEIGHT,
+    val sectionHeightDp: Float = DEFAULT_SECTION_HEIGHT,
+
+    // CourseBlock 外观 (单位: Float/Dp & Float)
+    val courseBlockCornerRadiusDp: Float = DEFAULT_BLOCK_CORNER_RADIUS,
+    val courseBlockOuterPaddingDp: Float = DEFAULT_BLOCK_OUTER_PADDING,
+    val courseBlockInnerPaddingDp: Float = DEFAULT_BLOCK_INNER_PADDING,
+    val courseBlockAlphaFloat: Float = DEFAULT_BLOCK_ALPHA,
+
+    // 颜色列表
+    val courseColorMaps: List<DualColor> = DEFAULT_COLOR_MAPS,
+
+    val courseBlockFontScale: Float = DEFAULT_FONT_SCALE,
+
+    // 界面开关与布局控制
+    val hideGridLines: Boolean = false,
+    val hideSectionTime: Boolean = false,
+    val hideDateUnderDay: Boolean = false,
+    val showStartTime: Boolean = false,
+    val hideLocation: Boolean = false,
+    val hideTeacher: Boolean = false,
+    val removeLocationAt: Boolean = false,
+    val textAlignCenterHorizontal: Boolean = false,
+    val textAlignCenterVertical: Boolean = false,
+    val borderType: BorderTypeProto = BorderTypeProto.BORDER_TYPE_NONE,
+    val scheduleMode: ScheduleModeProto = ScheduleModeProto.SECTION_MODE,
+    val pageTextColorLong: Long? = null,
+    val courseTextColorLong: Long? = null,
+
+    // 背景壁纸路径 (存储在私有目录下的绝对路径)
+    val backgroundImagePath: String? = null
+) {
+
+    /**
+     * 在颜色池中挑选「全局占用最少」的索引，供新建课程生成默认配色。
+     *
+     * 策略：优先返回尚未被占用的颜色；颜色池被用尽后，返回被占用次数最少的颜色。
+     * 并列时取索引最小者，保证同一输入得到确定结果（不再是随机分配，避免撞色）。
+     *
+     * @param usedColorIndices 当前课表已有课程的颜色索引，可含重复与越界值（越界项忽略）。
+     */
+    fun pickLeastUsedColorIndex(usedColorIndices: Collection<Int>): Int {
+        if (courseColorMaps.isEmpty()) return 0
+        val usageCounts = IntArray(courseColorMaps.size)
+        usedColorIndices.forEach { index ->
+            if (index in usageCounts.indices) usageCounts[index]++
+        }
+        var bestIndex = 0
+        for (index in usageCounts.indices) {
+            if (usageCounts[index] < usageCounts[bestIndex]) bestIndex = index
+        }
+        return bestIndex
+    }
+
+    /**
+     * 按「课程名」求解一套互不相同的颜色索引，用于消除课表撞色。
+     *
+     * 同名课程共用一个颜色（与导入路径 `getOrAssignColorByName` 语义一致）；
+     * 不同课程名优先使用颜色池中尚未被占用的颜色，用尽后才复用占用次数最少的颜色。
+     * 结果对同一输入稳定（按 Map 迭代顺序处理、并列取索引最小者），可反复执行而不产生抖动。
+     *
+     * @param nameToColorIndices 课程名 → 该课程名现有课次的颜色索引（顺序无关，可含越界值）。
+     * @return 课程名 → 最终颜色索引；颜色池为空时返回空 Map。
+     */
+    fun resolveDistinctColorIndices(nameToColorIndices: Map<String, List<Int>>): Map<String, Int> {
+        if (courseColorMaps.isEmpty()) return emptyMap()
+        val colorCount = courseColorMaps.size
+        val assignedColors = mutableListOf<Int>()
+        val claimedColors = HashSet<Int>()
+        val resolved = LinkedHashMap<String, Int>()
+
+        nameToColorIndices.forEach { (name, colorIndices) ->
+            // 1) 优先保留已有、且未被其它课程名占用的颜色（取出现次数最多者，并列取索引最小者）
+            val keep = colorIndices
+                .filter { it in 0 until colorCount && it !in claimedColors }
+                .groupingBy { it }
+                .eachCount()
+                .entries
+                .maxWithOrNull(compareBy({ it.value }, { -it.key }))
+                ?.key
+
+            // 2) 越界或颜色已被他人占用时，改配「全局占用最少」的颜色
+            val picked = keep ?: pickLeastUsedColorIndex(assignedColors)
+
+            claimedColors += picked
+            repeat(colorIndices.size.coerceAtLeast(1)) { assignedColors += picked }
+            resolved[name] = picked
+        }
+        return resolved
+    }
+
+    companion object {
+        // --- 默认常量（书卷 / CLAUDE 的旧基线，`DEFAULT` 与老数据回退都依赖它们）
+        val DEFAULT_TIME_COLUMN_WIDTH = 40f
+        val DEFAULT_DAY_HEADER_HEIGHT = 45f
+        val DEFAULT_SECTION_HEIGHT = 70f
+        val DEFAULT_BLOCK_CORNER_RADIUS = 8f
+        val DEFAULT_BLOCK_OUTER_PADDING = 1f
+        val DEFAULT_BLOCK_INNER_PADDING = 2f
+        val DEFAULT_BLOCK_ALPHA = 1f
+        /**
+         * 「课程块不透明度」下限。
+         *
+         * 该值在渲染时是**乘算**系数（叠在色板自带 alpha / 色条主题填充系数之上），历史滑杆下限
+         * 0.1 会让浅色模式的实际填充掉到 3%（色条主题）/ 2.5%（书卷），方块重新变成「透明」——
+         * 即用户反馈「多个主题中课程方块都是透明的」的同一现象。故下限提到 0.5：
+         * 最淡时浅色填充仍 ≥15%、深色 ≥19%，方块始终可辨。
+         * 读取侧同步夹取（见 [ScheduleGridStyleProto.toCompose]），避免历史低值把 UI 与渲染拉偏。
+         */
+        val MIN_BLOCK_ALPHA = 0.5f
+        val DEFAULT_FONT_SCALE = 1.2f
+
+        // 柔和协调的马卡龙配色（浅色背景 + 深色模式深色背景）。
+        // ⚠️ 保持原样：它是 `DEFAULT`、`toCompose()` 老数据回退、情侣课表默认色索引的共同基准，
+        //    任何改动都会波及既有用户的观感。通透（iOS）用的 Apple 系统色池见下方 APPLE_COLOR_MAPS。
+        val DEFAULT_COLOR_MAPS = listOf(
+            DualColor(light = Color(0xFFFFCDD2), dark = Color(0xFFD32F2F)), // 红
+            DualColor(light = Color(0xFFF8BBD0), dark = Color(0xFFC2185B)), // 粉
+            DualColor(light = Color(0xFFE1BEE7), dark = Color(0xFF7B1FA2)), // 紫
+            DualColor(light = Color(0xFFD1C4E9), dark = Color(0xFF512DA8)), // 蓝紫
+            DualColor(light = Color(0xFFC5CAE9), dark = Color(0xFF303F9F)), // 靛蓝
+            DualColor(light = Color(0xFFBBDEFB), dark = Color(0xFF1976D2)), // 蓝
+            DualColor(light = Color(0xFFB2EBF2), dark = Color(0xFF0097A7)), // 青
+            DualColor(light = Color(0xFFB2DFDB), dark = Color(0xFF00796B)), // 青绿
+            DualColor(light = Color(0xFFC8E6C9), dark = Color(0xFF388E3C)), // 绿
+            DualColor(light = Color(0xFFDCEDC8), dark = Color(0xFF689F38)), // 黄绿
+            DualColor(light = Color(0xFFFFF9C4), dark = Color(0xFFFBC02D)), // 黄
+            DualColor(light = Color(0xFFFFE0B2), dark = Color(0xFFF57C00)), // 橙
+        )
+
+        /**
+         * 默认样式对象，用于首次启动或重置样式。
+         */
+        val DEFAULT = ScheduleGridStyle(
+            timeColumnWidthDp = DEFAULT_TIME_COLUMN_WIDTH,
+            dayHeaderHeightDp = DEFAULT_DAY_HEADER_HEIGHT,
+            sectionHeightDp = DEFAULT_SECTION_HEIGHT,
+            courseBlockCornerRadiusDp = DEFAULT_BLOCK_CORNER_RADIUS,
+            courseBlockOuterPaddingDp = DEFAULT_BLOCK_OUTER_PADDING,
+            courseBlockInnerPaddingDp = DEFAULT_BLOCK_INNER_PADDING,
+            courseBlockAlphaFloat = DEFAULT_BLOCK_ALPHA,
+            courseColorMaps = DEFAULT_COLOR_MAPS,
+            courseBlockFontScale = DEFAULT_FONT_SCALE,
+            hideGridLines = false,
+            hideSectionTime = false,
+            hideDateUnderDay = false,
+            showStartTime = false,
+            hideLocation = false,
+            hideTeacher = false,
+            removeLocationAt = false,
+            textAlignCenterHorizontal = false,
+            textAlignCenterVertical = false,
+            borderType = BorderTypeProto.BORDER_TYPE_NONE,
+            scheduleMode = ScheduleModeProto.SECTION_MODE,
+            pageTextColorLong = null,
+            courseTextColorLong = null,
+            backgroundImagePath = null
+        )
+
+        // --- 通透（iOS 26）主题专属课表样式 ---
+        // 设计原则：Apple HIG 系统色 + 左侧 4dp 色条 + 隐藏网格线 + 文字左对齐。
+        // 颜色严格对应 iOS 系统色：Blue / Green / Orange / Purple / Red / Pink /
+        // Teal / Indigo / Yellow / Brown / Cyan / MintGray。
+        //
+        // 浅色档仅 0x1F（12%）alpha：这是「左侧色条 + 极淡同色底」的 iOS 卡片语言所需
+        // （实底会把卡片压成色块、盖掉层级）；深色档为实底系统色（深色下系统色本身就是亮色）。
+        private val APPLE_COLOR_MAPS = listOf(
+            DualColor(light = Color(0x1F007AFF), dark = Color(0xFF007AFF)), // systemBlue
+            DualColor(light = Color(0x1F34C759), dark = Color(0xFF34C759)), // systemGreen
+            DualColor(light = Color(0x1FFF9500), dark = Color(0xFFFF9500)), // systemOrange
+            DualColor(light = Color(0x1FAF52DE), dark = Color(0xFFAF52DE)), // systemPurple
+            DualColor(light = Color(0x1FFF3B30), dark = Color(0xFFFF3B30)), // systemRed
+            DualColor(light = Color(0x1FFF2D55), dark = Color(0xFFFF2D55)), // systemPink
+            DualColor(light = Color(0x1F5AC8FA), dark = Color(0xFF5AC8FA)), // systemTeal
+            DualColor(light = Color(0x1F5856D6), dark = Color(0xFF5856D6)), // systemIndigo
+            DualColor(light = Color(0x1FFFCC00), dark = Color(0xFFFFCC00)), // systemYellow
+            DualColor(light = Color(0x1FE08E0B), dark = Color(0xFFE08E0B)), // systemBrown
+            DualColor(light = Color(0x1F30B0C7), dark = Color(0xFF30B0C7)), // systemCyan
+            DualColor(light = Color(0x1FA2848E), dark = Color(0xFFA2848E)), // systemMintGray
+        )
+
+        private const val IOS_BLOCK_CORNER_RADIUS = 12f      // 课程块连续圆角（iOS 26 小半径形态）
+        private const val IOS_SECTION_HEIGHT = 70f           // 节高
+        private const val IOS_BLOCK_OUTER_PADDING = 1.5f     // 块间距
+        private const val IOS_BLOCK_INNER_PADDING = 3f       // 块内边距
+        private const val IOS_FONT_SCALE = 1.1f              // 字号缩放
+
+        /**
+         * 通透（iOS 26）主题专属课表样式：
+         * - 左侧 4dp 色条 + 极淡同色底
+         * - 12dp 连续圆角课程块
+         * - 12 色 Apple 系统色系
+         * - 隐藏网格线（iOS 靠留白与卡片分层，不用线框）
+         * - 70dp 节高、文字左对齐
+         */
+        val IOS = ScheduleGridStyle(
+            timeColumnWidthDp = 44f,
+            dayHeaderHeightDp = 48f,
+            sectionHeightDp = IOS_SECTION_HEIGHT,
+            courseBlockCornerRadiusDp = IOS_BLOCK_CORNER_RADIUS,
+            courseBlockOuterPaddingDp = IOS_BLOCK_OUTER_PADDING,
+            courseBlockInnerPaddingDp = IOS_BLOCK_INNER_PADDING,
+            courseBlockAlphaFloat = DEFAULT_BLOCK_ALPHA,
+            courseColorMaps = APPLE_COLOR_MAPS,
+            courseBlockFontScale = IOS_FONT_SCALE,
+            hideGridLines = true,
+            hideSectionTime = false,
+            hideDateUnderDay = false,
+            showStartTime = false,
+            hideLocation = false,
+            hideTeacher = false,
+            removeLocationAt = false,
+            textAlignCenterHorizontal = false,
+            textAlignCenterVertical = false,
+            borderType = BorderTypeProto.BORDER_TYPE_NONE,
+            scheduleMode = ScheduleModeProto.SECTION_MODE,
+            pageTextColorLong = null,
+            courseTextColorLong = null,
+            backgroundImagePath = null
+        )
+
+        // --- 柔绘（SOFT）主题专属课表样式 ---
+        // 柔绘的课表不靠色条硬切，而是靠「低饱和同色晕染底 + 虚化圆角 + 软模糊投影」分层。
+        // 颜色取低饱和马卡龙档（与 SoftStyle.kt 的语义色同饱和度），浅色档给足 alpha（0x33）
+        // 让块本身成为一块「薄涂色」，深色档提亮一档保证暗底可读。
+        private val SOFT_COLOR_MAPS = listOf(
+            DualColor(light = Color(0x337C86C9), dark = Color(0xFF9AA3DC)), // 雾蓝紫（主色）
+            DualColor(light = Color(0x337BAE8C), dark = Color(0xFF97C4A6)), // 苔绿
+            DualColor(light = Color(0x33D9A97E), dark = Color(0xFFE0BB96)), // 暖杏
+            DualColor(light = Color(0x33C98FA8), dark = Color(0xFFDBAAC0)), // 藕粉
+            DualColor(light = Color(0x337FA8C4), dark = Color(0xFF9CC0D8)), // 雾青
+            DualColor(light = Color(0x339A93B8), dark = Color(0xFFB3ACCF)), // 灰紫
+            DualColor(light = Color(0x33D8C089), dark = Color(0xFFE0CD9E)), // 淡金
+            DualColor(light = Color(0x33CC8A8A), dark = Color(0xFFDDA0A0)), // 陶土粉
+            DualColor(light = Color(0x338FA8A0), dark = Color(0xFFA8C0B8)), // 灰绿
+            DualColor(light = Color(0x33A89AC4), dark = Color(0xFFBDB2D6)), // 淡紫
+            DualColor(light = Color(0x33C4A88F), dark = Color(0xFFD6BFA8)), // 椰棕
+            DualColor(light = Color(0x338FA0C4), dark = Color(0xFFA8B8D6)), // 灰蓝
+        )
+
+        private const val SOFT_BLOCK_CORNER_RADIUS = 16f    // 虚化圆角：比通透的 12 更圆
+        private const val SOFT_SECTION_HEIGHT = 72f         // 节高略高，留白更干净
+        private const val SOFT_BLOCK_OUTER_PADDING = 2f     // 块间距加大，避免晕染互相干扰
+        private const val SOFT_BLOCK_INNER_PADDING = 3f
+        private const val SOFT_FONT_SCALE = 1.08f
+
+        /**
+         * 柔绘（SOFT）主题专属课表样式：
+         * - 低饱和同色晕染底（无左侧色条硬切，靠薄涂底色区分课程）
+         * - 16dp 虚化圆角、隐藏网格线、文字左对齐
+         * - 72dp 节高、块间距 2dp（晕染块之间留呼吸）
+         */
+        val SOFT = ScheduleGridStyle(
+            timeColumnWidthDp = 44f,
+            dayHeaderHeightDp = 48f,
+            sectionHeightDp = SOFT_SECTION_HEIGHT,
+            courseBlockCornerRadiusDp = SOFT_BLOCK_CORNER_RADIUS,
+            courseBlockOuterPaddingDp = SOFT_BLOCK_OUTER_PADDING,
+            courseBlockInnerPaddingDp = SOFT_BLOCK_INNER_PADDING,
+            courseBlockAlphaFloat = DEFAULT_BLOCK_ALPHA,
+            courseColorMaps = SOFT_COLOR_MAPS,
+            courseBlockFontScale = SOFT_FONT_SCALE,
+            hideGridLines = true,
+            hideSectionTime = false,
+            hideDateUnderDay = false,
+            showStartTime = false,
+            hideLocation = false,
+            hideTeacher = false,
+            removeLocationAt = false,
+            textAlignCenterHorizontal = false,
+            textAlignCenterVertical = false,
+            borderType = BorderTypeProto.BORDER_TYPE_NONE,
+            scheduleMode = ScheduleModeProto.SECTION_MODE,
+            pageTextColorLong = null,
+            courseTextColorLong = null,
+            backgroundImagePath = null
+        )
+    }
+}
+
+
+// 2. Proto ⇔ Compose 转换扩展函数
+
+fun DualColorProto.toCompose(): DualColor {
+    // Wire 中属性是直接访问的，long 类型不需要 toInt (除非颜色存储逻辑需要)
+    return DualColor(
+        light = Color(this.light_color), // Wire 属性名是下划线风格
+        dark = Color(this.dark_color)
+    )
+}
+
+fun DualColor.toProto(): DualColorProto {
+    // Wire 不使用 Builder，而是直接构造类或使用 copy()
+    return DualColorProto(
+        light_color = this.light.toArgb().toLong(),
+        dark_color = this.dark.toArgb().toLong()
+    )
+}
+
+/**
+ * Protobuf -> ScheduleGridStyle 转换 function
+ *
+ * @param paletteFallback 持久化配色为空（用户从未切换过主题 / 刚重置样式）时的回落色板。
+ *   必须传**当前主题预设**的 `gridStyle.courseColorMaps`：此前一律回落 [ScheduleGridStyle.DEFAULT]
+ *   的经典马卡龙 12 色，而 UI 主题默认是「通透」，于是新装用户看到的是「通透主题 + 马卡龙配色」
+ *   的错配组合（深色下还会出现「深色档强调色当文字、叠在同色淡底上」的低对比）。
+ */
+fun ScheduleGridStyleProto.toCompose(
+    paletteFallback: List<DualColor> = ScheduleGridStyle.DEFAULT_COLOR_MAPS
+): ScheduleGridStyle {
+    val d = ScheduleGridStyle.DEFAULT
+
+    return ScheduleGridStyle(
+        // Wire 中不使用 hasXXX() 判定，而是直接判定是否为 null 或默认值 (Proto3)
+        // 1. 基础布局尺寸 (Wire 生成的是可空或带默认值的属性)
+        timeColumnWidthDp = this.time_column_width_dp ?: d.timeColumnWidthDp,
+        dayHeaderHeightDp = this.day_header_height_dp ?: d.dayHeaderHeightDp,
+        sectionHeightDp = this.section_height_dp ?: d.sectionHeightDp,
+
+        // 2. 课程块外观
+        courseBlockCornerRadiusDp = this.course_block_corner_radius_dp ?: d.courseBlockCornerRadiusDp,
+        courseBlockOuterPaddingDp = this.course_block_outer_padding_dp ?: d.courseBlockOuterPaddingDp,
+        courseBlockInnerPaddingDp = this.course_block_inner_padding_dp ?: d.courseBlockInnerPaddingDp,
+
+        // 3. 透明度与缩放（不透明度夹到可辨下限，历史低值不再渲染出「透明方块」）
+        courseBlockAlphaFloat = (this.course_block_alpha_float ?: d.courseBlockAlphaFloat)
+            .coerceIn(ScheduleGridStyle.MIN_BLOCK_ALPHA, 1f),
+        courseBlockFontScale = this.course_block_font_scale ?: d.courseBlockFontScale,
+
+        // 5. 列表转换 (Wire 中 List 不会是 null，为空则是 EmptyList)
+        courseColorMaps = if (this.course_color_maps.isEmpty()) paletteFallback else this.course_color_maps.map { it.toCompose() },
+
+        // 6. 开关映射
+        hideGridLines = this.hide_grid_lines ?: d.hideGridLines,
+        hideSectionTime = this.hide_section_time ?: d.hideSectionTime,
+        hideDateUnderDay = this.hide_date_under_day ?: d.hideDateUnderDay,
+        showStartTime = this.show_start_time ?: d.showStartTime,
+        hideLocation = this.hide_location ?: d.hideLocation,
+        hideTeacher = this.hide_teacher ?: d.hideTeacher,
+        removeLocationAt = this.remove_location_at ?: d.removeLocationAt,
+        pageTextColorLong = this.page_text_color_long,
+        courseTextColorLong = this.course_text_color_long,
+
+        // 7. 对齐与边框
+        textAlignCenterHorizontal = this.text_align_center_horizontal ?: d.textAlignCenterHorizontal,
+        textAlignCenterVertical = this.text_align_center_vertical ?: d.textAlignCenterVertical,
+        borderType = this.border_type ?: d.borderType,
+        scheduleMode = this.schedule_mode ?: d.scheduleMode,
+
+        // 8. 背景图路径映射
+        backgroundImagePath = if (!this.background_image_path.isNullOrEmpty()) this.background_image_path else null
+    )
+}
+
+/**
+ * ScheduleGridStyle -> Protobuf 转换 (用于写入)
+ */
+fun ScheduleGridStyle.toProto(): ScheduleGridStyleProto {
+    return ScheduleGridStyleProto(
+        time_column_width_dp = this.timeColumnWidthDp,
+        day_header_height_dp = this.dayHeaderHeightDp,
+        section_height_dp = this.sectionHeightDp,
+        course_block_corner_radius_dp = this.courseBlockCornerRadiusDp,
+        course_block_outer_padding_dp = this.courseBlockOuterPaddingDp,
+        course_block_inner_padding_dp = this.courseBlockInnerPaddingDp,
+        course_block_alpha_float = this.courseBlockAlphaFloat,
+        course_block_font_scale = this.courseBlockFontScale,
+        course_color_maps = this.courseColorMaps.map { it.toProto() },
+        hide_grid_lines = this.hideGridLines,
+        hide_section_time = this.hideSectionTime,
+        hide_date_under_day = this.hideDateUnderDay,
+        show_start_time = this.showStartTime,
+        hide_location = this.hideLocation,
+        hide_teacher = this.hideTeacher,
+        remove_location_at = this.removeLocationAt,
+        text_align_center_horizontal = this.textAlignCenterHorizontal,
+        text_align_center_vertical = this.textAlignCenterVertical,
+        border_type = this.borderType,
+        schedule_mode = this.scheduleMode,
+
+        page_text_color_long = this.pageTextColorLong,
+        course_text_color_long = this.courseTextColorLong,
+        background_image_path = this.backgroundImagePath ?: ""
+    )
+}

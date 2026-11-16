@@ -1,0 +1,371 @@
+package com.shangkeschedule.ui.schedule.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import com.shangkeschedule.data.db.main.CourseWithWeeks
+import com.shangkeschedule.data.db.main.TimeSlot
+import com.shangkeschedule.data.model.AppThemePreset
+import com.shangkeschedule.data.model.ScheduleGridStyle
+import com.shangkeschedule.data.model.schedule_style.BorderTypeProto
+import com.shangkeschedule.data.model.schedule_style.ScheduleModeProto
+import com.shangkeschedule.ui.theme.AppTypeGrid
+import com.shangkeschedule.ui.theme.LocalIsDarkTheme
+import com.shangkeschedule.ui.theme.LocalThemePreset
+import com.shangkeschedule.ui.theme.appColors
+import com.shangkeschedule.ui.theme.appCourseBlock
+import com.shangkeschedule.ui.theme.CourseBlockBorder
+import com.shangkeschedule.ui.theme.CourseBlockPalette
+import com.shangkeschedule.ui.theme.CourseBlockShadow
+import com.shangkeschedule.ui.theme.appType
+import com.shangkeschedule.ui.theme.softFeatherRim
+import com.shangkeschedule.ui.theme.softShadow
+
+/**
+ * 主题预设相关渲染参数：在 CourseBlock 入口统一计算一次，
+ * 背景色、文字色、色条、阴影、内边距、虚化遮罩等均直接引用，避免多处重复判断主题。
+ */
+private data class CourseBlockPresetRender(
+    val blockBackgroundColor: Color,
+    val stripColor: Color,
+    val textColor: Color,
+    val sleepyShadowModifier: Modifier,
+    val timetableStartPadding: Dp,
+    val demotedOverlayAlpha: Float
+)
+
+@Composable
+private fun buildPresetRenderSpec(
+    colors: CourseBlockColors,
+    style: ScheduleGridStyleComposed
+): CourseBlockPresetRender {
+    // A1/V2 第二批（v3.69.0）：「淡底 + 深色条」取色口径与「软模糊投影」两处身份分支
+    // 收口为课程块角色 token（原为 themePreset == IOS / SOFT 的相等判断）。
+    val blockLook = appCourseBlock()
+    // 云舒（SLEEPY）主题已删除，其专属投影分支不再存在。
+    // 色条口径：通透（iOS 26）与柔绘共用「淡底 + 深色条」；书卷走实色块。
+    val usesStripPalette = blockLook.palette == CourseBlockPalette.STRIP
+
+    // 色条主题与柔绘共用「淡底 + 深色条」取色口径
+    val blockBackgroundColor = colors.background
+    val stripColor = colors.accent
+    val textColor = colors.content
+
+    val shape = RoundedCornerShape(style.courseBlockCornerRadius)
+    // 课程块投影：通透（iOS 26）与书卷均不加投影，靠材质与留白分层；
+    // 柔绘改为常驻一层极淡软模糊投影（elevation 6dp）——低对比界面上课程块需要一点"离地感"
+    // 才能与晕染底分开，但投影 alpha 极低，不会形成硬边落影。
+    // 悬浮态由 floatingShadowModifier 单独抬升。
+    // （软投影强度随块大小由调用方给，不进 token —— 见 AppCourseBlockTokens 注释）
+    val sleepyShadowModifier = if (blockLook.shadow == CourseBlockShadow.SOFT_BLUR) {
+        Modifier.softShadow(shape = shape, elevation = 6.dp)
+    } else {
+        Modifier
+    }
+    val timetableStartPadding = blockLook.stripStartPadding
+    // 非当前周降级遮罩：0.618 为书卷主题有意的黄金比例设计值（豁免），通透沿用同一档位。
+    val demotedOverlayAlpha = 0.618f
+
+    return CourseBlockPresetRender(
+        blockBackgroundColor = blockBackgroundColor,
+        stripColor = stripColor,
+        textColor = textColor,
+        sleepyShadowModifier = sleepyShadowModifier,
+        timetableStartPadding = timetableStartPadding,
+        demotedOverlayAlpha = demotedOverlayAlpha
+    )
+}
+
+@Composable
+fun CourseBlock(
+    courseWrapper: CourseWithWeeks,
+    isVisualDemoted: Boolean,
+    style: ScheduleGridStyleComposed,
+    timeSlots: List<TimeSlot>,
+    modifier: Modifier = Modifier,
+    isFloating: Boolean = false, // 标记当前块是否处于长按选中/悬浮状态
+    forceTimeText: String? = null // 叠加视图作息不同时强制展示的起止时间（按课程所属表作息解析）
+) {
+    val course = courseWrapper.course
+    val isDarkTheme = LocalIsDarkTheme.current
+
+    // 颜色适配
+    val colorIndex = course.colorInt.takeIf { it in style.courseColorMaps.indices }
+    val currentAlpha = if (isFloating) 0.95f else style.courseBlockAlpha
+    val themePreset = LocalThemePreset.current
+    val colorPair = colorIndex?.let { style.courseColorMaps[it] }
+        ?: style.courseColorMaps.firstOrNull()
+        ?: ScheduleGridStyle.DEFAULT_COLOR_MAPS.firstOrNull()
+    val blockColors = resolveCourseBlockColors(
+        themePreset = themePreset,
+        isDarkTheme = isDarkTheme,
+        colorPair = colorPair,
+        blockAlpha = currentAlpha,
+        fallbackContent = MaterialTheme.colorScheme.onSurface,
+        preferredContent = style.courseTextColor,
+        // 课表设了背景图时改走「书卷深色模式」口径（实色底 + 自适应文字），见 resolveCourseBlockColors
+        hasWallpaper = style.backgroundImagePath.isNotEmpty()
+    )
+    val presetRender = buildPresetRenderSpec(
+        colors = blockColors,
+        style = style
+    )
+
+    // 字体基础大小（在 BoxWithConstraints 内根据块实际宽度做自适应缩放）
+    val baseNameFontSize = AppTypeGrid.courseName * style.fontScale
+    val baseMetaFontSize = AppTypeGrid.courseMeta * style.fontScale
+
+    // 核心分支逻辑：判断 24小时模式 与 节次模式 的时间文本渲染
+    val customStartTime = course.customStartTime
+    val customEndTime = course.customEndTime
+    val customTimeString = if (customStartTime != null && customEndTime != null) "$customStartTime - $customEndTime" else null
+    val isCustomTimeCourse = customTimeString != null
+
+    // 叠加视图作息不同时强制展示（"8:00-9:50"），优先级最高；否则按模式默认规则
+    val timeTextToShow = forceTimeText ?: if (style.scheduleMode == ScheduleModeProto.TIME_24H_MODE) {
+        // 24小时绝对时间轴模式：全部课程都显示起止时间
+        if (isCustomTimeCourse) {
+            customTimeString
+        } else {
+            val startSlot = timeSlots.find { it.number == course.startSection }
+            val endSlot = timeSlots.find { it.number == course.endSection }
+            if (startSlot != null && endSlot != null) "${startSlot.startTime} - ${endSlot.endTime}" else null
+        }
+    } else {
+        // 传统节次模式：只有自定义课程显示起止时间；普通节次课程只有在开启展示开始时间时才显示开始时间
+        if (isCustomTimeCourse) {
+            customTimeString
+        } else if (style.showStartTime) {
+            timeSlots.find { it.number == course.startSection }?.startTime
+        } else {
+            null
+        }
+    }
+
+    // 边框样式配置（悬浮 = 语义 info 强调色，v2 规范：不再用孤立的功能蓝）
+    val borderColor = if (isFloating) appColors().info else appColors().divider
+    val borderWidth = if (isFloating) 2.dp else 1.dp
+    val borderAlpha = if (isFloating) 1.0f else style.courseBlockAlpha
+    val shape = RoundedCornerShape(style.courseBlockCornerRadius)
+    // A1/V2 第二批（v3.69.0）：「柔绘不画任何实色硬边描边」是**描边策略**差异，
+    // 收口为课程块角色 token（原为 themePreset == AppThemePreset.SOFT 的身份布尔）。
+    // 柔绘：课程块**没有任何 1dp/2dp 实色描边**（含用户在课表样式里选的实线/虚线描边）——
+    // 「无锐利硬边缘」是柔绘的硬约束；层级改由软模糊投影 + 羽化描边表达。
+    val blockLook = appCourseBlock()
+    val borderModifier = if (blockLook.border == CourseBlockBorder.NONE) {
+        Modifier
+    } else when (style.borderType) {
+        BorderTypeProto.BORDER_TYPE_SOLID -> {
+            Modifier.border(borderWidth, borderColor.copy(alpha = borderAlpha), shape)
+        }
+        BorderTypeProto.BORDER_TYPE_DASHED -> {
+            Modifier.drawBehind {
+                val strokeWidth = borderWidth.toPx()
+                val dashPathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 10f), 0f)
+                drawOutline(
+                    outline = shape.createOutline(size, layoutDirection, this),
+                    color = borderColor.copy(alpha = borderAlpha),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth, pathEffect = dashPathEffect)
+                )
+            }
+        }
+        else -> {
+            if (isFloating) Modifier.border(borderWidth, borderColor, shape) else Modifier
+        }
+    }
+
+    val horizontalAlignment = if (style.textAlignCenterHorizontal) Alignment.CenterHorizontally else Alignment.Start
+    val verticalArrangement = if (style.textAlignCenterVertical) Arrangement.Center else Arrangement.Top
+    val textAlign = if (style.textAlignCenterHorizontal) TextAlign.Center else TextAlign.Start
+
+    // 选中捏起时，增加三维物理阴影（柔绘改用软模糊投影，投影边缘完全化开）
+    val floatingShadowModifier = when {
+        !isFloating -> Modifier
+        blockLook.shadow == CourseBlockShadow.SOFT_BLUR -> Modifier.softShadow(shape = shape, elevation = 12.dp)
+        else -> Modifier.shadow(elevation = 8.dp, shape = shape, clip = false)
+    }
+
+    val sleepyShadowModifier = presetRender.sleepyShadowModifier
+
+    BoxWithConstraints(
+        modifier = modifier
+            .then(floatingShadowModifier)
+            .then(sleepyShadowModifier)
+            .fillMaxSize()
+            .then(borderModifier)
+            .clip(shape)
+            .background(color = presetRender.blockBackgroundColor)
+            .then(if (blockLook.featherRim) Modifier.softFeatherRim(shape) else Modifier)
+    ) {
+        // 左侧色条：宽 4dp，贯穿整个块高度
+        if (presetRender.timetableStartPadding > 0.dp) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(presetRender.stripColor)
+            )
+        }
+
+        // 可用文字区域尺寸（扣除内边距）
+        val innerPadding = style.courseBlockInnerPadding.coerceAtMost(2.dp)
+        val timetableStartPadding = presetRender.timetableStartPadding
+        val contentWidth = maxWidth - innerPadding * 2 - timetableStartPadding
+        val contentHeight = maxHeight - innerPadding * 2
+
+        // 字号自适应：以 5 列/7 列课表的典型内容宽度(约 44dp)为基准，窄块微缩、宽块微放。
+        // 收敛缩放区间，避免「开启显示周末(7列)字变小、关闭(5列)字变大」的跳变；窄块溢出由 Ellipsis 兜底
+        val referenceWidth = 44.dp
+        val minScale = 0.82f
+        val maxScale = 1.06f
+        val widthRatio = if (contentWidth > 0.dp) contentWidth / referenceWidth else 1f
+        val adaptiveScale = widthRatio.coerceIn(minScale, maxScale)
+        val nameFontSize = (baseNameFontSize * adaptiveScale).sp
+        val metaFontSize = (baseMetaFontSize * adaptiveScale).sp
+
+        // 紧凑块判定：双排（宽度减半）或极矮块视为紧凑，隐藏教师、优先保证名称
+        val isCompact = contentWidth < 32.dp || contentHeight < 30.dp
+
+        // 课程文字内容容器
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start = innerPadding + timetableStartPadding,
+                    top = innerPadding,
+                    end = innerPadding,
+                    bottom = innerPadding
+                ),
+            horizontalAlignment = horizontalAlignment,
+            verticalArrangement = verticalArrangement
+        ) {
+            if (timeTextToShow != null) {
+                Text(
+                    text = timeTextToShow,
+                    fontSize = metaFontSize,
+                    color = presetRender.textColor.copy(alpha = 0.8f),
+                    fontWeight = appType().titleWeight,
+                    textAlign = textAlign,
+                    style = TextStyle(lineHeight = 1.em)
+                )
+            }
+
+            // 课程名称：行数按「可用高度 ÷ 行高」预算并硬性钳制在 [2, 4]（见 CourseNameLineBudget）。
+            //
+            // v4.67.39 修正：此前**行数不限**、只靠 Ellipsis 兜底，
+            // 于是「毛泽东思想和中国特色社会主义理论体系概论」这类长课名在单列窄格里
+            // 一路折到 7 行，把地点与教师整段挤出可视区（真机截图实测）。
+            // 现在长课名会在预算行数内截断，**腾出的空间留给地点与教师** ——
+            // 「课名 + 地点 + 教师」三件套齐全，比「课名占满但看不到地点」信息密度更高。
+            //
+            // 预算里**先扣掉**地点/教师大致占用的行数，避免它们被顶出可视区。
+            val nameMaxLines = CourseNameLineBudget.linesFor(
+                contentHeightDp = contentHeight.value,
+                fontSizeDp = nameFontSize.value,
+            )
+            Text(
+                text = course.name,
+                fontSize = nameFontSize,
+                fontWeight = appType().emphasisWeight,
+                color = presetRender.textColor,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = nameMaxLines,
+                textAlign = textAlign,
+                modifier = Modifier.weight(1f, fill = false),
+                style = TextStyle(lineHeight = 1.2.em)
+            )
+
+            // 地点：最多 2 行内展示（v4.67.39 由 4 行下调）。
+                    // 真机实测「@未排地点」这类占位文本在窄格里会折成 3 行，
+                    // 3 行位置文本的信息量远不如 1 行（多数地点是「@楼-房」这种短串），
+                    // 却要多占两行高度，把教师顶出可视区。2 行是「够用且不挤」的平衡点。
+                    // 仍在 @、-、（、） 等符号前后提供换行机会，其余字符尽量保持不换行。
+                    if (!style.hideLocation) {
+                val position = course.position
+                if (position.isNotBlank()) {
+                    val prefix = if (style.removeLocationAt) "" else "@\u200B"
+                    // 在 @、-、全角/半角括号前后插入零宽空格，作为换行机会点
+                    val breakablePosition = position.replace(Regex("([@\\-（(）)])"), "\u200B$1\u200B")
+                    Text(
+                        text = "$prefix$breakablePosition",
+                        fontSize = metaFontSize,
+                        color = presetRender.textColor.copy(alpha = 0.88f),
+                        textAlign = textAlign,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 2,
+                        style = TextStyle(lineHeight = 1.1.em)
+                    )
+                }
+            }
+
+            // 教师：权重最低，置于最后；紧凑块（双排/极矮）下隐藏，否则单行展示
+            if (!style.hideTeacher && !isCompact) {
+                val teacher = course.teacher
+                if (teacher.isNotBlank()) {
+                    Text(
+                        text = teacher,
+                        fontSize = metaFontSize,
+                        color = presetRender.textColor.copy(alpha = 0.88f),
+                        textAlign = textAlign,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1,
+                        style = TextStyle(lineHeight = 1.1.em)
+                    )
+                }
+            }
+        }
+
+        // 当单课不是当前周时，进行干净的全局遮罩染色与虚化斜线绘制
+        if (isVisualDemoted && !isFloating) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        color = (if (isDarkTheme) Color.Black else Color.White)
+                            .copy(alpha = presetRender.demotedOverlayAlpha)
+                    )
+                    .drawBehind {
+                        val stripeWidth = 5.dp.toPx()
+                        val stripeColor = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.06f)
+                        val brush = Brush.linearGradient(
+                            0.0f to stripeColor, 0.45f to stripeColor,
+                            0.55f to Color.Transparent, 1.0f to Color.Transparent,
+                            start = Offset(0f, 0f), end = Offset(stripeWidth, stripeWidth), tileMode = TileMode.Repeated
+                        )
+                        drawRect(brush = brush)
+                    }
+            )
+        }
+    }
+}

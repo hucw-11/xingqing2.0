@@ -9,6 +9,9 @@ local.properties
 *.p12
 *.jks
 keystore.properties
+adapter_secrets.properties
+google-services.json
+*.keystore
 *.apk
 *.aab
 appdownload/

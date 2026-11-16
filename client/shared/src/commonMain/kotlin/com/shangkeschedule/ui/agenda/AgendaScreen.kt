@@ -1,0 +1,1992 @@
+package com.shangkeschedule.ui.agenda
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.shangkeschedule.tool.TimeTextUtils
+import com.shangkeschedule.ui.components.AppAlertDialog
+import com.shangkeschedule.Destination
+import com.shangkeschedule.data.db.main.ScheduleCategory
+import com.shangkeschedule.ui.components.AdaptiveNavigationScaffold
+import com.shangkeschedule.ui.components.AppPageHeader
+import com.shangkeschedule.ui.components.AppCard
+import com.shangkeschedule.ui.components.AppCheckboxIndicator
+import com.shangkeschedule.ui.components.AppDangerDialog
+import com.shangkeschedule.ui.components.AppDialogActions
+import com.shangkeschedule.ui.components.AppEmptyState
+import com.shangkeschedule.ui.components.AppErrorState
+import com.shangkeschedule.ui.components.AppGlassBottomSheet
+import com.shangkeschedule.ui.components.AppLoading
+import com.shangkeschedule.ui.components.AppSwitch
+import com.shangkeschedule.ui.components.AppTextField
+import com.shangkeschedule.ui.components.DatePickerModal
+import com.shangkeschedule.ui.components.NativeNumberPicker
+import com.shangkeschedule.ui.components.ToastManager
+import com.shangkeschedule.ui.theme.AnimationGroup
+import com.shangkeschedule.ui.theme.LocalAppMotion
+import com.shangkeschedule.ui.theme.rememberStatusFadeAlpha
+import com.shangkeschedule.ui.components.rememberAppHaptics
+import com.shangkeschedule.ui.theme.appColors
+import com.shangkeschedule.ui.theme.appShapes
+import com.shangkeschedule.ui.theme.appIconSize
+import com.shangkeschedule.ui.theme.appSpacing
+import com.shangkeschedule.ui.theme.appType
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.number
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
+import org.koin.compose.viewmodel.koinViewModel
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.nav_schedule
+import shangkeschedule.shared.generated.resources.a11y_agenda_add
+import shangkeschedule.shared.generated.resources.a11y_agenda_collapse_month
+import shangkeschedule.shared.generated.resources.a11y_agenda_expand_month
+import shangkeschedule.shared.generated.resources.a11y_agenda_next_month
+import shangkeschedule.shared.generated.resources.a11y_agenda_next_year
+import shangkeschedule.shared.generated.resources.a11y_agenda_prev_month
+import shangkeschedule.shared.generated.resources.a11y_agenda_prev_year
+import shangkeschedule.shared.generated.resources.action_cancel
+import shangkeschedule.shared.generated.resources.action_confirm
+import shangkeschedule.shared.generated.resources.add_24px
+import shangkeschedule.shared.generated.resources.agenda_add_location
+import shangkeschedule.shared.generated.resources.agenda_add_note
+import shangkeschedule.shared.generated.resources.agenda_ai_coming_soon
+import shangkeschedule.shared.generated.resources.agenda_ai_hint
+import shangkeschedule.shared.generated.resources.agenda_all_day
+import shangkeschedule.shared.generated.resources.agenda_back_to_today
+import shangkeschedule.shared.generated.resources.agenda_category_activity
+import shangkeschedule.shared.generated.resources.agenda_category_course
+import shangkeschedule.shared.generated.resources.agenda_category_exam
+import shangkeschedule.shared.generated.resources.agenda_category_homework
+import shangkeschedule.shared.generated.resources.agenda_category_other
+import shangkeschedule.shared.generated.resources.agenda_category_todo
+import shangkeschedule.shared.generated.resources.agenda_count_format
+import shangkeschedule.shared.generated.resources.agenda_create
+import shangkeschedule.shared.generated.resources.agenda_day_title_format
+import shangkeschedule.shared.generated.resources.agenda_delete_message
+import shangkeschedule.shared.generated.resources.agenda_delete_title
+import shangkeschedule.shared.generated.resources.agenda_duration_hours
+import shangkeschedule.shared.generated.resources.agenda_duration_minutes
+import shangkeschedule.shared.generated.resources.agenda_empty
+import shangkeschedule.shared.generated.resources.agenda_end_label
+import shangkeschedule.shared.generated.resources.agenda_group_afternoon
+import shangkeschedule.shared.generated.resources.agenda_group_allday
+import shangkeschedule.shared.generated.resources.agenda_group_evening
+import shangkeschedule.shared.generated.resources.agenda_group_morning
+import shangkeschedule.shared.generated.resources.agenda_lunar_format
+import shangkeschedule.shared.generated.resources.agenda_new_title
+import shangkeschedule.shared.generated.resources.agenda_select_month
+import shangkeschedule.shared.generated.resources.agenda_start_label
+import shangkeschedule.shared.generated.resources.agenda_status_finished
+import shangkeschedule.shared.generated.resources.agenda_status_ongoing
+import shangkeschedule.shared.generated.resources.agenda_status_upcoming
+import shangkeschedule.shared.generated.resources.agenda_teacher_prefix
+import shangkeschedule.shared.generated.resources.agenda_title_hint
+import shangkeschedule.shared.generated.resources.agenda_today_badge
+import shangkeschedule.shared.generated.resources.agenda_year_format
+import shangkeschedule.shared.generated.resources.arrow_drop_down_24px
+import shangkeschedule.shared.generated.resources.chevron_right_24px
+import shangkeschedule.shared.generated.resources.close_24px
+import shangkeschedule.shared.generated.resources.confirm_delete
+import shangkeschedule.shared.generated.resources.edit_24px
+import shangkeschedule.shared.generated.resources.list_alt_24px
+import shangkeschedule.shared.generated.resources.location_on_24px
+import shangkeschedule.shared.generated.resources.month_names
+import shangkeschedule.shared.generated.resources.more_vert_24px
+import shangkeschedule.shared.generated.resources.item_more_options
+import shangkeschedule.shared.generated.resources.schedule_24px
+import shangkeschedule.shared.generated.resources.week_days_full_names
+import shangkeschedule.shared.generated.resources.week_days_short_names
+import kotlin.math.abs
+import kotlin.time.Clock
+
+private val TIME_COLUMN_WIDTH = 56.dp
+
+/**
+ * 时间列与条目卡之间的时间轴列宽。
+ *
+ * 与今日页对齐（2026-10-13）：今日页时间轴用 `Arrangement.spacedBy(appSpacing().cardGap)`
+ * 即 16dp 横向节奏，本页原为 26dp ⇒ 两页「同结构条目」的卡片**可用宽度差 10dp**、
+ * 圆点位置也不一致。收敛为 16dp 后，两页的「时间列 56 + 间距 16 + 卡片」逐项同宽，
+ * 卡片左右边缘对齐。
+ */
+private val TIMELINE_COLUMN_WIDTH = 16.dp
+
+/** 时间轴分组：0 全天 / 1 上午 / 2 下午 / 3 晚上。 */
+private const val GROUP_ALL_DAY = 0
+private const val GROUP_MORNING = 1
+private const val GROUP_AFTERNOON = 2
+private const val GROUP_EVENING = 3
+
+/** 日程状态：0 已结束 / 1 进行中 / 2 未开始。 */
+private const val STATUS_FINISHED = 0
+private const val STATUS_ONGOING = 1
+private const val STATUS_UPCOMING = 2
+
+/** 时间选择器在输入无法解析时的回落基准：12:00。 */
+private const val DEFAULT_PICKER_MINUTES = 12 * 60
+
+private enum class DateTimeTarget { START, END }
+
+/**
+ * 「日程」页：月历周条 + 当日课程/自建日程时间轴。
+ *
+ * 与原「今日课表」页共享同一套玻璃底栏与主题 tokens，视觉语言完全一致。
+ */
+@Composable
+fun AgendaScreen(
+    onNavigate: (Destination) -> Unit,
+    onBack: () -> Unit,
+    viewModel: AgendaViewModel = koinViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val selectedDate by viewModel.currentSelectedDate.collectAsStateWithLifecycle()
+
+    var showCreateSheet by remember { mutableStateOf(false) }
+    var showMonthPicker by remember { mutableStateOf(false) }
+    var deletingEntry by remember { mutableStateOf<AgendaEntry?>(null) }
+
+    val hazeState = rememberHazeState()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        AdaptiveNavigationScaffold(
+            currentDestination = Destination.Schedule,
+            onTabSelected = { dest -> onNavigate(dest) }
+        ) { outerPadding ->
+            Scaffold(
+                contentWindowInsets = WindowInsets(0, 0, 0, 0)
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .hazeSource(hazeState)
+                ) {
+                    val loadError = uiState.error
+                    if (loadError != null) {
+                        // 数据源异常（v4.64.28）：此前链路抛异常会取消收集协程，页面永久停在加载态
+                        AppErrorState(
+                            hint = loadError,
+                            fillScreen = true,
+                            onRetry = viewModel::retryLoad
+                        )
+                    } else if (!uiState.isLoaded) {
+                        AppLoading()
+                    } else {
+                        AgendaContent(
+                            state = uiState,
+                            bottomInset = outerPadding.calculateBottomPadding(),
+                            onCreate = { showCreateSheet = true },
+                            onSelectDate = viewModel::selectDate,
+                            onPreviousMonth = viewModel::previousMonth,
+                            onNextMonth = viewModel::nextMonth,
+                            onGoToToday = viewModel::goToToday,
+                            onOpenMonthPicker = { showMonthPicker = true },
+                            onDeleteEntry = { deletingEntry = it },
+                            onToggleEntry = viewModel::toggleEntryDone
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showCreateSheet) {
+        AgendaCreateSheet(
+            initialDate = selectedDate,
+            hazeState = hazeState,
+            onDismiss = { showCreateSheet = false },
+            onCreate = { date, title, category, allDay, start, end, location, note ->
+                viewModel.addEvent(date, title, category, allDay, start, end, location, note)
+                showCreateSheet = false
+            }
+        )
+    }
+
+    deletingEntry?.let { entry ->
+        AppDangerDialog(
+            onDismissRequest = { deletingEntry = null },
+            title = stringResource(Res.string.agenda_delete_title),
+            text = stringResource(Res.string.agenda_delete_message, entry.title),
+            confirmText = stringResource(Res.string.confirm_delete),
+            onConfirm = {
+                viewModel.deleteEntry(entry)
+                deletingEntry = null
+            }
+        )
+    }
+
+    if (showMonthPicker) {
+        AgendaMonthPickerSheet(
+            currentYear = uiState.month.year,
+            currentMonth = uiState.month.month,
+            today = uiState.today,
+            hazeState = hazeState,
+            onDismiss = { showMonthPicker = false },
+            onSelectMonth = { year, month ->
+                viewModel.selectMonth(year, month)
+                showMonthPicker = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun AgendaContent(
+    state: AgendaUiState,
+    bottomInset: Dp,
+    onCreate: () -> Unit,
+    onSelectDate: (LocalDate) -> Unit,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onGoToToday: () -> Unit,
+    onOpenMonthPicker: () -> Unit,
+    onDeleteEntry: (AgendaEntry) -> Unit,
+    onToggleEntry: (AgendaEntry) -> Unit
+) {
+    val tokens = appColors()
+    val spacing = appSpacing()
+
+    val weekFullNames = stringArrayResource(Res.array.week_days_full_names)
+
+    // 整月日历是否展开（下拉展开 / 上收收起 / 点击把手切换）
+    var monthExpanded by rememberSaveable { mutableStateOf(false) }
+
+    // 每 30 秒刷新当前分钟，用于「已结束 / 进行中」状态实时翻转
+    var nowMinutes by remember { mutableIntStateOf(currentMinutesOfDay()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000L)
+            nowMinutes = currentMinutesOfDay()
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
+        AgendaDatePanel(
+            state = state,
+            expanded = monthExpanded,
+            onToggleExpanded = { monthExpanded = !monthExpanded },
+            onSelectDate = { date ->
+                onSelectDate(date)
+                // 在整月日历里点选日期后自动收起，把空间还给下方日程时间轴
+                monthExpanded = false
+            },
+            onShiftMonth = { delta ->
+                if (delta > 0) onNextMonth() else onPreviousMonth()
+            },
+            onOpenMonthPicker = onOpenMonthPicker,
+            onGoToToday = {
+                onGoToToday()
+                monthExpanded = false
+            }
+        )
+
+        AgendaDayHeader(
+            state = state,
+            weekFullNames = weekFullNames,
+            onCreate = onCreate,
+            modifier = Modifier.padding(
+                start = spacing.pageHorizontal,
+                end = spacing.pageHorizontal,
+                top = 4.dp
+            )
+        )
+
+        Text(
+            text = stringResource(Res.string.agenda_lunar_format, state.lunarText) +
+                " · " + stringResource(Res.string.agenda_count_format, state.entries.size),
+            fontSize = appType().caption,
+            color = tokens.textSecondary,
+            modifier = Modifier.padding(
+                start = spacing.pageHorizontal,
+                end = spacing.pageHorizontal,
+                top = 1.dp,
+                bottom = 1.dp
+            )
+        )
+
+        if (state.entries.isEmpty()) {
+            AppEmptyState(
+                hint = stringResource(Res.string.agenda_empty),
+                // 使用主题卡片内边距维持空态与页面内容的舒适呼吸感。
+                modifier = Modifier.padding(top = 6.dp)
+            )
+        } else {
+            // PF3（v3.69.0）：分组结果缓存 —— 原写法每次重组都执行 groupBy + toSortedMap。
+            // ⚠️ 必须放在 LazyColumn **外**：LazyListScope 不是 @Composable 作用域，
+            // 在其 content 内调 remember 会编译失败。
+            val grouped = remember(state.entries) {
+                state.entries.groupBy(::entryGroup).toSortedMap()
+            }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = spacing.pageHorizontal,
+                    end = spacing.pageHorizontal,
+                    top = 0.dp,
+                    bottom = bottomInset + 16.dp
+                ),
+                // 日程分组列表使用主题卡片间距，保持空态与内容态的节奏一致。
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                grouped.forEach { (group, entries) ->
+                    item(key = "group_$group") {
+                        AgendaGroupHeader(group = group, count = entries.size)
+                    }
+                    items(
+                        items = entries,
+                        key = { entry ->
+                            when {
+                                entry.isCourse -> "course_${entry.id}"
+                                entry.source == AgendaEntrySource.TODO -> "todo_${entry.id}"
+                                else -> "event_${entry.id}"
+                            }
+                        }
+                    ) { entry ->
+                        // animateItem（v3.54.0）：勾选完成/删除条目时位移动画
+                        Box(modifier = Modifier.animateItem()) {
+                            AgendaEntryRow(
+                                entry = entry,
+                                selectedDate = state.selectedDate,
+                                today = state.today,
+                                nowMinutes = nowMinutes,
+                                onDelete = { onDeleteEntry(entry) },
+                                onToggleDone = { onToggleEntry(entry) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 顶部日期面板：月份行 + 日期滚轴 / 整月日历 + 展开把手。
+ *
+ * 交互（v3.47.0：日期轴**滑动不改日期**；整月日历保持原样）：
+ * - **日期滚轴**：一屏 7 天的可点选日期轴，可左右滑动**浏览**；滑动不改变选中日
+ *   （松手只做对齐吸附），蓝色高亮始终在选中日上；只有**点击某一天**才更换选中日；
+ * - **切换月份**（月份左右箭头 / 月份选择器 / 整月日历内左右滑动）经
+ *   `AgendaViewModel.applyMonth` 把选中日期「同月同日」平移，目标月无该日则收敛到月末；
+ * - **下拉展开 / 上收收起**：日期滚轴与整月日历（31 天等，固定 6×7 = 42 格，含月外补白格）互换；
+ * - **点击月份标题**：打开月份选择器，直接跳到某年某月。
+ */
+@Composable
+private fun AgendaDatePanel(
+    state: AgendaUiState,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
+    onSelectDate: (LocalDate) -> Unit,
+    onShiftMonth: (Int) -> Unit,
+    onOpenMonthPicker: () -> Unit,
+    onGoToToday: () -> Unit
+) {
+    val tokens = appColors()
+    val shapes = appShapes()
+    val motion = LocalAppMotion.current
+    val monthNames = stringArrayResource(Res.array.month_names)
+    val weekShortNames = stringArrayResource(Res.array.week_days_short_names)
+    var menuExpanded by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    // 滑动转场：位移自 ±1 收敛到 0（新日期 / 新月份从滑动方向滑入）。
+    // 时长与曲线复用「周翻页」既有令牌，并随「周翻页」分组开关与「减弱动态效果」一起降级为瞬切。
+    val slideOffset = remember { Animatable(0f) }
+    val slideEnabled = motion.isEnabled(AnimationGroup.WEEK_PAGER)
+    val slideMs = if (slideEnabled) motion.tokens.entranceDurationMs else 0
+    val slide: (Int) -> Unit = { direction ->
+        scope.launch {
+            if (slideMs <= 0) {
+                slideOffset.snapTo(0f)
+            } else {
+                slideOffset.snapTo(direction.toFloat())
+                slideOffset.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(
+                        durationMillis = slideMs,
+                        easing = motion.tokens.entranceEasing
+                    )
+                )
+            }
+        }
+    }
+
+    // 展开 / 收起整月日历的纵向转场（随「减弱动态效果」瞬切）
+    val expandMs = if (motion.reduceMotion) 0 else motion.tokens.expandDurationMs
+
+    // 纵向手势：下拉展开整月 / 上收收起。
+    // 水平方向**不拦截** —— 收起态日期轴不响应滑动，展开态整月日历自行处理左右滑动翻月。
+    val threshold = with(LocalDensity.current) { 44.dp.toPx() }
+    val currentExpanded by rememberUpdatedState(expanded)
+    val shiftMonth by rememberUpdatedState(onShiftMonth)
+    val slideBy by rememberUpdatedState(slide)
+    val toggleExpanded by rememberUpdatedState(onToggleExpanded)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                translationX = slideOffset.value * size.width * 0.45f
+                alpha = 1f - 0.35f * abs(slideOffset.value)
+            }
+            .pointerInput(Unit) {
+                var dy = 0f
+                var fired = false
+                detectVerticalDragGestures(
+                    onDragStart = { dy = 0f; fired = false },
+                    onDragCancel = { dy = 0f; fired = false },
+                    onDragEnd = { dy = 0f; fired = false }
+                ) { _, drag ->
+                    if (fired) return@detectVerticalDragGestures
+                    dy += drag
+                    if (abs(dy) > threshold) {
+                        fired = true
+                        if ((dy > 0f) != currentExpanded) toggleExpanded()
+                    }
+                }
+            }
+    ) {
+        // 页面标题与月份/翻月控件并入一行，减少日程页固定头部的纵向占用
+        //（父容器 Column 已处理 statusBarsPadding，此处勿重复）
+        AppPageHeader(
+            bottomGapOverride = 4.dp,
+            modifier = Modifier.padding(horizontal = appSpacing().pageHorizontal),
+            title = stringResource(Res.string.nav_schedule),
+            actions = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // 月份标题：点击直接选月份
+                    Row(
+                        modifier = Modifier
+                            .clip(shapes.chipSmall)
+                            .clickable { onOpenMonthPicker() }
+                            .padding(horizontal = 2.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = monthNames.getOrNull(state.month.month - 1).orEmpty(),
+                            // 批 2：原 `hero`(34/30/34sp) → `sectionTitle`(17/18/16sp)。
+                            // 月份是**次级信息**，页面名才是最大层级（规范 R9 台阶语义）
+                            fontSize = appType().sectionTitle,
+                            fontWeight = appType().titleWeight,
+                            color = tokens.textPrimary
+                        )
+                        Icon(
+                            imageVector = vectorResource(Res.drawable.arrow_drop_down_24px),
+                            contentDescription = stringResource(Res.string.agenda_select_month),
+                            tint = tokens.textSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Row(
+                        modifier = Modifier
+                            .clip(shapes.capsule)
+                            .background(tokens.inputBg)
+                            .padding(horizontal = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { onShiftMonth(-1) }, modifier = Modifier.size(appSpacing().touchMin)) {
+                            Icon(
+                                imageVector = vectorResource(Res.drawable.chevron_right_24px),
+                                contentDescription = stringResource(Res.string.a11y_agenda_prev_month),
+                                tint = tokens.textSecondary,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .graphicsLayer { rotationZ = 180f }
+                            )
+                        }
+                        // 批 2（规范 R7）：删掉 prev / next 之间的 1dp 竖分隔线 ——
+                        // 两个 IconButton 之间已有间距，竖线属纯装饰
+                        IconButton(onClick = { onShiftMonth(1) }, modifier = Modifier.size(appSpacing().touchMin)) {
+                            Icon(
+                                imageVector = vectorResource(Res.drawable.chevron_right_24px),
+                                contentDescription = stringResource(Res.string.a11y_agenda_next_month),
+                                tint = tokens.textSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(
+                            imageVector = vectorResource(Res.drawable.more_vert_24px),
+                            contentDescription = stringResource(Res.string.item_more_options),
+                            tint = tokens.textSecondary,
+                            modifier = Modifier.size(appIconSize().small)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.agenda_back_to_today)) },
+                            onClick = {
+                                menuExpanded = false
+                                onGoToToday()
+                            }
+                        )
+                    }
+                }
+            }
+        )
+
+        // 日期滚轴 ⇄ 整月日历
+        AnimatedContent(
+            targetState = expanded,
+            transitionSpec = {
+                val sizeSpec = tween<IntSize>(
+                    durationMillis = expandMs,
+                    easing = motion.tokens.expandEasing
+                )
+                val fadeSpec = tween<Float>(
+                    durationMillis = expandMs.coerceAtMost(220)
+                )
+                val enterFade: EnterTransition = fadeIn(animationSpec = fadeSpec)
+                val exitFade: ExitTransition = fadeOut(animationSpec = fadeSpec)
+                // 展开方向：新内容自上而下展开；收起方向：交叉淡入淡出，高度由 SizeTransform 收拢
+                val transform = if (targetState) {
+                    expandVertically(
+                        animationSpec = sizeSpec,
+                        expandFrom = Alignment.Top
+                    ) + enterFade togetherWith exitFade
+                } else {
+                    enterFade togetherWith exitFade
+                }
+                // 注意：SizeTransform 必须显式加在 if 之外
+                //（直接写成 `else {...} + SizeTransform(...)` 会被解析成只作用于 else 分支）
+                transform using SizeTransform(clip = false)
+            },
+            label = "agenda-date-panel",
+            modifier = Modifier.padding(horizontal = appSpacing().cardInner)
+        ) { showMonthGrid ->
+            if (showMonthGrid) {
+                AgendaMonthGrid(
+                    cells = state.monthCells,
+                    firstDayOfWeek = state.firstDayOfWeek,
+                    weekShortNames = weekShortNames,
+                    onSelectDate = onSelectDate,
+                    onShiftMonth = { delta ->
+                        // 展开态：整月日历内左右滑动翻月（滚轴态已改为连续滚动，不再有翻月手势）
+                        shiftMonth(delta)
+                        slideBy(delta)
+                    }
+                )
+            } else {
+                AgendaDateRail(
+                    days = state.stripDays,
+                    selectedDate = state.selectedDate,
+                    weekShortNames = weekShortNames,
+                    onSelectDate = onSelectDate
+                )
+            }
+        }
+
+        // 展开把手：下拉 / 上收提示，也可直接点击切换
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(14.dp)
+                .clickable { onToggleExpanded() },
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = vectorResource(Res.drawable.arrow_drop_down_24px),
+                contentDescription = stringResource(
+                    if (expanded) Res.string.a11y_agenda_collapse_month
+                    else Res.string.a11y_agenda_expand_month
+                ),
+                tint = tokens.textSecondary,
+                modifier = Modifier
+                    .size(14.dp)
+                    .graphicsLayer { rotationZ = if (expanded) 180f else 0f }
+            )
+        }
+    }
+}
+
+/** 日期滚轴一屏可见的天数（取奇数，保证中线唯一）。 */
+private const val VISIBLE_DAYS = 7
+
+/**
+ * 可滑动浏览 + 点选更换的日期轴（v3.47.0：「滑动不改日期」）。
+ *
+ * 与上一版（v3.46.0「连续滚动 + 松手吸附提交」）的关键区别：**滑动不再改变选中日期**。
+ * 现在可以左右滑动**浏览**，但松手**只做对齐吸附、不提交选中日**；蓝色高亮（选中态）
+ * 始终留在选中日那一格上 —— 即「蓝色跟选中日期在一起，不随滚动而变」。
+ * 选中日只由**点击某一天**更换（以及月份箭头 / 月份选择器 / 回到今天 / 整月日历点选）。
+ *
+ * 数据来自 `AgendaUiState.stripDays`（以选中日为中线的前后各 120 天）；
+ * 选中日变化 ⇒ ViewModel 以新的选中日重新居中输出 ⇒ 日期轴重新居中到该天。
+ */
+@Composable
+private fun AgendaDateRail(
+    days: List<AgendaDayCell>,
+    selectedDate: LocalDate,
+    weekShortNames: List<String>,
+    onSelectDate: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val listState = rememberLazyListState()
+
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val cellWidth = maxWidth / VISIBLE_DAYS
+        // 左右各留半格内边距：这样「滚到第 i 项」就等于把第 i 项摆在正中
+        val edgePadding = (maxWidth - cellWidth) / 2
+
+        val currentDays by rememberUpdatedState(days)
+        var firstLayout by remember { mutableStateOf(true) }
+
+        // 选中日变化（点选某天 / 月份箭头 / 月份选择器 / 回到今天 / 整月日历点选）
+        // → 把该天挪到中线。首帧直接就位（不做可见的长距离滚动），之后动画居中。
+        LaunchedEffect(selectedDate) {
+            val target = currentDays.indexOfFirst { it.date == selectedDate }
+            if (target < 0) return@LaunchedEffect
+            if (firstLayout) {
+                listState.scrollToItem(target)
+                firstLayout = false
+            } else {
+                listState.animateScrollToItem(target)
+            }
+        }
+
+        // 手动滑动结束 → 只把最近的格子吸附到中线（对齐用），**绝不提交选中日**：
+        // 滑动仅用于浏览，蓝色高亮始终留在选中日上 ——「蓝色跟选中日期在一起，不随滚动而变」。
+        LaunchedEffect(listState) {
+            snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
+                if (scrolling) return@collect
+                val info = listState.layoutInfo
+                val center = (info.viewportStartOffset + info.viewportEndOffset) / 2f
+                val nearest = info.visibleItemsInfo
+                    .minByOrNull { abs(it.offset + it.size / 2f - center) }
+                    ?: return@collect
+                val delta = (nearest.offset + nearest.size / 2f) - center
+                if (abs(delta) > 1f) listState.animateScrollBy(delta)
+            }
+        }
+
+        LazyRow(
+            state = listState,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = edgePadding)
+        ) {
+            items(items = days, key = { it.date.toString() }) { cell ->
+                AgendaDateRailCell(
+                    cell = cell,
+                    weekdayLabel = weekShortNames
+                        .getOrNull(cell.date.dayOfWeek.isoDayNumber - 1).orEmpty(),
+                    width = cellWidth,
+                    // 点选：只改选中日；居中交给上面的"选中日变化"分支按重建后的窗口重新计算
+                    onClick = { onSelectDate(cell.date) }
+                )
+            }
+        }
+    }
+}
+
+/** 日期滚轴单元格：星期短名 + 日号 + 农历 + 有日程圆点；选中项走主题主色。 */
+@Composable
+private fun AgendaDateRailCell(
+    cell: AgendaDayCell,
+    weekdayLabel: String,
+    width: Dp,
+    onClick: () -> Unit
+) {
+    val tokens = appColors()
+    val shapes = appShapes()
+    // 蓝色高亮**严格由「选中日」标志驱动**（cell.isSelected），与滚动位置无关 ——
+    // 即「蓝色跟选中日期在一起，不随滚动而变」。
+    val highlight = cell.isSelected
+    val numberColor = when {
+        highlight -> tokens.textOnPrimary
+        cell.isToday -> tokens.primary
+        !cell.isInMonth -> tokens.textSecondary.copy(alpha = 0.55f)
+        else -> tokens.textPrimary
+    }
+    val labelColor = when {
+        highlight -> tokens.textOnPrimary.copy(alpha = 0.85f)
+        cell.isInMonth -> tokens.textSecondary
+        else -> tokens.textSecondary.copy(alpha = 0.5f)
+    }
+
+    Column(
+        modifier = Modifier
+            .width(width)
+            .clip(shapes.chipSmall)
+            .background(if (highlight) tokens.primary else Color.Transparent)
+            .clickable { onClick() }
+            .padding(vertical = 3.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = weekdayLabel,
+            fontSize = appType().timeLabel,
+            color = labelColor
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = cell.date.day.toString(),
+            fontSize = 16.sp,
+            fontWeight = appType().emphasisWeight,
+            color = numberColor
+        )
+        Spacer(modifier = Modifier.height(1.dp))
+        Text(
+            text = cell.lunarLabel,
+            fontSize = 9.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = labelColor
+        )
+        Spacer(modifier = Modifier.height(1.dp))
+        Box(
+            modifier = Modifier
+                .size(2.dp)
+                .clip(CircleShape)
+                .background(
+                    when {
+                        !cell.hasEvents -> Color.Transparent
+                        highlight -> tokens.textOnPrimary
+                        else -> tokens.primary
+                    }
+                )
+        )
+    }
+}
+
+/**
+ * 整月日历（日期滚轴下拉展开）：星期表头 + 固定 6 行 × 7 列日期格。
+ *
+ * 单元格来自 `AgendaUiState.monthCells`（42 格，含上月末尾 / 下月初的补白格），
+ * 补白格淡化显示但仍可点击（点选后选中日期与可见月份一起过去）。
+ *
+ * v3.47.0：折叠态日期滚轴**不响应滑动**（改为纯点选，滑动不改日期）；
+ * 展开态整月日历保持原样（仍保留「左右滑动翻月」，整月日历是"页面"语义）。
+ */
+@Composable
+private fun AgendaMonthGrid(
+    cells: List<AgendaDayCell>,
+    firstDayOfWeek: Int,
+    weekShortNames: List<String>,
+    onSelectDate: (LocalDate) -> Unit,
+    onShiftMonth: (Int) -> Unit
+) {
+    val tokens = appColors()
+    val swipeThreshold = with(LocalDensity.current) { 48.dp.toPx() }
+
+    // 表头按「每周第一天」轮转，与单元格列顺序严格一致
+    val orderedWeekNames = (0 until 7).map { index ->
+        weekShortNames.getOrNull((firstDayOfWeek - 1 + index) % 7).orEmpty()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                var dx = 0f
+                var fired = false
+                detectHorizontalDragGestures(
+                    onDragStart = { dx = 0f; fired = false },
+                    onDragCancel = { dx = 0f; fired = false },
+                    onDragEnd = { dx = 0f; fired = false }
+                ) { _, drag ->
+                    if (fired) return@detectHorizontalDragGestures
+                    dx += drag
+                    if (abs(dx) > swipeThreshold) {
+                        fired = true
+                        onShiftMonth(if (dx < 0f) 1 else -1)
+                    }
+                }
+            }
+    ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            orderedWeekNames.forEach { name ->
+                Text(
+                    text = name,
+                    fontSize = appType().hint,
+                    color = tokens.textSecondary,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(vertical = 4.dp)
+                )
+            }
+        }
+        // cells 固定 42 个 ⇒ 恒为 6 行，切月份时面板高度不跳动
+        cells.chunked(7).forEach { rowCells ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                rowCells.forEach { cell ->
+                    AgendaMonthDayCell(cell = cell, onSelectDate = onSelectDate)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.AgendaMonthDayCell(
+    cell: AgendaDayCell,
+    onSelectDate: (LocalDate) -> Unit
+) {
+    val tokens = appColors()
+    val shapes = appShapes()
+    val selected = cell.isSelected
+    val numberColor = when {
+        selected -> tokens.textOnPrimary
+        cell.isToday -> tokens.primary
+        !cell.isInMonth -> tokens.textSecondary.copy(alpha = 0.55f)
+        else -> tokens.textPrimary
+    }
+    val labelColor = when {
+        selected -> tokens.textOnPrimary.copy(alpha = 0.85f)
+        cell.isInMonth -> tokens.textSecondary
+        else -> tokens.textSecondary.copy(alpha = 0.5f)
+    }
+
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .clip(shapes.chipSmall)
+            .background(if (selected) tokens.primary else Color.Transparent)
+            .clickable { onSelectDate(cell.date) }
+            .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = cell.date.day.toString(),
+            fontSize = 15.sp,
+            fontWeight = appType().emphasisWeight,
+            color = numberColor
+        )
+        Spacer(modifier = Modifier.height(1.dp))
+        Text(
+            text = cell.lunarLabel,
+            fontSize = 9.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = labelColor
+        )
+        Spacer(modifier = Modifier.height(3.dp))
+        Box(
+            modifier = Modifier
+                .size(4.dp)
+                .clip(CircleShape)
+                .background(
+                    when {
+                        !cell.hasEvents -> Color.Transparent
+                        selected -> tokens.textOnPrimary
+                        else -> tokens.primary
+                    }
+                )
+        )
+    }
+}
+
+/**
+ * 月份选择器：年份可前后切换，点选 1–12 月直接跳转（「点击月份可直接选择对应的月份」）。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AgendaMonthPickerSheet(
+    currentYear: Int,
+    currentMonth: Int,
+    today: LocalDate,
+    hazeState: HazeState?,
+    onDismiss: () -> Unit,
+    onSelectMonth: (Int, Int) -> Unit
+) {
+    val tokens = appColors()
+    val type = appType()
+    val spacing = appSpacing()
+    val monthNames = stringArrayResource(Res.array.month_names)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    var year by remember { mutableIntStateOf(currentYear) }
+
+    AppGlassBottomSheet(
+        hazeState = hazeState,
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = spacing.pageHorizontal)
+                .padding(bottom = spacing.sectionGap)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(Res.string.agenda_select_month),
+                    fontSize = type.sectionTitle,
+                    fontWeight = appType().emphasisWeight,
+                    color = tokens.textPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.close_24px),
+                        contentDescription = stringResource(Res.string.action_cancel),
+                        tint = tokens.textSecondary
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { year -= 1 },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.chevron_right_24px),
+                        contentDescription = stringResource(Res.string.a11y_agenda_prev_year),
+                        tint = tokens.textSecondary,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .graphicsLayer { rotationZ = 180f }
+                    )
+                }
+                Text(
+                    text = stringResource(Res.string.agenda_year_format, year),
+                    fontSize = type.pageTitle,
+                    fontWeight = appType().emphasisWeight,
+                    color = tokens.textPrimary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = { year += 1 },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.chevron_right_24px),
+                        contentDescription = stringResource(Res.string.a11y_agenda_next_year),
+                        tint = tokens.textSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            (0 until 4).forEach { rowIndex ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(appSpacing().sectionTitleGap)
+                ) {
+                    (0 until 3).forEach { columnIndex ->
+                        val month = rowIndex * 3 + columnIndex + 1
+                        AgendaMonthOption(
+                            label = monthNames.getOrNull(month - 1).orEmpty(),
+                            selected = year == currentYear && month == currentMonth,
+                            isCurrentMonth = year == today.year && month == today.month.number,
+                            onClick = { onSelectMonth(year, month) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun AgendaMonthOption(
+    label: String,
+    selected: Boolean,
+    isCurrentMonth: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tokens = appColors()
+    val shapes = appShapes()
+    val container = when {
+        selected -> tokens.primary
+        isCurrentMonth -> tokens.primarySoft
+        else -> tokens.inputBg
+    }
+    val content = when {
+        selected -> tokens.textOnPrimary
+        isCurrentMonth -> tokens.primary
+        else -> tokens.textPrimary
+    }
+
+    Box(
+        modifier = modifier
+            .height(46.dp)
+            .clip(shapes.chip)
+            .background(container)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontSize = appType().body,
+            fontWeight = if (selected || isCurrentMonth) appType().titleWeight else appType().bodyWeight,
+            color = content,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun AgendaDayHeader(
+    state: AgendaUiState,
+    weekFullNames: List<String>,
+    onCreate: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tokens = appColors()
+    val shapes = appShapes()
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (state.selectedDate == state.today) {
+            Box(
+                modifier = Modifier
+                    .clip(shapes.capsule)
+                    .background(tokens.primarySoft)
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = stringResource(Res.string.agenda_today_badge),
+                    fontSize = appType().caption,
+                    fontWeight = appType().titleWeight,
+                    color = tokens.primary
+                )
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+        }
+        Text(
+            text = stringResource(
+                Res.string.agenda_day_title_format,
+                state.selectedDate.month.number,
+                state.selectedDate.day,
+                weekFullNames.getOrNull(state.selectedDate.dayOfWeek.isoDayNumber - 1).orEmpty()
+            ),
+            fontSize = 15.sp,
+            fontWeight = appType().emphasisWeight,
+            color = tokens.textPrimary
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        // AC3（v3.69.0）：命中区提到 48dp（WCAG 2.5.5），可见圆底仍为 40dp —— 视觉不变、热区变大
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clickable { onCreate() },
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(tokens.primarySoft),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = vectorResource(Res.drawable.add_24px),
+                    contentDescription = stringResource(Res.string.a11y_agenda_add),
+                    tint = tokens.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AgendaGroupHeader(group: Int, count: Int) {
+    val tokens = appColors()
+    val label = when (group) {
+        GROUP_ALL_DAY -> stringResource(Res.string.agenda_group_allday)
+        GROUP_MORNING -> stringResource(Res.string.agenda_group_morning)
+        GROUP_AFTERNOON -> stringResource(Res.string.agenda_group_afternoon)
+        else -> stringResource(Res.string.agenda_group_evening)
+    }
+    Row(
+        // AC2（v3.69.2）：「全天 / 上午 / 下午 / 晚间」分组标题，声明 heading 让
+        // TalkBack 支持按标题跳转；mergeDescendants 把图标与计数并入同一节点，
+        // 避免读成「图标」「上午」「3」三个碎片。
+        modifier = Modifier
+            .padding(top = 4.dp)
+            .semantics(mergeDescendants = true) { heading() },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = vectorResource(Res.drawable.schedule_24px),
+            contentDescription = null,
+            tint = tokens.textSecondary,
+            modifier = Modifier.size(15.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = label,
+            fontSize = appType().caption,
+            fontWeight = appType().titleWeight,
+            color = tokens.textSecondary
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = count.toString(),
+            fontSize = appType().caption,
+            color = tokens.textSecondary
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun AgendaEntryRow(
+    entry: AgendaEntry,
+    selectedDate: LocalDate,
+    today: LocalDate,
+    nowMinutes: Int,
+    onDelete: () -> Unit,
+    onToggleDone: () -> Unit
+) {
+    val tokens = appColors()
+    // 完成态渐隐：statusFadeMs 渐变取代二值硬跳（v3.54.0）
+    val entryAlpha = rememberStatusFadeAlpha(entry.done, 0.55f)
+    // 长按删除触觉反馈（v3.54.0）
+    val haptics = rememberAppHaptics()
+    val status = entryStatus(entry, selectedDate, today, nowMinutes)
+    val statusLabel = when (status) {
+        STATUS_FINISHED -> stringResource(Res.string.agenda_status_finished)
+        STATUS_ONGOING -> stringResource(Res.string.agenda_status_ongoing)
+        else -> stringResource(Res.string.agenda_status_upcoming)
+    }
+    val statusColor = when (status) {
+        STATUS_FINISHED -> tokens.textSecondary
+        STATUS_ONGOING -> tokens.success
+        else -> tokens.primary
+    }
+    val categoryLabel = if (entry.isCourse) {
+        stringResource(Res.string.agenda_category_course)
+    } else {
+        categoryLabel(entry.categoryKey)
+    }
+    val metaLine = listOfNotNull(
+        categoryLabel,
+        entry.location,
+        entry.teacher?.let { stringResource(Res.string.agenda_teacher_prefix, it) }
+    ).joinToString(" · ")
+    // 「待办」类条目可勾选完成：自建日程里分类为待办的事件，以及来自今日页待办列表的条目
+    val canToggleDone = !entry.isCourse &&
+        ScheduleCategory.fromKey(entry.categoryKey) == ScheduleCategory.TODO
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+    ) {
+        Column(
+            modifier = Modifier
+                .width(TIME_COLUMN_WIDTH)
+                .padding(top = 2.dp),
+            horizontalAlignment = Alignment.End
+        ) {
+            // 无时间条目（默认待办）不渲染占位文本，列宽保留维持时间轴对齐
+            // 与今日页时间列同字阶（2026-10-13）：13sp SemiBold / 17sp 行高。
+            if (!entry.startTime.isNullOrBlank()) {
+                Text(
+                    text = entry.startTime,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontSize = 13.sp,
+                        fontWeight = appType().titleWeight,
+                        lineHeight = 17.sp
+                    ),
+                    color = tokens.textPrimary
+                )
+            }
+            if (!entry.isAllDay && !entry.endTime.isNullOrBlank()) {
+                Text(
+                    text = entry.endTime,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontSize = 12.sp,
+                        fontWeight = appType().bodyWeight,
+                        lineHeight = 16.sp
+                    ),
+                    color = tokens.textSecondary
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .width(TIMELINE_COLUMN_WIDTH)
+                .fillMaxHeight()
+                .drawBehind {
+                    val centerX = size.width / 2f
+                    val dotY = 10.dp.toPx()
+                    drawLine(
+                        color = tokens.divider,
+                        start = Offset(centerX, 0f),
+                        end = Offset(centerX, size.height),
+                        strokeWidth = 1.5.dp.toPx()
+                    )
+                    drawCircle(
+                        color = tokens.primary,
+                        radius = 3.dp.toPx(),
+                        center = Offset(centerX, dotY)
+                    )
+                }
+        ) {}
+
+        AppCard(
+            modifier = Modifier
+                .weight(1f)
+                .graphicsLayer { alpha = entryAlpha.value },
+            // 与今日页时间轴卡同形（2026-10-13）：圆角走 heroCard（今日页同款），
+            // 内边距 14/14/14/12 与今日页 TodayTimelineCard 逐项一致，两页卡片同高同宽。
+            shape = appShapes().heroCard,
+            elevation = 1
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        onClick = { if (canToggleDone) onToggleDone() },
+                        onLongClick = {
+                            if (!entry.isCourse) {
+                                haptics.confirm()
+                                onDelete()
+                            }
+                        }
+                    )
+                    .padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 12.dp)
+            ) {
+                if (canToggleDone) {
+                    // AC2（v3.69.2）：外层 Row 的 combinedClickable 负责整行点击/长按，
+                    // 这里单独声明复选框角色与状态，否则 TalkBack 读不出「已完成 / 未完成」。
+                    AppCheckboxIndicator(
+                        checked = entry.done,
+                        modifier = Modifier
+                            .align(Alignment.Top)
+                            .toggleable(
+                                value = entry.done,
+                                role = Role.Checkbox,
+                                onValueChange = { onToggleDone() }
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = entry.title,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontSize = 16.sp,
+                            fontWeight = appType().titleWeight,
+                            lineHeight = 20.sp
+                        ),
+                        color = tokens.textPrimary,
+                        textDecoration = if (entry.done) TextDecoration.LineThrough else null,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    // 卡片等高（2026-10-13）：同页卡片此前按数据有无**条件渲染**副行
+                    // （无「分类/地点/教师」则整行消失、无备注则第二副行消失）⇒ 同页卡片
+                    // 高度参差。现两个副行槽位**恒定占位**（无内容时留同高空白），
+                    // 使本页每张卡高度一致。
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = metaLine,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = 12.sp,
+                            fontWeight = appType().captionWeight,
+                            lineHeight = 16.sp
+                        ),
+                        color = tokens.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = entry.note.orEmpty(),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = 12.sp,
+                            fontWeight = appType().captionWeight,
+                            lineHeight = 16.sp
+                        ),
+                        color = tokens.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (!entry.done) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = statusLabel,
+                        fontSize = appType().hint,
+                        color = statusColor,
+                        // 卡片等高：状态标签限单行，避免换行撑高该卡
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun categoryLabel(key: String?): String = when (ScheduleCategory.fromKey(key)) {
+    ScheduleCategory.TODO -> stringResource(Res.string.agenda_category_todo)
+    ScheduleCategory.ACTIVITY -> stringResource(Res.string.agenda_category_activity)
+    ScheduleCategory.EXAM -> stringResource(Res.string.agenda_category_exam)
+    ScheduleCategory.HOMEWORK -> stringResource(Res.string.agenda_category_homework)
+    ScheduleCategory.OTHER -> stringResource(Res.string.agenda_category_other)
+}
+
+@Composable
+private fun categoryColor(category: ScheduleCategory): Color {
+    val tokens = appColors()
+    return when (category) {
+        ScheduleCategory.TODO -> tokens.success
+        ScheduleCategory.ACTIVITY -> tokens.warning
+        ScheduleCategory.EXAM -> tokens.danger
+        ScheduleCategory.HOMEWORK -> tokens.info
+        ScheduleCategory.OTHER -> tokens.textSecondary
+    }
+}
+
+/**
+ * 新建日程底部弹窗：标题 / 分类 / 全天 / 起止时间 / 地点 / 备注。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AgendaCreateSheet(
+    initialDate: LocalDate,
+    hazeState: HazeState?,
+    onDismiss: () -> Unit,
+    onCreate: (
+        date: LocalDate,
+        title: String,
+        category: ScheduleCategory,
+        isAllDay: Boolean,
+        startTime: String?,
+        endTime: String?,
+        location: String?,
+        note: String?
+    ) -> Unit
+) {
+    val tokens = appColors()
+    val shapes = appShapes()
+    val spacing = appSpacing()
+    val type = appType()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val weekFullNames = stringArrayResource(Res.array.week_days_full_names)
+    val aiComingSoonText = stringResource(Res.string.agenda_ai_coming_soon)
+
+    val nowHour = remember { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).hour }
+    val defaultStartHour = (nowHour + 1).coerceIn(0, 23)
+    val defaultEndHour = (defaultStartHour + 1).coerceAtMost(23)
+
+    var title by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf(ScheduleCategory.TODO) }
+    // 待办默认不带时间（可关掉「全天」开关自定义时间）；活动 / 考试等默认带时间
+    var allDay by remember { mutableStateOf(category == ScheduleCategory.TODO) }
+    var startDate by remember { mutableStateOf(initialDate) }
+    var endDate by remember { mutableStateOf(initialDate) }
+    var startTime by remember { mutableStateOf(hourText(defaultStartHour, defaultStartHour == 23)) }
+    var endTime by remember { mutableStateOf(hourText(defaultEndHour, defaultEndHour == 23)) }
+    var location by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+    var timePickerTarget by remember { mutableStateOf<DateTimeTarget?>(null) }
+    var datePickerTarget by remember { mutableStateOf<DateTimeTarget?>(null) }
+
+    AppGlassBottomSheet(
+        hazeState = hazeState,
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                // 键盘弹起时顶起内容（v3.54.0）：此前备注框与「创建」按钮会被 IME 遮挡
+                .imePadding()
+                .padding(horizontal = spacing.pageHorizontal)
+                .padding(bottom = spacing.sectionGap)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(Res.string.agenda_new_title),
+                    fontSize = type.sectionTitle,
+                    fontWeight = appType().emphasisWeight,
+                    color = tokens.textPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.close_24px),
+                        contentDescription = stringResource(Res.string.action_cancel),
+                        tint = tokens.textSecondary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(shapes.chipSmall)
+                    .background(tokens.inputBg)
+                    .clickable { ToastManager.show(aiComingSoonText) }
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = vectorResource(Res.drawable.edit_24px),
+                    contentDescription = null,
+                    tint = tokens.primary,
+                    modifier = Modifier.size(appIconSize().small)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = stringResource(Res.string.agenda_ai_hint),
+                    fontSize = type.body,
+                    color = tokens.textSecondary,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = vectorResource(Res.drawable.arrow_drop_down_24px),
+                    contentDescription = null,
+                    tint = tokens.textSecondary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            AppTextField(
+                value = title,
+                onValueChange = { title = it },
+                placeholder = stringResource(Res.string.agenda_title_hint),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ScheduleCategory.entries.forEach { item ->
+                    AgendaCategoryChip(
+                        category = item,
+                        selected = item == category,
+                        onClick = {
+                            category = item
+                            // 切到待办默认免时间；切到其它类型恢复具体时间
+                            allDay = item == ScheduleCategory.TODO
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+            HorizontalDivider(color = tokens.divider)
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = vectorResource(Res.drawable.schedule_24px),
+                    contentDescription = null,
+                    tint = tokens.textSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = stringResource(Res.string.agenda_all_day),
+                    fontSize = type.body,
+                    color = tokens.textPrimary
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                AppSwitch(checked = allDay, onCheckedChange = { allDay = it })
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            AgendaDateTimeRow(
+                label = stringResource(Res.string.agenda_start_label),
+                date = startDate,
+                weekNames = weekFullNames,
+                time = if (allDay) null else startTime,
+                trailingText = null,
+                onDateClick = { datePickerTarget = DateTimeTarget.START },
+                onTimeClick = { timePickerTarget = DateTimeTarget.START }
+            )
+            AgendaDateTimeRow(
+                label = stringResource(Res.string.agenda_end_label),
+                date = endDate,
+                weekNames = weekFullNames,
+                time = if (allDay) null else endTime,
+                trailingText = if (allDay) null else durationText(startTime, endTime),
+                onDateClick = { datePickerTarget = DateTimeTarget.END },
+                onTimeClick = { timePickerTarget = DateTimeTarget.END }
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider(color = tokens.divider)
+            Spacer(modifier = Modifier.height(14.dp))
+
+            AppTextField(
+                value = location,
+                onValueChange = { location = it },
+                placeholder = stringResource(Res.string.agenda_add_location),
+                singleLine = true,
+                leadingIcon = {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.location_on_24px),
+                        contentDescription = null,
+                        tint = tokens.textSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            AppTextField(
+                value = note,
+                onValueChange = { note = it },
+                placeholder = stringResource(Res.string.agenda_add_note),
+                singleLine = false,
+                minLines = 2,
+                leadingIcon = {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.list_alt_24px),
+                        contentDescription = null,
+                        tint = tokens.textSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(appSpacing().sectionGap))
+
+            // R1-012a：提交后锁死，关闭前的双击穿透只落一条（sheet 条件合成，重开自动复位）
+            var submitted by remember { mutableStateOf(false) }
+            Button(
+                onClick = {
+                    if (!submitted) {
+                        submitted = true
+                    onCreate(
+                        startDate,
+                        title.trim(),
+                        category,
+                        allDay,
+                        if (allDay) null else startTime,
+                        if (allDay) null else endTime,
+                        location.trim().takeIf { it.isNotBlank() },
+                        note.trim().takeIf { it.isNotBlank() }
+                        )
+                    }
+                },
+                // 时间顺序校验：此前唯一前置条件是标题非空，可创建 startTime >= endTime 的非法日程。
+                // 落库后 durationText 用 coerceAtLeast(0) 把负时长显示成「0 分钟」，
+                // 时间轴状态判定永远匹配不到「进行中」，属持久化的脏数据。
+                // 「HH:mm」为等宽补零格式，字符串比较即时间比较。
+                enabled = !submitted && title.isNotBlank() && (allDay || startTime < endTime),
+                shape = shapes.chip,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = tokens.primary,
+                    contentColor = tokens.textOnPrimary
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                Text(
+                    text = stringResource(Res.string.agenda_create),
+                    fontSize = type.rowTitle,
+                    fontWeight = appType().titleWeight
+                )
+            }
+        }
+    }
+
+    timePickerTarget?.let { target ->
+        AgendaTimePickerDialog(
+            title = stringResource(
+                if (target == DateTimeTarget.START) Res.string.agenda_start_label
+                else Res.string.agenda_end_label
+            ),
+            initialTime = if (target == DateTimeTarget.START) startTime else endTime,
+            onDismiss = { timePickerTarget = null },
+            onConfirm = { value ->
+                if (target == DateTimeTarget.START) startTime = value else endTime = value
+            }
+        )
+    }
+
+    datePickerTarget?.let { target ->
+        DatePickerModal(
+            onDateSelected = { millis ->
+                if (millis != null) {
+                    val date = Instant.fromEpochMilliseconds(millis)
+                        .toLocalDateTime(TimeZone.UTC)
+                        .date
+                    if (target == DateTimeTarget.START) startDate = date else endDate = date
+                }
+            },
+            onDismiss = { datePickerTarget = null }
+        )
+    }
+}
+
+@Composable
+private fun AgendaCategoryChip(
+    category: ScheduleCategory,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val tokens = appColors()
+    val shapes = appShapes()
+    val dotColor = categoryColor(category)
+    val container = if (selected) tokens.primary else tokens.inputBg
+    val contentColor = if (selected) tokens.textOnPrimary else tokens.textPrimary
+
+    Row(
+        modifier = Modifier
+            .clip(shapes.capsule)
+            .background(container)
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(if (selected) tokens.textOnPrimary else dotColor)
+        )
+        Spacer(modifier = Modifier.width(7.dp))
+        Text(
+            text = categoryLabel(category.key),
+            fontSize = appType().body,
+            fontWeight = if (selected) appType().titleWeight else appType().bodyWeight,
+            color = contentColor,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun AgendaDateTimeRow(
+    label: String,
+    date: LocalDate,
+    weekNames: List<String>,
+    time: String?,
+    trailingText: String?,
+    onDateClick: () -> Unit,
+    onTimeClick: () -> Unit
+) {
+    val tokens = appColors()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontSize = appType().body,
+            color = tokens.textSecondary,
+            modifier = Modifier.width(48.dp)
+        )
+        Text(
+            text = stringResource(
+                Res.string.agenda_day_title_format,
+                date.month.number,
+                date.day,
+                weekNames.getOrNull(date.dayOfWeek.isoDayNumber - 1).orEmpty()
+            ),
+            fontSize = appType().body,
+            color = tokens.textPrimary,
+            modifier = Modifier
+                .clip(appShapes().chipSmall)
+                .clickable { onDateClick() }
+                .padding(horizontal = 6.dp, vertical = 6.dp)
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        // 暂存最近一次非 null 时间：退场期间以旧文本淡出收缩，而非瞬间变空壳
+        var lastShownTime by remember { mutableStateOf<String?>(null) }
+        if (time != null) lastShownTime = time
+        // 时长接动效令牌（v3.54.0）：statusFadeMs 取代硬编码 200ms
+        val chipFadeMs = LocalAppMotion.current.tokens.statusFadeMs
+        AnimatedVisibility(
+            visible = time != null,
+            enter = fadeIn(tween(chipFadeMs)) + expandHorizontally(),
+            exit = fadeOut(tween(chipFadeMs)) + shrinkHorizontally()
+        ) {
+            Text(
+                text = lastShownTime.orEmpty(),
+                fontSize = appType().body,
+                fontWeight = appType().titleWeight,
+                color = tokens.textPrimary,
+                modifier = Modifier
+                    .clip(appShapes().chipSmall)
+                    .clickable { onTimeClick() }
+                    .padding(horizontal = 6.dp, vertical = 6.dp)
+            )
+        }
+        if (trailingText != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = trailingText,
+                fontSize = appType().hint,
+                color = tokens.textSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun AgendaTimePickerDialog(
+    title: String,
+    initialTime: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    val parsedMinutes = TimeTextUtils.parseMinutesOfDayOrNull(initialTime)
+    var hour by remember {
+        mutableIntStateOf(((parsedMinutes ?: DEFAULT_PICKER_MINUTES) / 60).coerceIn(0, 23))
+    }
+    var minute by remember {
+        mutableIntStateOf(((parsedMinutes ?: DEFAULT_PICKER_MINUTES) % 60).coerceIn(0, 59))
+    }
+    val hours = remember { (0..23).map { it.toString().padStart(2, '0') } }
+    val minutes = remember { (0..59).map { it.toString().padStart(2, '0') } }
+
+    AppAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = appType().emphasisWeight
+            )
+        },
+        text = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                NativeNumberPicker(
+                    values = hours,
+                    selectedValue = hour.toString().padStart(2, '0'),
+                    onValueChange = { hour = it.toInt() },
+                    modifier = Modifier.weight(1f)
+                )
+                Text(":", style = MaterialTheme.typography.titleMedium)
+                NativeNumberPicker(
+                    values = minutes,
+                    selectedValue = minute.toString().padStart(2, '0'),
+                    onValueChange = { minute = it.toInt() },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        },
+        confirmButton = {
+            AppDialogActions(
+                confirmText = stringResource(Res.string.action_confirm),
+                onConfirm = {
+                    onConfirm(
+                        hour.toString().padStart(2, '0') + ":" + minute.toString().padStart(2, '0')
+                    )
+                    onDismiss()
+                },
+                dismissText = stringResource(Res.string.action_cancel),
+                onDismiss = onDismiss
+            )
+        },
+        dismissButton = {}
+    )
+}
+
+/** 时间轴分组：全天 / 上午 / 下午 / 晚上。 */
+private fun entryGroup(entry: AgendaEntry): Int {
+    if (entry.isAllDay) return GROUP_ALL_DAY
+    val hour = entry.startTime?.substringBefore(":")?.toIntOrNull() ?: return GROUP_MORNING
+    return when {
+        hour < 12 -> GROUP_MORNING
+        hour < 18 -> GROUP_AFTERNOON
+        else -> GROUP_EVENING
+    }
+}
+
+/** 计算条目状态：已结束 / 进行中 / 未开始。 */
+private fun entryStatus(
+    entry: AgendaEntry,
+    selectedDate: LocalDate,
+    today: LocalDate,
+    nowMinutes: Int
+): Int {
+    if (selectedDate < today) return STATUS_FINISHED
+    if (selectedDate > today) return STATUS_UPCOMING
+    if (entry.isAllDay) return STATUS_ONGOING
+    val start = parseMinutes(entry.startTime) ?: return STATUS_UPCOMING
+    val end = parseMinutes(entry.endTime) ?: start
+    return when {
+        nowMinutes > end -> STATUS_FINISHED
+        nowMinutes >= start -> STATUS_ONGOING
+        else -> STATUS_UPCOMING
+    }
+}
+
+private fun parseMinutes(time: String?): Int? = TimeTextUtils.parseMinutesOfDayOrNull(time)
+
+private fun currentMinutesOfDay(): Int {
+    val time = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).time
+    return time.hour * 60 + time.minute
+}
+
+private fun hourText(hour: Int, lastHour: Boolean): String =
+    hour.toString().padStart(2, '0') + if (lastHour) ":59" else ":00"
+
+@Composable
+private fun durationText(startTime: String, endTime: String): String {
+    val start = parseMinutes(startTime) ?: 0
+    val end = parseMinutes(endTime) ?: 0
+    val diff = (end - start).coerceAtLeast(0)
+    val hours = diff / 60
+    val minutes = diff % 60
+    return when {
+        hours > 0 && minutes > 0 ->
+            stringResource(Res.string.agenda_duration_hours, hours) +
+                stringResource(Res.string.agenda_duration_minutes, minutes)
+        hours > 0 -> stringResource(Res.string.agenda_duration_hours, hours)
+        else -> stringResource(Res.string.agenda_duration_minutes, minutes)
+    }
+}

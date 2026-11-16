@@ -1,0 +1,97 @@
+package com.shangkeschedule.ui.settings.notification
+
+import com.shangkeschedule.ui.theme.appType
+import com.shangkeschedule.ui.theme.appSpacing
+import com.shangkeschedule.ui.theme.appColors
+import com.shangkeschedule.ui.settings.SectionCard
+import com.shangkeschedule.ui.settings.SectionDivider
+import com.shangkeschedule.ui.settings.SettingItem
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import com.shangkeschedule.ui.components.ThemedLoadingIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.stringResource
+import com.shangkeschedule.ui.components.AppSectionHeader
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.desc_skipped_dates
+import shangkeschedule.shared.generated.resources.item_clear_skipped_dates
+import shangkeschedule.shared.generated.resources.item_manage_skipped_dates
+import shangkeschedule.shared.generated.resources.item_update_holiday_info
+import shangkeschedule.shared.generated.resources.section_title_skipped_dates
+import shangkeschedule.shared.generated.resources.skipped_dates_none
+import shangkeschedule.shared.generated.resources.update_holiday_info_hint
+
+/**
+ * 「跳过日期（节假日）」设置卡片。
+ *
+ * 「管理跳过日期」的手动增删与「更新节假日信息」的联网合并写的是同一份
+ * `skippedDates` 集合，「清空跳过日期」则整体清空它。
+ */
+@Composable
+fun AdvancedSettingsCard(
+    uiState: NotificationSettingsUiState,
+    onUpdateHolidays: () -> Unit,
+    onClearSkippedDates: () -> Unit,
+    onManageSkippedDates: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        // 统一分区头（labelLarge + 主色，v2 规范 §3）
+        AppSectionHeader(stringResource(Res.string.section_title_skipped_dates))
+        Text(
+            text = stringResource(Res.string.desc_skipped_dates),
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = appType().caption),
+            color = appColors().textSecondary,
+            modifier = Modifier.padding(bottom = appSpacing().sectionTitleGap)
+        )
+
+        SectionCard {
+            SettingItem(
+                title = stringResource(Res.string.item_manage_skipped_dates),
+                onClick = onManageSkippedDates,
+                trailingContent = {
+                    // 跳过日期数量：Telegram 灰底白字胶囊徽标（v2 规范 §4.4）
+                    if (uiState.skippedDates.isNotEmpty()) {
+                        com.shangkeschedule.ui.components.AppBadge(count = uiState.skippedDates.size)
+                    } else {
+                        Text(
+                            text = stringResource(Res.string.skipped_dates_none),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            )
+            SectionDivider()
+            SettingItem(
+                title = stringResource(Res.string.item_update_holiday_info),
+                onClick = onUpdateHolidays,
+                trailingContent = {
+                    if (uiState.isLoading) {
+                        ThemedLoadingIndicator(modifier = Modifier.size(26.dp))
+                    }
+                }
+            )
+            SectionDivider()
+            SettingItem(
+                title = stringResource(Res.string.item_clear_skipped_dates),
+                onClick = onClearSkippedDates
+            )
+        }
+        Text(
+            text = stringResource(Res.string.update_holiday_info_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = appColors().textSecondary.copy(alpha = 0.6f),
+            // 辅助说明与设置卡片之间使用主题列表间距，保持信息层级舒适。
+            modifier = Modifier.padding(
+                start = appSpacing().cardInner,
+                top = appSpacing().listGap
+            )
+        )
+    }
+}

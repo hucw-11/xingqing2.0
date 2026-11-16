@@ -1,0 +1,3530 @@
+{
+  "commit": "afd1389cfaef2be15cef0aea7ea4efa158f1659e",
+  "repository": "https://github.com/qiqqqqq517/shangkeschedule",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "3176065d7fb6a1d1fb69c78583405c2503ae953c8f74ff2e3e0debc2dd08e4c1"
+    },
+    {
+      "path": "androidApp/.gitignore",
+      "sha256": "976323fcf7f90d12491d294430a9bc444239cf6f6ebf07e44fb662f4e540577b"
+    },
+    {
+      "path": "androidApp/build.gradle.kts",
+      "sha256": "0dd16394aa835cd30d4538bfc9a879f50f84a51bf44ed2dce6182a8e65f17d3e"
+    },
+    {
+      "path": "androidApp/proguard-rules.pro",
+      "sha256": "62a2968572775dce3193248f056096d42bf1c74f3f30f5e0f29d6be00eef8927"
+    },
+    {
+      "path": "androidApp/src/main/AndroidManifest.xml",
+      "sha256": "ceb8dcda3eff19164ba5cc84be2fb581512ba1ac53668c994ea5c9f65c6b5e90"
+    },
+    {
+      "path": "androidApp/src/main/ic_launcher-playstore.png",
+      "sha256": "caf2d8ccab840b3eb2135c74eb7ed0ee74a8a823dab2a90df968c386972ba085"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/MainActivity.kt",
+      "sha256": "e885f04966c42a8b378d6e91f144e8eaaec22c43366cd7bb7a2564ac9190e00b"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/MyApplication.kt",
+      "sha256": "6f84848eafe1966d9c20951f4efe8e342bb2214dc9875e6bfefa8678991cd898"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/calendar/CalendarAuthenticatorService.kt",
+      "sha256": "bb48a5401ced732bad55d4d40b71da33bff6c6613c3eb63cfdd5fcdb4199a5b3"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/calendar/CalendarSyncAdapterService.kt",
+      "sha256": "a7282b07ce4ff5fdd093be0da9ee485ef6983871284444ffd41d3fe6f1f843d3"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/data/sync/SyncManager.kt",
+      "sha256": "cb7f27d9e08b36f0ea232a5b3e094654b26131fe5e38a733188d6ed3114f304e"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/BootEventReceiver.kt",
+      "sha256": "7c2da7d3cd1309fab0ea674a5bef26593c7f109a1128d687f14994015836398c"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/CourseAlarmReceiver.kt",
+      "sha256": "2dd0be8a5a836e004932db7ae73534837c0ff54faeb94ce8d3fb2ed646934f2c"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/DailyRolloverWorker.kt",
+      "sha256": "83eb5035cde1442aa6fec941717c6853115dedd21bfad3c19bff9e3bbcd28a78"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/DynamicIslandAlarmReceiver.kt",
+      "sha256": "bb918d47fa5d631d357b9cbb9d545a89f9e2237915f32a64663d4d6431d70a95"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/DynamicIslandManager.kt",
+      "sha256": "481bb8e75c2576997b5bcd537aa9ced092f0000e091da1ca8844752245411dcd"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/DynamicIslandService.kt",
+      "sha256": "ff1b1f3b371b51fef427272417dec6efdb3d5eea117cbd39e601492e634e60c1"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/PermissionNoticeNotifier.kt",
+      "sha256": "45357ecf33ea3178b0237c69dbdeb7cb152bd9b415c6cc0d36cc4ea602c2e611"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/TimeChangeReceiver.kt",
+      "sha256": "eb847ba11b2de82aba3525347d9eddd8ae46b3539332c18d974c555808e5d043"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/alarm/AlarmScheduler.kt",
+      "sha256": "2cdaecf104e1c8c636ba4904611aba5b4ac287045b2426a47f09c72d0027d98f"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/alarm/ForegroundGate.kt",
+      "sha256": "35466d6f5517da92e4ff5c6260a74f19f7c2e4eeb0df43cbe2445579a2c7dad5"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/control/AutoModeController.kt",
+      "sha256": "9f2d04183d84219df0d1ae361d9db5c8b00ae230bf18c92c5b507152c3e66345"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/control/AutoModeScheduler.kt",
+      "sha256": "8860d0b7ec1610b8f770c77a1c5aca9e652355d5e4e938f969565b75fda79fd9"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/control/AutoModeStateProbe.kt",
+      "sha256": "49ea900952db34d397197c0a10c003c7fce4109cb38baf3dc5a67416266577b2"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/migrate/LegacyAlarmMigrator.kt",
+      "sha256": "2a14c963b8328698cbcb0cccc98b857285f14ea5804520ab8693716df2300434"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmCoordinator.kt",
+      "sha256": "81d38a5bfb99725ecca08ca9e999d0bb41b057d70950d6a3c6641623da7438d7"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmDisableCleanup.kt",
+      "sha256": "763a71d0cac93fb574de4c7eba828474c57e11be5f21ede284aaae529794a80e"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmReviewDecision.kt",
+      "sha256": "91ba621b8b678723d18736c8cc90f1a50a2f44614a6ec32332084fb7441e767e"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmReviewNotifier.kt",
+      "sha256": "b6c2f7e6ba1f0424eb5f7cb7f46419cef5c3582aea5da2ab6ada52b7fddec34e"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmRiskObserver.kt",
+      "sha256": "ac86739f5055ddb9e8a25cda98f8440c2d03ddb6b18b709b1d3a1781f9e1495a"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmRiskSignals.kt",
+      "sha256": "d6834b8f782c8010ab8a2bde05499555583ae04ebf5ccc0fb1d00688c3b4e8f4"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmScheduler.kt",
+      "sha256": "4e8f1acaf7f5f52f6836225ea3bcf65c1adc1974d6a06dc64a1158e0c39aae19"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmWriteDecision.kt",
+      "sha256": "883c9a8999195c548f516be279c756459ac468a903bf068d1471374420d4802f"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmWriteStatusDecision.kt",
+      "sha256": "50662d55c0a42159627589760fbd29b9c07e270e27986f3ab65dca025a598da7"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmWriteStatusReporter.kt",
+      "sha256": "f6b20af330919513bfa1bb25299d8ff581701545f664b4faf40ee32379d2fa71"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmWriter.kt",
+      "sha256": "e45d7e486bc3d3f6fed783310015ed844149ed6f938538a26ef3b2c14ee34fda"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/morning/SystemClockGateway.kt",
+      "sha256": "c37c9dde2e0dbbf1d82fceb6cb52432bff1020c2cda1b61d5dd2de9992de01c1"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/notify/CourseReminderNotifier.kt",
+      "sha256": "933dfb599a95666341b98b4ff5e16ecbb7b57b06f1d8ba65aeaece9ef1f9b3cf"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/notify/ExamCountdownNotifier.kt",
+      "sha256": "e544d6274d286250f9dde148363b59caafc6a2bcb2721a61271cdd9ef3df4f85"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/notify/MorningAlarmNotifier.kt",
+      "sha256": "9f9ebdc75cb2703f959b63ec347bbff673ca9813f3a6cc9605324f33b073079d"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/notify/NextClassNotifier.kt",
+      "sha256": "c1054fe07f7228f8f6cf65a5acb73146daa990941ad277f374853ce65c8db64c"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/notify/NotificationChannels.kt",
+      "sha256": "c6a9f36039038965e5c23534a2e893966129c2e742b639e67f43f09ef5c071b6"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/notify/NotificationPermission.kt",
+      "sha256": "e23cf2c48774df6b4ad43f71b315d7a45e9016e1d1fb29df7efc95c402bd8e91"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/notify/PostedNotificationRegistry.kt",
+      "sha256": "42ac10021a3d7ef964fd05d1ad2a77be47368c7b47e906a7568ee316348c07e0"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/receiver/AlarmPermissionReceiver.kt",
+      "sha256": "518d055177e273b9989b7f24b2cb3d0d6359afc39be327aed00e13ec86c29834"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/receiver/AutoModeAlarmReceiver.kt",
+      "sha256": "8aa9fa6e44119bf769e97bf8d1f0b429d4dd430d8b22cac0a8c0e0c92ac11a39"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/receiver/MorningFallbackDelivery.kt",
+      "sha256": "af3e3c509facb728a5a1815bc4207d5db866658ff921dd6b5cea8d7a21f59a53"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/receiver/NextClassControlReceiver.kt",
+      "sha256": "95de2057b6a8247360121a114128fc2c30142e61dcb9993ca2048a94dd65c1d2"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/receiver/ReminderAlarmReceiver.kt",
+      "sha256": "c3c1a8d4b58f8be17c46b960181e2bf1e3a3387297d3c86952eab94599a47f20"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/reminder/CourseReminderScheduler.kt",
+      "sha256": "abaf596290f28486dbdaf3b2c8b59fbec3ab5ec66c46b7c16f622684e362229c"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/schedule/NextClassNotificationWorker.kt",
+      "sha256": "3d6a8cd9ffe864c174b4787f75f15af5e6a96b856d6f4d1533dfbd8e6864da9e"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/schedule/NotificationScheduler.kt",
+      "sha256": "a7d96e61f2bc713e4f1f7c6b690d57b89879820922f1ec931c08b7cdd4fcdeeb"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/service/notification/schedule/NotificationSyncWorker.kt",
+      "sha256": "b4ec0de4dff5aa17a9e185bc7c3c57e6def034cc10108a2cdd3fb62a50d488dc"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/ScheduledWidgetProvider.kt",
+      "sha256": "017834d0e26fb981bfd90059a0524a329f2ee39300e8cdae38a3e18e28473189"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WebDavAutoSyncWorker.kt",
+      "sha256": "f454cdb0e51579715523417272bb6ef99829661173f118fc2acc7050b9a65a27"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetBoundaryAlarmScheduler.kt",
+      "sha256": "0e6be2fb39db7354d0ce09c0076b2cacad8aff0731c86de3edeb0b9b86eb7996"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetBubbleContrast.kt",
+      "sha256": "81eb39e29570972a04372d7aa05bb22f33e704d583e448432bf5196c9df3143c"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetCourseColor.kt",
+      "sha256": "449cdf44b01d54b1b5304d42802ee1f2a779fb1e68d0d4677042783a6922a716"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetCoursePalette.kt",
+      "sha256": "757787c65d0ec35c8e101daea1563cfc5fea28ea3d56507768f7ee93c77181e2"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetCourseRows.kt",
+      "sha256": "09d9d701ddc6ea96de1efb2d31a9eac8354b5fcc13bbef21f588e55a9d6b93f9"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetCourseSelection.kt",
+      "sha256": "c40741f935d278d2d41c00b16620ec46cea3ca8d6ec803dfb715a45465641349"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetDayBoundaryAlarmScheduler.kt",
+      "sha256": "91837e19631b9a9994674144f5462b86d8066113c014079823c0fe6e73d900e1"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetDayBoundaryReceiver.kt",
+      "sha256": "d2d4dadedf2ec4a0de0d848ba1e3a5787b822f82a3a9a9646e3da18f57298671"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetListCapacity.kt",
+      "sha256": "f8d135b1e5e7a38d4212ea5339d2c400c25dbd12b7ddb339ee09033aa815423f"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetNightModeWatcher.kt",
+      "sha256": "bc9472dd03bd3e255c8cb5600cbb296b9ec86047d89ad454c78d9663a219f1a3"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetPackageReplacedReceiver.kt",
+      "sha256": "edbddfd4e6caa3c9304366e39846bd06818b207cadf62c3dbe65d1941a4548fc"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetRefreshAlarmReceiver.kt",
+      "sha256": "d8e146a50051025da876be3f34f07241f7fa51d721567561318dc686f8ede32b"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetRefreshCoordinator.kt",
+      "sha256": "00495981e2d9d9c7ebc18789ec3d274a467ee6c3e6448bdafa40ec65b1936123"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetRemoteViews.kt",
+      "sha256": "63d88d846ca9ae1960ba37520519492a633e5054e0f465aba5a4f69dc2cbf2de"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetSyncWorkers.kt",
+      "sha256": "ea727c13ad29134c53d6ef9079bde950cc6dfe0fe5cee081dd3908288b63221b"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetTextScale.kt",
+      "sha256": "1fb937736c60ca53d64166aaecc7252a060ed851310cdb8d07bb085d4c6dfeb3"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WidgetUpdateHelper.kt",
+      "sha256": "f9a0cec4a7ef87e13cfe9c8092b72eef1492af8f3b14fa64d46267fa4986ca3f"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/WorkManagerHelper.kt",
+      "sha256": "0ecd65536c8f75cf666000d32abc40ae13f37dc2bfb45b45c170524564fd2de5"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/agenda_list/AgendaListNativeProvider.kt",
+      "sha256": "17fefb112db4b50adf3cd637bc1ec32cfb4989dd012b6afcd60728616a5f7e1e"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/agenda_list/AgendaListNativeRenderer.kt",
+      "sha256": "e72dfd71d3da7a2afddd35215e0f4355f4e685ce60edfeb60c9767c5085a1d2b"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/compact/CompactNativeProvider.kt",
+      "sha256": "d4aff15dc4f0050a6d3956b0013caced2d25cccd25d1941b5cc0342c7a41a3f0"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/compact/CompactNativeRenderer.kt",
+      "sha256": "4f7b53df93b4a5cfa7933245203fb2fa89e61e36e043132e75b4b1d7d5aa36e7"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/courselist/CourseListRemoteViewsService.kt",
+      "sha256": "ef9fab97aa51cc5efda549e3cb18998fa962ea09e97fc4ecdbe6b4e59f3fa91d"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/double_days/DoubleDaysNativeProvider.kt",
+      "sha256": "764e33d47d582f71f9790f2287f0a8f1909f7fe0f42d851a1ff23d7a02774767"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/double_days/DoubleDaysNativeRenderer.kt",
+      "sha256": "259378701b09c3d67668ad3140a39533408a8246da1ff191849be0cdd4040acc"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/exam_countdown/ExamCountdownNativeProvider.kt",
+      "sha256": "0a06d125c1fcc8ec8d944894742fe5ddc7a89060e9cd45e4ffb2f758fd041aa5"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/exam_countdown/ExamCountdownNativeRenderer.kt",
+      "sha256": "c12a6233657564a95bf7a77ef57cf9c00a0c194974fd8b5f92e42292490e15d7"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/list_vertical/ListVerticalNativeProvider.kt",
+      "sha256": "3c817759cb4de46d163383d9739d0fab9a401e6733818178c887d2ec7a206dda"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/list_vertical/ListVerticalNativeRenderer.kt",
+      "sha256": "9d757b1661fc50c099af6455317e6d04a40be36176791527ecdeab2c3bcba8e9"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/next_course/NextCourseNativeProvider.kt",
+      "sha256": "c5bc9c4310dd44b7f300c62be1d769ec56e64961749a52f07b7d015b466309b2"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/next_course/NextCourseNativeRenderer.kt",
+      "sha256": "28463a23744237219ad359e97db449fc47bd6de861898c102b6404ec10add2a9"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/tiny/TinyNativeProvider.kt",
+      "sha256": "6ae1bd7352636ca4d33fc4ae6021427fd0f4ed98fd8991afcb8d5a5ce1e7d7e2"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/tiny/TinyNativeRenderer.kt",
+      "sha256": "7e3c79cb8537608aaae0473a710c993ba4f3cb12267f563d579c4c2e3b10fd67"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/week_courses/WeekCoursesNativeProvider.kt",
+      "sha256": "f4742b2c485d03da34bfb4b009706058dfaec11c003415804180442ee49f6d0e"
+    },
+    {
+      "path": "androidApp/src/main/kotlin/com/shangkeschedule/widget/week_courses/WeekCoursesNativeRenderer.kt",
+      "sha256": "d2dd6ffb8302e2670ae32db9f16fcefe33a561c852c4b8e1d83c8cedb7f57c60"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable-night/widget_loading_background.xml",
+      "sha256": "9fd755c2ad96466d4b5c46c4f51482977035d5e4b4b510d79b69ef59a323f2bc"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/ic_notification.xml",
+      "sha256": "c07279cb31d6a31f6aa2c0458bf82eb273524a419bbd08f4d457e13caacf23f9"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_bg_rounded.xml",
+      "sha256": "96a5be0bc76ba619262e4525e31a1689a07be65f809d03da34e9a8862ff0e896"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_chip_bg.xml",
+      "sha256": "7378a950c44493480ded699a203b2c23fcd7bfa10895a26ec84088422516e600"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_divider_inset.xml",
+      "sha256": "113be477b36069a64e8739340c48b81525fd00a14d5eba93195d73ecd4b31f97"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_indicator_shape.xml",
+      "sha256": "0cb8d50e529012dad071b009093c220f00d8597fbb0952c1493f47000c551f97"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_loading_background.xml",
+      "sha256": "9fd755c2ad96466d4b5c46c4f51482977035d5e4b4b510d79b69ef59a323f2bc"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_preview_agenda_list.webp",
+      "sha256": "b7dedde7e6e1cf37caf017e808993b1528bbd7f988a9e09c017a5ca094a07bdc"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_preview_compact.webp",
+      "sha256": "15c4737e734fa10d2233a77b4b413d1f340c92d32ef199d2aaae5c077661e8af"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_preview_double_days.webp",
+      "sha256": "b1b3ce0dc67fe2c8e588ff8127e687741d5395dd2a532bb56bb2d29b63e014c4"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_preview_exam_countdown.webp",
+      "sha256": "3817d72b7b0114791329ddddb7d3dca39b68aefe8e6797f2cc4975f497becf29"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_preview_list_vertical.webp",
+      "sha256": "14eff396594b3b1d4bc51c29182465b6294f72d5feec6a09ba80049b3a1b922c"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_preview_next_course.webp",
+      "sha256": "2f1eda5f702bb6bf82adbb1cc1e4df337c77cd84ed73a0dcf923df6c0bf76637"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_preview_tiny.webp",
+      "sha256": "9a1b0c849bd570e9e454295f24bcc623a7853cbc986c79e2a6a53bec7a92c462"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_preview_week_courses.webp",
+      "sha256": "0db1c2577e8d86efc332187a434c3c1b4fd8ed745c3d626b9db9f48431c8be62"
+    },
+    {
+      "path": "androidApp/src/main/res/drawable/widget_shape_circle_base.xml",
+      "sha256": "402e3aa8f3755816f3a9ddf7747c7564ef5aa8bcfc61d0992678180f3c4f7a86"
+    },
+    {
+      "path": "androidApp/src/main/res/layout-night/widget_course_color_bar.xml",
+      "sha256": "584e33f5112cd9cd107947199f70a796878a75a238c4c611edf1bcbe0a4bb201"
+    },
+    {
+      "path": "androidApp/src/main/res/layout-night/widget_item_course_common.xml",
+      "sha256": "c87d7be0679c1bf6a0d97d9e7dde2dbd78ebc9fb0c0746ad56c304f726022527"
+    },
+    {
+      "path": "androidApp/src/main/res/layout-night/widget_item_course_list_node.xml",
+      "sha256": "80fa6b1e4f440de4324a7677528f9259e0ff1fe33bf6a2df21db52cd1dfcfea3"
+    },
+    {
+      "path": "androidApp/src/main/res/layout-night/widget_tiny_circle.xml",
+      "sha256": "534758227c25a2deada9e612b8bffd862a98cd1621a1bd469e15050a620dc049"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_agenda_list_native.xml",
+      "sha256": "be294199698c4f80356c4d36839812483c1c20a7b9d3f2363cab421675ca76c3"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_course_color_bar.xml",
+      "sha256": "fb58dfb58a23aa08573d4e3af11474f9964a2fe7dadc0166cccb384857e0077b"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_divider_horizontal.xml",
+      "sha256": "e80939395ee286ca7140c54f8d78a0449883904fe81ea2d6ff455e963de8ce24"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_double_days_native.xml",
+      "sha256": "63b073d6a6bb687b620aff34467b3bf9c46b0947d7dd4669b3b8c5aa0cbba382"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_exam_countdown_native.xml",
+      "sha256": "0196992e7736adeb2b0a11dbb9303de09e00bda699c5c448bd2e004c4f8fbfb1"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_item_agenda_node.xml",
+      "sha256": "0ab10c92c5c17f3b444bb145a98445ccc6410221d2e537a13237ff232e1cb365"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_item_course_common.xml",
+      "sha256": "fc9dba99f21a334dc343e92a17e1f44a88870220f5d43e63346c1587002afb54"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_item_course_list_node.xml",
+      "sha256": "b52b2cffe3bc4e342aef6a4ffc8ec00c068445b4a9ef386b9a4d88ecd41af164"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_item_week_course_node.xml",
+      "sha256": "3445cdedabbc4d0ad8dd2a68b03ab9afcf7d507b581ce17bbc2884ce155b17d5"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_list_vertical_native.xml",
+      "sha256": "4c35d87c386c519ca040b003e5ba54860291c098e486251747e85c7bbf12e181"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_loading_placeholder.xml",
+      "sha256": "4e4fe37b25a28bca604a1b81b82d7ef34fa764ced2fb40db8fa63d96961c4d1d"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_next_course_native.xml",
+      "sha256": "7acda58e8ed8b8e7281862c3d7534777621bdd9a22436421682d0d2dd7bb66ee"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_tiny_circle.xml",
+      "sha256": "7128594b12dea2a3230f5ff9da9c27a69fd96b983dd0cbe7830bb04a3c29c304"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_tiny_native.xml",
+      "sha256": "1352e73a2bafb09246c6ece6ab5f4095e282423cbcb0db74bc6bd282ff71df1b"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_today_compact_native.xml",
+      "sha256": "5e56d71d5bb9c3ccb1dd05219ddd8c86af68437b147a3781771c687d78f30b2c"
+    },
+    {
+      "path": "androidApp/src/main/res/layout/widget_week_courses_native.xml",
+      "sha256": "4ed3d825190b4818072b19272f60ad08237d95b732583c8f29372e09c34e9ebc"
+    },
+    {
+      "path": "androidApp/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "sha256": "6be9be8d39cb250f663814bc3ac3ba570d9629be22fbebcc95d0c058e2249717"
+    },
+    {
+      "path": "androidApp/src/main/res/mipmap-hdpi/ic_launcher_foreground.webp",
+      "sha256": "df598ce516f039669dd603b0d6fc1728958925a68a3a1afd5303a5264a3c93d7"
+    },
+    {
+      "path": "androidApp/src/main/res/mipmap-mdpi/ic_launcher_foreground.webp",
+      "sha256": "8e87dc1db24e8e2272c0d33cd2da839f8c55954bda8c248f45b007f110e0ceaf"
+    },
+    {
+      "path": "androidApp/src/main/res/mipmap-xhdpi/ic_launcher_foreground.webp",
+      "sha256": "9168ca4a18fb799acfd2cd8a9a97b64fc688d00ed9cfd3de9e045a7fea1d2c46"
+    },
+    {
+      "path": "androidApp/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.webp",
+      "sha256": "01180e63780eb01d01baff4e6f3c2b8079848913e5e287f89ebaea2407332600"
+    },
+    {
+      "path": "androidApp/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.webp",
+      "sha256": "9b25c33b8f3516844d3b2951c2004b172c48fcb3614048d98b8dd643f75c264a"
+    },
+    {
+      "path": "androidApp/src/main/res/resources.properties",
+      "sha256": "ff62a6ea361d2fb6805f2061c7dc422be6d2aa31fbc4b644a631025381045942"
+    },
+    {
+      "path": "androidApp/src/main/res/values-en/strings.xml",
+      "sha256": "4541bfa73e7a02b11c5fa67c24dda34cc64de9d6232c256cbc06a55a876a144f"
+    },
+    {
+      "path": "androidApp/src/main/res/values-night/colors.xml",
+      "sha256": "39c4fc93c56f263e469c8e95f30f277a11025b774688f1b00d3375a01dfe0e8e"
+    },
+    {
+      "path": "androidApp/src/main/res/values-v31/themes.xml",
+      "sha256": "2160ea7673991fe7d1981db557e7716406c3ca5c866de5f7e4d6e64ee10a7cad"
+    },
+    {
+      "path": "androidApp/src/main/res/values-zh-rCN/strings.xml",
+      "sha256": "f9f31e8607cff269967950b51d5fad397769dfced7916dfdf065ba5deb2b5115"
+    },
+    {
+      "path": "androidApp/src/main/res/values-zh-rTW/strings.xml",
+      "sha256": "278308566dedd8e40a6ada5547277d3f2634416d3d95c725e370970e0049edc8"
+    },
+    {
+      "path": "androidApp/src/main/res/values/calendar_account.xml",
+      "sha256": "3f988781bd25c080e716dfc7522b56110099c36a37b977d73bbf99c8af03e1d8"
+    },
+    {
+      "path": "androidApp/src/main/res/values/colors.xml",
+      "sha256": "f5e47757ad4b9815e1824b99575f64e58ff5d4eeaee0cfe2e3663119a722208d"
+    },
+    {
+      "path": "androidApp/src/main/res/values/ic_launcher_background.xml",
+      "sha256": "a0ddc2b65e05a1df75ff4ed9cd48bebaa67a56f01efa613b210963fb3eac940b"
+    },
+    {
+      "path": "androidApp/src/main/res/values/strings.xml",
+      "sha256": "5b308da856439ca0f8824bc866efb483946a7e9a92d2f8f8a8ff3ddfa038acba"
+    },
+    {
+      "path": "androidApp/src/main/res/values/themes.xml",
+      "sha256": "5f8af039e1762b0cdb8fa5fbdaad9f3d5fefda73433876b183bc4c6b5d1ca0c5"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/backup_rules.xml",
+      "sha256": "61b317c3f1e9db76c28090969ce7cb39f6c24432b819b328e5453bef5300baa0"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/calendar_authenticator.xml",
+      "sha256": "1234644952495735dea80f35c92b8aacf739b7d3fe053a5e0370201cf85eef02"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/calendar_sync_adapter.xml",
+      "sha256": "69e902c9b51199f95c455953d3c5dc66baadba29151248a712f21a20268cd28a"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/data_extraction_rules.xml",
+      "sha256": "efc00d1625086cae90129eb4ca6fe4a62a09bb1ded7ce093e0ad72a9cc810f66"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/file_paths.xml",
+      "sha256": "d8dac8c5e7579508e353da9f5f76656dbb1cef773d72fa80e7d59c6d5c535dd5"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/network_security_config.xml",
+      "sha256": "99b4a4d1f7d1d7f982856f8afd38fad6f30c6d8251cbae495e26180f968390eb"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/shangkeschedule_agenda_list_widget.xml",
+      "sha256": "05fbb0f4c3471d35f9c6816053bf86142107ccda7a8b9aed4c77da6f6d314746"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/shangkeschedule_compact_widget.xml",
+      "sha256": "b7dbeb406ee7f5f5c60f85e75f827dd6372a9b6a0dc2c48f6341494c0b87a4c3"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/shangkeschedule_double_days_widget.xml",
+      "sha256": "f4731da75a0e1611a08f0808fc07beacecee42059ac80c862519929750ef0b17"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/shangkeschedule_exam_countdown_widget.xml",
+      "sha256": "dd51b6e7df8c1f587e0de18c828e536fc6e171459d19f460914b61615dac4191"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/shangkeschedule_list_vertical_widget.xml",
+      "sha256": "ad6b21c2cd90047aa3ff4172a36df4e439aca7d583933947b66232521d241988"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/shangkeschedule_next_course_widget.xml",
+      "sha256": "bef5cd1f6b21e70b7ba937655aa59f9ed39083c4bcb7382f24134adad123a54f"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/shangkeschedule_tiny_widget.xml",
+      "sha256": "131439ab8ed0ce93744c15b780da398a8a0c87c93b5f8c3ae15a2d741086e319"
+    },
+    {
+      "path": "androidApp/src/main/res/xml/shangkeschedule_week_courses_widget.xml",
+      "sha256": "8389a8707e282e67ea500c95b6d863e6ba4cb7d4c155b291d1f9e9eec7dee413"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/calendar/CalendarAccountIconTest.kt",
+      "sha256": "322a70c9a968dbfc309e759631eea352960be7cf06174863c7b7b829d7912a1e"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/notification/plan/MorningAlarmPlanTest.kt",
+      "sha256": "cc2f7cfb080784231b0121851167160222697715829d35d2e838869c9110b6a0"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmActionsTest.kt",
+      "sha256": "d241868e6dfa2052e0e07b65ed0faeb81faaa8da39c8cd7407aa6fb54bfdc6d3"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmReviewDecisionTest.kt",
+      "sha256": "254369ecdb2fb8965de7f72a1fcdce060ae06eb0ab7be3fce001ebea2f5f3124"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmRiskSignalsTest.kt",
+      "sha256": "fb34b0e91b6c07a48b9f047a08c5dc20523e46b630e032a7bd9f982cd07b0fe0"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmWriteDecisionTest.kt",
+      "sha256": "aaa009c30af68edf90d54bedf83efa623d80c53254c7829cb53432d3f547e313"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/service/notification/morning/MorningAlarmWriteStatusDecisionTest.kt",
+      "sha256": "628781d4dba126e46421047ab8a1016721a442d7d742be26312ea25a2fd4d516"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/service/notification/receiver/MorningFallbackDeliveryTest.kt",
+      "sha256": "d117b4208a55ee8bbb720a474e3232b27b1549bc8a9f98a26a63d7416b9c677a"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/widget/WidgetBubbleContrastTest.kt",
+      "sha256": "fc8a17aadb1ba400e84c6e588eec065dbadb016cb0cc5e82a93e88ad15b1e02e"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/widget/WidgetCoursePaletteTest.kt",
+      "sha256": "6f9e7acfaf330549cd46818b78d502b8e36f66bab5c61dbd57307e4ca8459d97"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/widget/WidgetCourseSelectionTest.kt",
+      "sha256": "3b5427e291f38d977d968455db9563687f309a653a15040982dc80fc5d123593"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/widget/WidgetDayBoundaryActionsTest.kt",
+      "sha256": "5f67938c6697b82b30e8232ded4fa66288c014fa03581e2d8180cecd14436d9b"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/widget/WidgetListCapacityTest.kt",
+      "sha256": "4272e8a81a072136a1560d1ff796599af76a631006f0717ba7ed127c28bcfb83"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/widget/WidgetNightModeTest.kt",
+      "sha256": "da278359e2cc35c1e4933975137e416d2edd70daa6fff820de3c384b38099f95"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/widget/WidgetRefreshCoordinatorTest.kt",
+      "sha256": "9717ee8da9e59961828ca0038289235e2b2a614120660ed5e3b4d723763d692a"
+    },
+    {
+      "path": "androidApp/src/test/kotlin/com/shangkeschedule/widget/WidgetTextScaleTest.kt",
+      "sha256": "87c0769caae68d09e0dae9e5bc96ce9b7a72442d5e6e14191f10b815374b7c87"
+    },
+    {
+      "path": "build.gradle.kts",
+      "sha256": "b7ac7f6190b59cbe07ec2d2a84aa98d0c65becfab06277fd75eb5458bae672b0"
+    },
+    {
+      "path": "desktopApp/.gitignore",
+      "sha256": "2913d3e0d38326d5a02081567998a8ae0a289dc62eddf0a4db6e0f04bfb8f540"
+    },
+    {
+      "path": "desktopApp/build.gradle.kts",
+      "sha256": "60e311c32c21f8b8da455dc334bfdecf459d6bc42539ad2c84224c246e4f676b"
+    },
+    {
+      "path": "desktopApp/src/main/kotlin/com/shangkeschedule/Main.kt",
+      "sha256": "3685eb34022d6625ee8afe36ce44aeec9cdb15a06147d21b704a36ef5d4e74be"
+    },
+    {
+      "path": "desktopApp/src/preview/kotlin/com/shangkeschedule/preview/BookPreview.kt",
+      "sha256": "b543a19047622fdf33ec4622cc8bc3e5a46221e753ce57ef313bb72e3450b452"
+    },
+    {
+      "path": "desktopApp/src/preview/kotlin/com/shangkeschedule/preview/ClearPreview.kt",
+      "sha256": "aacf9481e98effcc185977b91a7d26461009560c9d292bad4ad8abca294987a9"
+    },
+    {
+      "path": "desktopApp/src/preview/kotlin/com/shangkeschedule/preview/ComponentsPreview.kt",
+      "sha256": "877d44e486a84163a6d7ab04c3e27173f036564d0afaf117b681f3dbd5d9e032"
+    },
+    {
+      "path": "desktopApp/src/preview/kotlin/com/shangkeschedule/preview/ContrastProbe.kt",
+      "sha256": "5e797b9ddf205c8bf13712948070aaa31edd436d31ca42af7c8cba85cd838137"
+    },
+    {
+      "path": "desktopApp/src/preview/kotlin/com/shangkeschedule/preview/GlassProbe.kt",
+      "sha256": "a7a19ccd80b4247103abfcd3669f1bcd8d0e19fa9327144910b0e494c47669b9"
+    },
+    {
+      "path": "desktopApp/src/preview/kotlin/com/shangkeschedule/preview/PaletteProbe.kt",
+      "sha256": "ea185b10afedf1a0062e3574e10a3f451e03d8975950b8a57b06ce6d091c6cc8"
+    },
+    {
+      "path": "desktopApp/src/preview/kotlin/com/shangkeschedule/preview/PreviewHarness.kt",
+      "sha256": "1ea99e6333e7fd1355c47826925fd572c34dc7b6925c078f580dff96cab73822"
+    },
+    {
+      "path": "desktopApp/src/preview/kotlin/com/shangkeschedule/preview/SoftPreview.kt",
+      "sha256": "7688744cbf79ed349a79f592ffd9c5a14834d14d135b84f8bb56c7a998837676"
+    },
+    {
+      "path": "desktopApp/src/preview/kotlin/com/shangkeschedule/preview/UxInteractionProbe.kt",
+      "sha256": "9a749b53dd9e69a1e86d8f3bd24967b42b7c58336fa5ccfc4471ef519c8d41b5"
+    },
+    {
+      "path": "gradle.properties",
+      "sha256": "c227d999d1c552ae890d2731e45f8e6b53c683a12ae8fed4560c3811f1d6fe9a"
+    },
+    {
+      "path": "gradle/gradle-daemon-jvm.properties",
+      "sha256": "d83e5060874ef54501c525a1b2cfe782de6ff27cfb0d76cc047a9a6ff74eb7e2"
+    },
+    {
+      "path": "gradle/libs.versions.toml",
+      "sha256": "29408cb973280fcb501049ee0af9ac8903f571a08b0471d0a639581cfc549bec"
+    },
+    {
+      "path": "gradle/wrapper/gradle-wrapper.jar",
+      "sha256": "7a9ce74cff467ca1bf60a4fcd9f05185acceda4d0f382434d393e17864262c5d"
+    },
+    {
+      "path": "gradle/wrapper/gradle-wrapper.properties",
+      "sha256": "9dd79c404e5cf3d742862b561b04923664e427b10655ec204ce3a39e49abeb8c"
+    },
+    {
+      "path": "gradlew",
+      "sha256": "0367e8c7d789376a26af723e17b3f05cb09f07361da0ac0aef75d4693c42b001"
+    },
+    {
+      "path": "gradlew.bat",
+      "sha256": "d539676c48b596afda64c963ec8f7ee56c7b3fe7e3b81d1dbe2d1a1e3dd9e9f8"
+    },
+    {
+      "path": "settings.gradle.kts",
+      "sha256": "049e1bd7269a838acbf9d12dc32fff9742209ab5211dd245bca61c3cfcde12b9"
+    },
+    {
+      "path": "shared/.gitignore",
+      "sha256": "1faed12c6728f3554d9d1e6e60f28917edad4ff9b78c4528caccec504d1467c1"
+    },
+    {
+      "path": "shared/assets/offline_repo/index/school_index.pb",
+      "sha256": "524eb108d3f79ee4d1b305fcefc99de59e177b0789cb06d4e1d2f5fdead1c783"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/ADAPTER_GUIDE.md",
+      "sha256": "041889d45fc7d898e0dafd2f4e2082b4a54c5a78029e87ba136fd582cf94bcff"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/AHSZU/ahszu_01.js",
+      "sha256": "5a8f51324e7199aecf7ace0f5ed673bf3ae4d0d68bbf2ab6921ec393bf1e5ed9"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/AHU/ahu.js",
+      "sha256": "29b1d34522f8490ccefa9064dcb30cd62eacef5fa153e15ce094d86a0b142ee1"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/AHZYYGZ/AHZYYGZ.js",
+      "sha256": "4a0ddbe04168734d701e3e478b7e3b280dfea5acd86d4efc434d31f855b316c2"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/BUPT/bupt_01.js",
+      "sha256": "4e47d1e3f2826a128426e1a6b5aa9dab2dfae57cda70bab6e602f422165967f6"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CAPU/capadap.js",
+      "sha256": "ce42f4f09a1ccab7ba3962a13388a36b932602ea6a9f3f7b133aca9aa0cd7a94"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CAUC/cauc.js",
+      "sha256": "80f4a76e84916418261352d53acbfe00a9b32f88c1b3b8ec6ea52b39ab5fb5e7"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CCIT/ccit.js",
+      "sha256": "8d3fa1dde5613a88929205ded47c927fb579080739bfa2c6838950f2e20c3d0a"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CFEC/CFEC.js",
+      "sha256": "333f4dbc6816a69f4cff1cc5ab5ec8e5d3dce12078ad8af9f6fcd02813539287"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CHZU/chzu.js",
+      "sha256": "d4050e30f960d6935f1a2e9a946d6f3c24d7b0e4c946745c23f67cfb612c7aea"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CJLU/cjlu.js",
+      "sha256": "ba3091b05a2b350749d5453c483401d8449340a98ae8fd3625d75475a5117955"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CMC/cmc_01.js",
+      "sha256": "2bad571049f66b5371343537145a43850caaed69edddbd3d30a60dfab43f7320"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CQCIVC/cqcivc.js",
+      "sha256": "e93c0cbafc47f61008fce2d049c10daf9c2d2ce568255086c9686fc86282e9c0"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CQCST/cqcst_01.js",
+      "sha256": "2e6fabe9712f3c164b9bc3d6796d81c6b2b3a772a03d7819eb81f2067858e288"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CQJTU/cqjtu.js",
+      "sha256": "bbc61fb8b1dc3ba30513110099f8f6ded0e0a3142e033d11a0cc3df90abc3f17"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CQRK/cqrk_01.js",
+      "sha256": "5cd91cbc199ea7093886037c491723c1a2148c6ad07b6fe07690b6a05e377e97"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CQU/cqu.js",
+      "sha256": "935b585689dee9deb66b932b2956ae2e58821d56896f33243fee979dcabe928f"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CQUET/cquet_01.js",
+      "sha256": "2c64d44cd2ad7c64b9b02ae19d325044e8704d73650f5cceeca72bfe04af90f7"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CQUT/cqut_01.js",
+      "sha256": "dd3d65e6c47dc55694afd6248ba7bf2e5b034d84dcd4f0df6bb89f5499dc1e7b"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CSUFT/csuft.js",
+      "sha256": "5ef62b7031ed9af01926df521dd5f4fcab7e072f08966101e58c4cddbdba6b7c"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CTGU/ctgu.js",
+      "sha256": "3732003291e7272b85e4e6fa0249b74e8df20e95d2824649b22268af1f1be977"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CUIT/cuit_bk_new.js",
+      "sha256": "da1bfd376b84d9afd998eb7354026bf52891d407e8159d65d3bfd70e07cd47fe"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CUIT/cuit_bk_old.js",
+      "sha256": "49be3b0a76b43e37ffa1937ba1b6c3aeed067532c9a112d37e5b24f8ed6b0e41"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CUP/cup_01.js",
+      "sha256": "ba27c1cb6e526915c1727ec895bfc38a4219f95df4a624d069dd69f530e2044b"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CUP/cup_02.js",
+      "sha256": "d0673fc624b575a52308ecf7e954c0ce65c4a77a3a6bac2566285f7e0de66a42"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CUPK/cupk_01.js",
+      "sha256": "57e061832a2f2e183b84d116f0b33cbcec2451f4f256918f6635c537319bdca4"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CUST/cust.js",
+      "sha256": "451c41a547bc419e069268f63a6de02dd2205c425fd00d42ee37083d62cf61d4"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CWXU/cwxu_01.js",
+      "sha256": "2b88a509b9ee2d23824ab199b4ffc8061151c770bb0fdd303dd411170666ea77"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CZIMT/czimt.js",
+      "sha256": "18d95628b48a6719e3c5717925937ec6daa202b8f61e8781f3950bf076764755"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/CZIT/czit.js",
+      "sha256": "3fe2ad2d90c27cf4fd6d5faf17cc288fa42e6d91958069af20ea7e3925a2df47"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/DLMU/dlmu_01.js",
+      "sha256": "92e7b9c13077b18c203d2a0c71c03ef0d83d4ee983f86ce6ff9bd0d67810e5ae"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/DLU/dlu.js",
+      "sha256": "98642ccf78d0f54f206f642baf3110cc435044dc43ba0a645ea7f1344de1d389"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/DLUT/dlut.js",
+      "sha256": "b677ea5d255c1f89eccbb84df453cb095ebca82c3d09e4b01a7b1ae83250ae18"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/ECJTU/ecjtu_01.js",
+      "sha256": "6b5bd7746b7b3d8f2e929dabc345f89653ee08ffe550ef201b619d624f7e334f"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/FJCPC/fjcpc.js",
+      "sha256": "6cb6f2adb431b286c43293f985f2e09dd3735b08060fcfcdb0dc5f51c456d5c4"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/FOSU/fosu_01.js",
+      "sha256": "4ee6ddebad72d26ed422bb31d42f736425ffb0cae0b3f308e725fd3e40c09a3c"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GDIPU/gdipu.js",
+      "sha256": "849fa12e99123ba6a95f9ad14b767df49f3d01b75461e9923427cf52fe765ad2"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GDOU/gdou.js",
+      "sha256": "aa3f38bb77cbe2b09b45425e942f223d4a0a4ad44e3ff1396bafe54cd2809105"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GDOU/gdouyj.js",
+      "sha256": "1e66b37bb30461812b34649ecebbe28f0d0e9f9f4e2480cb69f44fce7bde0b8a"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GDPU/gdpu_01.js",
+      "sha256": "fbee9476b40fc5f541f027376769bb01558804bc500aa908ced1a9b8bd092716"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GDUST/gdust.js",
+      "sha256": "6ae593c405ab205ee4d98d9bfd19d108cbe038888e39be1395d24df58b8265ba"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GLMU/glmu.js",
+      "sha256": "50ead2ed71732b1377ff2574ad297e5a08934f4c14d15db20ae0bafc343a39ac"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GLOBAL_TOOLS/school.js",
+      "sha256": "f8246d61d79aca981a37c9184d0ad434de317292e68f1153727059276fb9d6ae"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GLOBAL_TOOLS/starlink.js",
+      "sha256": "7bb4a160813932dd7e868d0072dce4312a3ea9155225d7df034a856e433b9ba8"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GLOBAL_TOOLS/wake_up.js",
+      "sha256": "a8173dca8fff71df6dd705591a06b9e4832c794251728cb4092f28df631f1ca0"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GPNU/gpnu_01.js",
+      "sha256": "ea63dc769c90a848ee3975644caccb3cfc2650ff80f95621bfd461d30e561487"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GSCMXY/gscmxy.js",
+      "sha256": "8c43b5303b1f2930aea935531ba21569be7d77c12d011c83ef47941179f73337"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GSMC/gsmc_01.js",
+      "sha256": "259b61cccc6a1504505730c070b54b2cc4fd3e25d5d3c671aded7357ac8d68af"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GUC/school.js",
+      "sha256": "a8613787047f2b138846f41c3eee99c9de0b01c69e3a5643f56dd952efa9a391"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GUIT/guit_01.js",
+      "sha256": "0edf85b6126a1ae67d82b2005b6ae6e715fc1be97a524d941a2907239ddce7a5"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GXDLXY/gxdlxy_01.js",
+      "sha256": "c121bbead45661c48e746e7cdfb1bbe6bf24aca4cedb69503391065bdd8a28a8"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GXSTZY/gxstzy.js",
+      "sha256": "9fc2e9b19bd9950e47a8741012e4a4ae0f577be30f29d6e3a3447b70cafa77f0"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GZPYP/gzpyp.js",
+      "sha256": "9227ec102a49e512cc9543ae027a85076803f1928b4a711dd4c2d420b8f5e976"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GZST/gzst.js",
+      "sha256": "f318c0792b8b13b08f7c009cb2215305b657d03c115437fe490aeac16fde4e60"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GZTRC/gztrc.js",
+      "sha256": "0e1b8cda9125207bfc0acd2f270406e2b2d3a01dd6a3ff7086676a0c4e98331c"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GZU/gzu.js",
+      "sha256": "8c2d60789de44c1211f2df5e09cc519c10223bac96daa71d0128fdea74d1ce3a"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/GZUTCM/gzutcm.js",
+      "sha256": "899fcbea9e79a692c5338b3df39d595c5a2dc28ba67ba667d772e448d4bfe585"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HAUT/haut_01.js",
+      "sha256": "d37868db3cc44562e2795e49d8d62c877ab999113e92ac06d553a74494e701a7"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HBGUHX/hbguhx_01.js",
+      "sha256": "8de2b962fc9a0650c3d3d529462c4954c7e423117f68fb538ef4d69ffa70bb73"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HBLGXY/hblgxy_01.js",
+      "sha256": "c67db8fd0fdc7d9a8385e8627eec1c103eace1cb21c47f567e77b8cd494de2e8"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HBMU/hbmu.js",
+      "sha256": "af7e801f02eafc7f14db518499b284bb9bd668ed4a99edd73e1ac5e4dbffb5a0"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HBNU/hbnu.js",
+      "sha256": "cefef2fe5eb4b3506d111a637257a62834a4c767d618bc718c6089414ff3258f"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HBTCM/hbtcm.js",
+      "sha256": "a2cced13714d162af3a1dfcd4f2d81406a55f2490bbee3a0cf7d4596c79fe5c1"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HBVTC/hbvtc.js",
+      "sha256": "30189f3a0a66fd8690970ade2ba01d3180bfd6c3fbe5d530b9d2ab9f9771aff8"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HEBMU/hebmu.js",
+      "sha256": "a6fd2331c3a0fdb591bb010a69d41ed1fdea820b52c5930c1a137f5659da1155"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HFNU/hfnu.js",
+      "sha256": "6af5612de4d24e56ad5e7527ac5e74667235846725cedebcaff82f696a779eeb"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HHTC/hhtc.js",
+      "sha256": "acbb112bdb7ee906dbd6ae33527f8f022defe9da8620a59eb030cb38cd287a76"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HIIT/hiit_01.js",
+      "sha256": "80da013fca65d1d2b108d94f8da0696071de99ade37d3336273251c090fe123b"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HIST/hist.js",
+      "sha256": "e99b33ea1da7d9ddde51b8ac2a476f10d9cb2d2e42acc8136b3c619ada90552a"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HLJU/hlju.js",
+      "sha256": "5b8c62c4265a9fe48371136f6b6529515cc105e58fdefc3f61ad412790a35074"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HNIU/hniu_01.js",
+      "sha256": "fa7a90c9aea0bce9b62836c5fcb22e318c11b1d5a0abde15fbe45e3c16ba2478"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HNSF/hnsf_01.js",
+      "sha256": "9deb2da051b4e302e26620575e65e5a0474974e18202262dee135eb23dde4e6c"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HNSF/hnsf_02.js",
+      "sha256": "25629e64a99d592432c4ea192d7454edf87e3a702577ec2e8094a774ffe028f2"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HNUST/HNUST_01.js",
+      "sha256": "f264192a38776a3ca84d770b9f3fa8be3313b901742f86ac55857e173a3eb9e0"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HNVCC/HNVCC_01.js",
+      "sha256": "f696d87fbdce2bd6783b7384e155163e6233728e58a49447cfd15f5f0ff9406a"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HNZY/hnzy.js",
+      "sha256": "8c5eab67dc424f4b9f1ab64cfa7fd23ac6e066772dab5916c89d1396acb7885b"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HQU/hquadap.js",
+      "sha256": "5fb82c90c52d13f8e68fcead0eae863892c83186a35ea06ca9e6ab532f9968fa"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HUAT/HUAT.js",
+      "sha256": "85563b33d8ec81c5a18612a0a8745a9efbfab304502c3e88c9dd14706f273ed3"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HUAYU/huayu.js",
+      "sha256": "fcea12a37a3b544095c8eb38fe37d3c88a0fb0cc8b1851137702db2a7fcd822d"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HUEL/huel_01.js",
+      "sha256": "32d8ba5fd45e8690b227f55f2c16952bcdc003f77e6a0062d73b1a6ba8c1a46e"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HUNNU/hunnu.js",
+      "sha256": "51a3292446a1a1075e28675d1ae1f3e261a88dab4aa2a7455e38547aaf5f04e9"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HUSE/HUSE.js",
+      "sha256": "3b2ed560a1d6ae3c60118727971b50ff87e6cc14308b0af7be40bd5fb62f4bcf"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HUST/hust.js",
+      "sha256": "d248b194f10ea3841e85707e177d4abf9a1416e028c30188c37dc51141bbd747"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/HYNU/hynu_01.js",
+      "sha256": "5f86cf2687b9ebae13df057703042edcc3a1bc30b8a959ef4c5d3255a3d13829"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/IMNC/imnc_01.js",
+      "sha256": "07f002a1a7875a5985bbfb1d3106589f80747450b5e98e493718dd85effa8ae2"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/IMU/imu_01.js",
+      "sha256": "a69236c49e40a8e53f89584614d3885092a2b0b14b3a5cd3b7c3ae48b11fdf8d"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/IMUT/IMUT_01.js",
+      "sha256": "9cdf7f5e301d5b4216286d83bc301f47fe3621b327c52483f8b63ed91b038670"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/JHZYEDU/zhengfang.js",
+      "sha256": "ddce88e101e59cd2313ba47cb6daad6ae99cb2bdbdade3e7a5103b89bada8cea"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/JLU/JLU_01.js",
+      "sha256": "4bc2fb1e5fda72d0ae32128268a9b9e95b9a90fc68f4efbf0f20d8ac02e1ead3"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/JNMC/jnmc.js",
+      "sha256": "6063d2f79217ba7cd3b42ce7559a7abbf10201cf13cb9222d25fcb27e3317117"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/JNU/jnu_01.js",
+      "sha256": "a42e24629352fad992a9624bc12d4fcbb726171ca94590cc51880bb5e6cf1318"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/JSNU/JSNU_01.js",
+      "sha256": "5877a9e25142f906348c90d3a10884b9c966a446ab762a354b897078ee951a70"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/JSTC/jstc_01.js",
+      "sha256": "bb247ff3e3400aca645ae3db3ccc49cb2fdc0f84dc6460932ca832c4877d33b7"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/JXFU/JXFU_01.js",
+      "sha256": "97112e1e7c21697b9d29a4724fae7459099c897c41c4d46f6d805ae9b69aa7c2"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/JXNU/JXNU.js",
+      "sha256": "83cd5abffbf6c867f9e42711090faeff0bdc4e2d725d6b86759abc6c064fcfbc"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/JXUST/jxust.js",
+      "sha256": "23daed1871ed01ab2b0d792cea3f45f55c520e842badd93b89780f0aa9ba3eed"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/JYVTC/jyvtc.js",
+      "sha256": "9a6f25e3ead9c5b0399c78d46dc81d5172e67999f257157de2ecd97721f5d1b1"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/KSU/ksu_01.js",
+      "sha256": "fbb31b1a3f599f0a7e6283bc8949815efec054502f8e89bc326c8ade7f784a10"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/MMPT/mmpt.js",
+      "sha256": "24f26c199585599b4c0726a33649b0daf0bdcae38aa1ba59bb9c283fb6dbb616"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NANKAI_YJS/nankai_yjs.js",
+      "sha256": "7e2795d2f077b51f010372589a58cce81aae3f1fd5ba42e100ebee6b1ccf7c4c"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NBUT/nbut.js",
+      "sha256": "8e38a43f5a76916bed846b247b59bb730fac715d018f8e0e8e03090e3804846b"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NCUT/ncut_01.js",
+      "sha256": "989f76762164284fb3d99a71c2beef3bcbb369cd49b8c7e0b9ec65e96b246914"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NCU_JW/ncu.js",
+      "sha256": "f3807b256d91a5894e3c54b270973fe9f77be1bcf434f4f1c1acf1cf6b4665aa"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NEAU/NEAU_01.js",
+      "sha256": "6fb0584ed64b9935b08d5585ad43f04c03105dd7c163f0647008270c076f89d6"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NENU/NENU_01.js",
+      "sha256": "d7569edb42e78db103b08c83337aa31c77694f256192d19b57da7d59c3688d3d"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NEU/neu.js",
+      "sha256": "69d49b668b4eec5d160d9bf8ab4b4a5cd3b5816910620aa0f45871b089242f02"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NEUQ/neuq.js",
+      "sha256": "8422a9f23f66a6dcabc9e283be4943cd8c6a50016571d80715dd70b5bed40f85"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NIIT/niit.js",
+      "sha256": "ec016a9f57f7694d0f0e707892b43bb8033b03338b76b6ebb2fd516fe3afbedb"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NJFU/njfu_01.js",
+      "sha256": "0a59b0cdb4e047f2f2cbd4659c5ada38ddd03ca417564046706744a9023f193c"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NJNU/njnu.js",
+      "sha256": "69606d4eb4c2330e4f372a5d44ccc9f48196abd034847ebd58525bb415e411c9"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NJTECH/njtech.js",
+      "sha256": "9fb572e16031a535c6ccbd6ba4e6bd8e655b85d1c6d496b7a44c9a18bc802284"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NTU/ntu.js",
+      "sha256": "5d143bbd67c18c784fc5ac7486e5ebef6f02c8a9be658e402e6883e18cdcbca0"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/NWPU/nwpu_01.js",
+      "sha256": "4f1fab6e6994f1d3ec721fd03147f91c28f59653bbb11b32d07fbc6fbf5cd49b"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/QAU/qau_01.js",
+      "sha256": "7c5a0112b03e146cd5f0872b653c2ad8745ea2a3ce89d6272967a8bd9319e31e"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/QDHHC/qdhhc.js",
+      "sha256": "94b35239907b84a3726ea022dd0263b5bcd91bef17652b73b09d3e12312b81ef"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/QQHRIT/qqhrit.js",
+      "sha256": "850873980f7164dc9192d600521b4f83b680e35f019b734696161694e3619305"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/QQHRU/qqhru.js",
+      "sha256": "df235968d84c3050366da3f0aba6a04a0d235127d8d07955e6faee0711ef2854"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/QUT/qut.js",
+      "sha256": "e958c477287d9f2341c1f4285ec9afda581146c3e39807aa69532940a9ea351f"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SCUEC/scuec.js",
+      "sha256": "3c4995a9730420f9c90ec8c7d04554a61118769552523229f145451e98abf56f"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SCUT/SCUT_01.js",
+      "sha256": "085b5182a0aa344720481870034bc9692aad55954a3679e974027ab63adecc0c"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SDDFVC/sddfvc.js",
+      "sha256": "169d53001174f6623dfa2369e3e59a399dd93e7fbe1f089706d3b7599f69f285"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SDIPCT/sdipct.js",
+      "sha256": "b9c1b6347224069c2528d47ea953e48b9a97ce8f99ca75d8f9f13ed4ab648f53"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SDJTU/sdjtu.js",
+      "sha256": "ff8e7f812cebc49fa9e3b06d04158b70f01e93a30a3b327fb89fc1902afc3d36"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SDLIVC/sdlivc.js",
+      "sha256": "e0a96d7def39c85772571d53fa626c4dd54e605cadac1a771c40583d0ada140e"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SDNU/sdnu.js",
+      "sha256": "80b3229f5441cc71069fa5d0368659f20336374ebe02c4cb4dc883151c86dba5"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SHUFEZJ/shufezj.js",
+      "sha256": "d034e16cc58b1cc462faf1ce1f6f68031dacae663e14ef01938534b65b10ec38"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SHZQ/shzq.js",
+      "sha256": "08a2be5f4d2e21b54b4042f5363484d5942e8a3987bd6badc1e529189724f50b"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SICNU/school.js",
+      "sha256": "858e2b6e01430ee105c6cb7666e4d23d87c81e85c353b0bd8888e0c8ddf08ba4"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/STCNCHU/stcnchu.js",
+      "sha256": "2a5229bb4047bbd48762e88bee6c2e12e83ab5c6eb5ea85337392acc8bce9118"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/STU/stu.js",
+      "sha256": "aaf7504b5115ba4be6608f5ee2d73cd456f3122e44cbc814a10261ecb4f92dd5"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SUDA/suda.js",
+      "sha256": "8a3df3cf83643c1d15caa83e8fe714154bafee9a49077a36bbdb2fd5ca31128b"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SWJTU/swjtu_vatuu.js",
+      "sha256": "2e4a75bb1d4a5a694a4096ec250dd6e7329753ad585f5a91065e1436f3a8e104"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SXGCXY/sxgcxy_01.js",
+      "sha256": "20ae0906945f4ddc1b42a4d68aaf6aec319b05753f6ddaf334b1808b72fd0108"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/SYIST/syist_01.js",
+      "sha256": "03a52bb563ad69c9f844d5d053db5bdfc64c9982c38a6396a5a7dae3bc169331"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/TARU/taru_01.js",
+      "sha256": "fc4e77ec812f5e49d9480fb6f0f87f02ba984927d9b45324e461f0a3920d707a"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/TCU/tcu_01.js",
+      "sha256": "c46328d65df4b64f747cc58d9bec606618703e7e34cc36966b393e4d2108e8f9"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/TJAU/tjau.js",
+      "sha256": "aa762bad71b74b50f50b1f91e6c996312eae086e1d25d0ef6e7e0c6ac761bb6a"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/TONGJI/tongji_01.js",
+      "sha256": "a42b3a4b60af6590019a6982f76f2f87dfb6accbb2203b12109749cf10c8636f"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/TSU/tsu_01.js",
+      "sha256": "c94d10729a2d86bf00d922aaf6fb8bc6263b091cef1fe308519754ce5d2f1d98"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/UCAS/ucas.js",
+      "sha256": "0c0babd33d8f5a411a39f4cc6a35ae1a7d045becc28baa4c403dffb4bb44b113"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/UESTC/uestc.js",
+      "sha256": "4c7b0640a8ec17abf87b082adb6331334e937b684c56812376a6153525f0b5aa"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/UJN/school.js",
+      "sha256": "8d69e76f00fa87122e01a51cf389c63cc77c393b63026876b0581904667886f3"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/UJS/ujs_zhengfang_v9.0.js",
+      "sha256": "a09d919f68ac885e263685e85c7339289010da3079f502d9ef18283aa5ad21ac"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/UPC/upc.js",
+      "sha256": "c8d07b394c6a2c4baa06332bfe066e12ca82210e7c6f387cd7fc5ff75ca07735"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/USTC/ustc.js",
+      "sha256": "a0cb05c165dab1c60f280bbe1bc384885de97d068f65995860b0f3c24a0b97e0"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/UZZ/uzz_01.js",
+      "sha256": "649746388908b456609f44800abbda3d7d59902cc2682ae61a4521d232ae9321"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/WBU/wbu_01.js",
+      "sha256": "121099dd4185ce31b6bd81ebbbf09c287ec9c98aa102eaca6d67425a536c7017"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/WBU/wbu_02.js",
+      "sha256": "1a2062d3b8fad74ce40e8b5e612a68734bc92da19c7996f8ce41bf84e591e3f4"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/WENHUA/wenhua_01.js",
+      "sha256": "930ede322cf51776a1a254c16480bbe5a3896e7fa60d77aefb6566cd1312bf63"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/WHCB/WHCB.js",
+      "sha256": "fecacfef9146707a015ddc1d97700a53344be53727d94059540db7f2270237ee"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/WHIT/whit.js",
+      "sha256": "ee563de48f2eec568f310576036d7ae1203439a9758bf3a57332e2e59838c275"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/WHUT/whut_01.js",
+      "sha256": "3202a9343e18ffaf1374ff12f2bd9b2a313bd10bced5bfa45a305b5daf030915"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/XATU/myschool.js",
+      "sha256": "2746e9d245ae07232f939cdcec6f6d023b323df550dec1e117c505b7d52f61ea"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/XAUT/XAUT_01.js",
+      "sha256": "069a98f9f7044b736df312ad2574d52facdfc85842c9b1031532628219d4b14e"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/XAWL/xawl_01.js",
+      "sha256": "05977ce0e2c4301b9aba54504880a2c84ba2a0e39314147f432db89a840abebc"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/XIYI/xiyi.js",
+      "sha256": "4bebb10c012f5eaafc310998257c20e1fd5067be4f28335346eea0e410a57585"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/XJIE/xjie_01.js",
+      "sha256": "3d44cd60c681d676905655131f1b7509a959281bd4ef599a6e0886c70003c03f"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/XJZFU/xjzfu.js",
+      "sha256": "28dba2ba727872bd5ab92606dd6cb980de30121eefc32180c7036a8f2e905b29"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/XMCU/xmcu_01.js",
+      "sha256": "39b69d86b2c390a2faef43c812e5b7f21263af8cedacaa2b781a4c46a09919d9"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/XUST/xust_01.js",
+      "sha256": "aa1e7e5b011b1b74e9d77641a78fd89cfa37cdd2e762529a70ec48940c4aefec"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/XWXY/xwxy.js",
+      "sha256": "c70423aae825055012c8a2a79d78c039684a0fa2b13cda7f053bf83da8973e53"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/XYAFU/xyafu_01.js",
+      "sha256": "0bb279fe8b81bbd8d75c97ff34ec15d1d590981a16872aff8320caabb374a5c3"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/XZIT/xzit_01.js",
+      "sha256": "78384be6960c0bba485c049eb5356a08ad13927c2b8ff41b2df35878e5b7e1eb"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/YANGTZEU/yu.js",
+      "sha256": "1792822a58b710dc36d879a57aacd9d1b413c9efd5b06578785e20aedaaa5e93"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/YIBINU/yibinu_01.js",
+      "sha256": "dd8949b9425d69a0f8e4b50c977788450e10f54a1aef002e7521748953e704ab"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/YMUN/ymun.js",
+      "sha256": "e990e42dacea00ec662bfb9c47129e7c46ca98c2bb85a2048c850c6e75ce92f4"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/YNUFE/ynufe.js",
+      "sha256": "2b8d0867cd82a1e8e7de55754f7e29b3999011aa86f5aff77bf9120b2d191ffe"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/YXHMC/yxhmc.js",
+      "sha256": "32af6a5e182e6fc13f16e77164571006e24495fb624663ca8c40448535cdf7df"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/YZU/yzu.js",
+      "sha256": "d63f0289bab02e42c1d777c4b4e5a370c7de5f576fee9e69f32730781f4356d4"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/ZCMU/zcmu.js",
+      "sha256": "9398f480ef90ecbfafeb9366d96189c03af8c0e28492fb2ad4536132c18b16db"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/ZHKU/zhku_lc6464.js",
+      "sha256": "b637aea2d8cee83355450909641424e35731e6b4b921167e6289ab757b5f6a98"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/ZJUT/zjut_01.js",
+      "sha256": "77898ecd7006d875f0bf6f14061d0a6ca81e3e3ee8a4606389f6cc7c565b22ad"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/ZUA/zua.js",
+      "sha256": "fc4290f66e3cf922d6bb1c57978180161c65425cb3b3404adb650dfc3fc8fd0e"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_common/timetable_parser_utils.js",
+      "sha256": "610a7026e18a2391d2d6b40ef020c241413dfe177df4ab5db3b660f91c714b6d"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/chaoxing.js",
+      "sha256": "b4f0177b7c73e1c94d01f53d51a6745ceefa1f74a75bc378900adb1a6a0d6079"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/dom_matrix_helper.js",
+      "sha256": "1c76a665a4e13d5490aa2058fae987a21fba6a874bccfdd1dd72d7b564c70631"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/index.js",
+      "sha256": "2370f89461a9d598196ad3ae477897f751bfa07fe18e1686444ab5951721f5a7"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/kingosoft.js",
+      "sha256": "9c5f859e0333fee8c72ca41d1a7a47c67fbb17cdf880ba2f00268f268fd6c6f5"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/kingosoft_new.js",
+      "sha256": "f94c6864f2317235aa41c3dd649da1dcb31d989dfedfce0de5708ccf1848c220"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/qiangzhi.js",
+      "sha256": "8597a61cf4a33fea2efbfedc4d243e4fe31a8a0e7f39b2f4e98eac27b9117ecf"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/qiangzhi_old.js",
+      "sha256": "8c805653731c4e19cce4e012c6075acef298a6b5369fe10cbab4d027792bc6b4"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/south_soft.js",
+      "sha256": "cd5d0634c736be2362f5a07026215e9e4bc5e00f159a20c1a940bdc109ddb060"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/urp.js",
+      "sha256": "be5ef5b39f4d2cc0d4fad275499d2c49e28ed75ed0ca0eeb50a9e9c37519fe47"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/urp_new.js",
+      "sha256": "9f6672bc6f45c4394e512fe720d22356e75ec95be61ef25c06858871a92ccda8"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/wisedu.js",
+      "sha256": "483d603c7798a116fd2340b8146a656c9771c3a326b97699c421d7715ae68141"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/_timetable_parsers/zhengfang_new.js",
+      "sha256": "2597e68a77fda14fb6a53c71d2e4f0a12b258f2d215e5ecd053fc12f78e67147"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/chaoxing_jiaowu/chaoxing.js",
+      "sha256": "1dc460cd0820b8876fd599d51ff27d020e965843df4ca550a7100aae986add43"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/chengfang/chengfang.js",
+      "sha256": "ef91eb9fab1ce7044f1ab6dfe04bce0440cf8a642cffe25af9ceb152787edba7"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/hubei_engineering/hbeu.js",
+      "sha256": "a0d377681651007ee68832640394ecb3682b32410a6b18f250af3d4f1b953573"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/hufe/hufe.js",
+      "sha256": "4054565b4dbebbde3a28844ca2c7c902fe686a128a9ab6421aa6a61ec0d9b5af"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/kingosoft/kingosoft.js",
+      "sha256": "112c1e4c410ceaa304e63c990aec1fbbc8896835398698fa8032eea3321f6eb7"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/qiangzhi/qiangzhi.js",
+      "sha256": "8b4d02acaf4cc5394a6f8753468660cef4facc7ee1a7cc9dac4a6f78aec09cef"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/qingguo_jiaowu/qingguo_01.js",
+      "sha256": "ed011aa859e0a9ba2dab084153a9cc3b651079d7d973202b72b6ef6ee3e7791c"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/south_soft/south_soft.js",
+      "sha256": "03101279efcad0f94bdf3c9dddbf271cd3daa3c9293b3749739a9ae89fbeca78"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/syau/syau.js",
+      "sha256": "0eb9f04b65bfb345611a09a6cd945752e18370377053d38b342c5cd59c0b663d"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/urp/urp.js",
+      "sha256": "6981fb38426a6754fa46866a2a667353047029fb6a5df8c2b28dd1fee3d2f2f0"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/urp_jiaowu/urp_01.js",
+      "sha256": "fd6182cf301bca7937dbf9f7d5197e5056589ead240874a00d417ec58014f976"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/wisedu/wisedu.js",
+      "sha256": "9fbb0c1a87014253f6b570c09214af53f2938fe11e0e92d3c9f4cb3ce2b1fb75"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/zhengfang/zhengfang.js",
+      "sha256": "3ff27f26a0ad258c3e56928cfb3320c10de697eacd17055aa683cfabcba77f38"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/resources/zhengfang_jiaowu/zhengfang_01.js",
+      "sha256": "87a5a8a12a262d8240c37df8862cb54d7f89c5787050b308d6b7a94a697cca25"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/schools_template.json",
+      "sha256": "c1f2f70d9732a40e159b3ddeda93cd36993bf3a0d6c875b99ee3e2f7b9348101"
+    },
+    {
+      "path": "shared/assets/offline_repo/schools/timetable_schools.json",
+      "sha256": "bf29bd99462d2e5babcd95ca9d1d4e615b7467e59d10ad70bca1ddde75132717"
+    },
+    {
+      "path": "shared/build.gradle.kts",
+      "sha256": "9b6016b69573bee6bdf286b18c78cd346ed6dbe207e9d78c84d32d58d061cd87"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/10.json",
+      "sha256": "fd20208f3f3365d624200ce3f8d773391a0024e0bb71a09666c0ed1ce832e4cf"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/11.json",
+      "sha256": "19135e2a27531fefeb7ce389982cd7a7d92c4664d4de825a5b3b7e62fc600ace"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/12.json",
+      "sha256": "83a7a4d8cab2f81c3f2c1cfe7caedd19b8ee9490c73299f9394e93839d02c106"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/13.json",
+      "sha256": "982221d35fef02c8def189c2a2bc363fabcb20aaf7e6b9e8ee8c7a67003eb7a9"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/14.json",
+      "sha256": "3845a6c3fe86d11fdd9aada27c6d634cf80b0ba2d5942f5a0a5b481f874f4945"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/15.json",
+      "sha256": "e46f3003fab5364600c469fa6ace2339271b4bba5d67aaa62fab4d81092bc10d"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/16.json",
+      "sha256": "ac9d87cc702420b6b3cb5bd755ef47d074347426265a5a3294686ca78e8a11ca"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/3.json",
+      "sha256": "a651bdac57122833ffdb17e37b9e27043e8662b6be3a791c40c73097eccdcc0b"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/4.json",
+      "sha256": "03d6038618f3080494163e792516bfe98a1fa803ce7c9cffe85cf3f6fd4102bf"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/5.json",
+      "sha256": "6f89e6e5769f835af4ed06533659e6b4251fce76e698bafaae4b3a7fd535d1a5"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/6.json",
+      "sha256": "9bb034cd25056f2b8715f50155c6d7d25b990ca453fef10f06e32d86348dbd4a"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/7.json",
+      "sha256": "06a857c149ec6c1bf6b4564b2df38ab7dfcb9eb858d89a2cf1eaa9896271b58d"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/8.json",
+      "sha256": "1c73e98bb74ddd5940b8d47491aa8fdc25cf7fb69a12090f3cb23b05e0b7fc86"
+    },
+    {
+      "path": "shared/schemas/com.shangkeschedule.data.db.main.MainAppDatabase/9.json",
+      "sha256": "d92ecf3b7dfb96d4a8416ebee22af0b5341e5b4fa71bdded36968cc4927c0cf5"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/AdapterRemoteUpdaterPathTest.kt",
+      "sha256": "1e175a63f360b4e8bcce3c6f1e592de24acc2fdd8a856a1c41c10297f88c068f"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/AdapterScanWatchdogTest.kt",
+      "sha256": "18cade345c8180f80d2627695ba0e75c0620548fa0c43aa467cba74e153f7743"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/AiImportClientTest.kt",
+      "sha256": "573056c4f509d2bb1a7c64084c71cc5a15cfad7e78ccb81980c4f98c1b8d3fb4"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/AiPromptPlainTextContractTest.kt",
+      "sha256": "9dfcb43211e936c66fcba805bd24a274f47953d0f86b8b651c9aaebda71703f7"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/AutoModePlanTest.kt",
+      "sha256": "1fa2479b16572197be48e3e94cebf0dd2eb6502ea71d9ad1c15dbbe08d3357af"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/BoundedStreamReaderTest.kt",
+      "sha256": "ba760ab97f24bd00bbd3251b4205b59bf5df96afec6ef64524dd016e933977e5"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/CopySemesterNameTest.kt",
+      "sha256": "5ed6c1f3c856452a18842a7b17fae95cda7a80cf93ebc075f2a6be0d37b448af"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/CoupleFreeTimeCalculatorTest.kt",
+      "sha256": "e021187092810cb5d8f3cb4dff8d723700b8903a9450ecab8126fe42c9c5b822"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/CourseNotePruneTest.kt",
+      "sha256": "edb3eedf1281cc129e7006809d93ccadeb9209f2338397f056aefa90531cd819"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/CourseShareCodecTest.kt",
+      "sha256": "2ee006553414c7715d91f4e7b494de94e2ac81cc7950f2ecf6f40f23fe13c6a9"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/DatabaseMigrationChainTest.kt",
+      "sha256": "1a2c7781ffc1488f4040318f75b6d91a466359ddd44020b5fd5e13a4595bafd0"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/EmptyWeeksImportTest.kt",
+      "sha256": "856716081d9b19bbbb95bce0545569966f827a2027d777d6529124b77bca428e"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/ExcelMergedCellTest.kt",
+      "sha256": "47ed315e987b4538db1d4bde665bf4e177f42becfc6a6da0978fb4a255f87858"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/GpaScaleLinearTest.kt",
+      "sha256": "a2f9e5e04dc4ef9e63bf14132e45de2641e0dd5e72fc0b950136f36c7c5dea23"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/GradeStudyParsingTest.kt",
+      "sha256": "7e7e9752ba4f64abae2713765126f64760d298f81ec31b1a813ee79121ad5422"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/HolidayRangeTest.kt",
+      "sha256": "0b04449d42d4b66539d29cc8a9cf5e182fc8c397c00f8fddffac73515afa6bfa"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/IcsParseTest.kt",
+      "sha256": "14b61aa858a4f607e61925d4a37bdc06296f24c3623f8e7e48237a15b7952867"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/ImportIdleWatchdogTest.kt",
+      "sha256": "071d1a885041292324b5331b191aae3183c091f3e81e89f011cdc5230fa66606"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/NotificationEngineTest.kt",
+      "sha256": "029ff0ca5fc84c648c811632855346e099f8979d86a0a86f1b6ead2b61949326"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/OfflineRepoArchiveTest.kt",
+      "sha256": "92af624117b6b94455e185212fdac29a5a1b41b368e09346e026b416dfbc5eab"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/ParserErrorCodeTest.kt",
+      "sha256": "dafe68984e15025f5d1f6228167fd7a755e2810901fabc72c03975267dc464ad"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/ReminderPlanTest.kt",
+      "sha256": "16f9766b60940b374017212223c2b4dba0881121fbc9b449f240c65239823f6c"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/RestoreModuleOrderTest.kt",
+      "sha256": "24b5a8c33f640d54372a0aeaae3f6c003ecf1ec349dcc1c0d7a10e37261bd2b9"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/SliderTrackGeometryTest.kt",
+      "sha256": "eab090fd772dfa9e6f91553a9392467225b7cf47e17e171da8f5fbbe2b4cf817"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/StrictJsonImportPriorityTest.kt",
+      "sha256": "ddbd57274979bb889d31224c731adc81dfba73c3ce0e944b377cd9d22b6f7687"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/StyleVersionGateTest.kt",
+      "sha256": "a64138ea37255006abb67dd96b211639a148df282c16d754d0085f7897a600ac"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/ThemeShareCodecTest.kt",
+      "sha256": "95b2a71a6ab9206cf2aa4068aef58512ee3d2127e5835de1f8089eb4b5cfebaf"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/TimeTextUtilsTest.kt",
+      "sha256": "387db878a77f766ff2740beb83ea2faa9072f9287cebfcca1747bdbc657ab41c"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/UniversalScheduleParserOddEvenTest.kt",
+      "sha256": "cd829ac6fb75cebefb17801222bad78d645f0ff9d4d154a4db64f9e5d0dbbb6b"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/UpdateCheckLogicTest.kt",
+      "sha256": "3c32bfc063ccbc540e59aa3deb3189f1ee6eddaab8c52064d46c45e57f129cf8"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/WallpaperTextColorTest.kt",
+      "sha256": "a5c8978376162be264d0c0442a2b3d217e009211a5c78262c92b57799e5622d3"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/LocalSecretsMigrationTest.kt",
+      "sha256": "96d8fbef1ca551e2ea1dd5df93d8ba1c30ef9b03f93593111a8296e6b3ea0a35"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/PercentFormatStringTest.kt",
+      "sha256": "456e126cc8041fea50f4b948b41d75235f824e3fc0f5684f67cb91f5dfa88f76"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/WidgetPinStringsTest.kt",
+      "sha256": "7d9b2a1369f3eb9c89eafbf019f91b51c31b54766f28c3e8a8995654c64444b7"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/data/model/MorningAlarmSettingsTest.kt",
+      "sha256": "a7936d53b70e6981152f8365df5f8deacd2caaf7fc49ab55b8f8bf827e30c4e2"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/data/model/SchoolCategoryTabTest.kt",
+      "sha256": "90b0ce80d833974f6b2c7f99288487cdd854c65a1e9759ff4c9e74d5961dea1f"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/data/repository/CategoryCreditAlignmentTest.kt",
+      "sha256": "2b080261aa89bfc8d0501059cfc6b60936d7b76c434532f3e30c7c6318eaf171"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/data/repository/ImportCourseConfigSchemeTest.kt",
+      "sha256": "b1474d9d0eba5a198cb1cc9e8e7e6b84f84971cc012b7cc2451a959e68a6282f"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/data/sync/WidgetSyncNotificationTest.kt",
+      "sha256": "3a14cee28e0ec902e5ad286e5064725a47302e95de88bbe7358d2f07d7fac310"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/notification/morning/MorningAlarmSyncGateTest.kt",
+      "sha256": "bc2397ace3c0362177b23af5ec3c8d9ea70345ed6fcdfb54f431a1ae6569ce8a"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/notification/morning/MorningAlarmWriteStatusStoreTest.kt",
+      "sha256": "cf8bd76935e575cdea50c99774eeb6a77603e37f59e0eb7df90239184330dd63"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/notification/morning/WeeklyAlarmConfirmationStoreTest.kt",
+      "sha256": "1b2e73398e0eb884a5f4a02851758028022f5f8c934851a215b6bb8375decac8"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/notification/plan/MorningAlarmHybridPlanTest.kt",
+      "sha256": "67d41c185cf110ce0e482655f825a54e221963523996106a17402854ad142192"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/notification/plan/MorningAlarmSemesterProjectionTest.kt",
+      "sha256": "4704e1407cc0d091af334c0250b9df583fc330ca9d8604f8784a7cbe0be6a440"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/notification/plan/MorningAlarmWeeklyRiskTest.kt",
+      "sha256": "a63b80e0aeb30f98141ccd33180fd6f4ed80058af90c5545eba8c0b58ef33ac1"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/notification/plan/WidgetRefreshEngineTest.kt",
+      "sha256": "addcf287507e818025b88b0bc145349648a04dfa9a644b6d0dc4f403c93f9d5e"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/tool/CalendarBrandColorTest.kt",
+      "sha256": "6ca2836c7706f7e4b523bf74c55abef978aa301b6f827b516293027c4347496b"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/tool/CalendarEventIndexTest.kt",
+      "sha256": "1785968baa17787c7d3686c41bf11d807bccf13d0351dca3cb8526a7dbc512fa"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/tool/CalendarIdentityMigrationTest.kt",
+      "sha256": "3d718a3a219abf8d2fb27ada5662c71c16bfb688357dd9a2911ea75a2b91ba9d"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/tool/CalendarOwnerMarkTest.kt",
+      "sha256": "966df0c6c9620c344a519700add6439c9cfab3ab1b6965849802d48e7a2792b4"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/tool/OemGuideResolverTest.kt",
+      "sha256": "a499a3786b7784ddb36a9a24968b5b706257bba98044e461b76a365aabcad74f"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/ui/schedule/components/CourseNameLineBudgetTest.kt",
+      "sha256": "d1f627bbf41357a004d0a404132d8a8274f75354b8b1794ed154282ea730d8b5"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/ui/schedule/components/WidgetProviderRouteCoverageTest.kt",
+      "sha256": "c7754d36739f84f75ae99c2540bdbd84317c3a6bb269bc427da265e1acda9fc1"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/ui/schoolselection/WebHostRulesTest.kt",
+      "sha256": "518f2bdb53278dacf2a5c7162aaae9c095d97a2b1af26d498043737f16246b15"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/ui/schoolselection/list/SchoolListEntryTest.kt",
+      "sha256": "a0a5898c9ea54d3017f94f20657fa02c19d3931b470672675617a2c0eecbbdf1"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/ui/schoolselection/web/AdapterErrorTextTest.kt",
+      "sha256": "dee61fc52b548d31db7cbc388bf3e78e5a0dcc73c0d9e3a21a4d3e32c6173235"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/ui/schoolselection/web/StudyNavigationTest.kt",
+      "sha256": "9d2655ab8a82183aeaf29155b5504933a86e2677f0b0e6b8716c3ed9ea661cbb"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/ui/settings/notification/MorningWeeklyUiRiskTest.kt",
+      "sha256": "3473cc1d2234a5729fc6a3ee85bba04346685dd60ea19a63481f60d2cf48b753"
+    },
+    {
+      "path": "shared/src/androidHostTest/kotlin/com/shangkeschedule/widget/WidgetRouteTest.kt",
+      "sha256": "618691ec27b24e546ad873cb44b20484a791ffd47c60a09b7a8460673881eb55"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/data/db/main/MainAppDatabase.android.kt",
+      "sha256": "ab31002161b9360241a1e9dc7efce27c3df01519879862005e675ab433e932fc"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/data/db/widget/WidgetDatabase.android.kt",
+      "sha256": "9c989d477b23c6ba4c83f277940f2c618e51629bd5aaeecc7a01fd24e20f2193"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/data/di/PlatformServices.android.kt",
+      "sha256": "b259e68a8e444c8f16bbbcee4ad0114e5868ea2ed744832c7428e0e32851eb56"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/data/repository/ThemeModeSync.android.kt",
+      "sha256": "b08fcb7c4e83a58faa84e26b9df1a8a16dd84a749bcf4cba30afc623e1ca48e4"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/notification/live/LiveUpdateSupport.kt",
+      "sha256": "b8365845ff424f5a374c76048dc52a62e06262df6eb5af00200a09319ad9bf8c"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/notification/morning/MorningAlarmRegistryStore.kt",
+      "sha256": "4e1ec9d3ab32400ee951fbfd5d1b16e23ee6355b951c83c0931478010fd3dc24"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/notification/morning/MorningAlarmSyncGate.kt",
+      "sha256": "95a9ff43383fee1648f12b69e231adb112bccf4c39377a386701c30cd5201faa"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/notification/morning/MorningAlarmWriteStatusStore.kt",
+      "sha256": "ffffab7895d17cfa580c54ce219f64613ba3d8765325b78f31bc1e5b7ce940bb"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/notification/morning/WeeklyAlarmConfirmationStore.kt",
+      "sha256": "64a3339cea8d98a6db5ce9262935c604515a7c174000acb0516dd1c96d7b32e6"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/tool/AppLog.android.kt",
+      "sha256": "c4fe9b11daad2c14509d26f28a9eee51d918d703bd6e06f777433e256c6baaec"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/tool/BoundedStreamReader.kt",
+      "sha256": "211fc5569bde2e924454031535a705f9e7a90a4de1f16579e3255ba7c7f5adf1"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/tool/CalendarAccountManager.android.kt",
+      "sha256": "c007f648f6869547eb4ea103038a7f9e99e4789dfe57197d30b105a6aa993b38"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/tool/CalendarIdentityMigration.kt",
+      "sha256": "c8e1b73d9cf071fd2a6f36a4f00d7562cf64637dc4c5e80361b5b9d818da157b"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/tool/ClipboardHelper.android.kt",
+      "sha256": "89a488e3c039da798dccb0c804f1db7aeb44e2078fc9671c95755992756e4dd8"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/tool/FileManager.android.kt",
+      "sha256": "c33aa944f7517118203312afe57639a5677a619fafe5f6c6435b0c067b36c5f6"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/tool/SecureCrypto.android.kt",
+      "sha256": "e654b7b62cc91be2ed8b7849ab94ccb75d2cafb26c1b1ecc459b32185fdaeb75"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/tool/SystemInfo.android.kt",
+      "sha256": "d7fecf88f4af370e2f91bf91da5628fc7067a82f0e290ded0709ddaf105012b3"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/tool/WidgetTroubleshoot.android.kt",
+      "sha256": "f31ffd60259b05d7daf75a08fd8550df90e69898a6c0e630577924e85a72db80"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/components/ImageCropper.android.kt",
+      "sha256": "c9139c3cd9172f466fef4274542051f52ec2dfedffc3e51ecb4812f976376d0f"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/components/ShareManager.android.kt",
+      "sha256": "6144570ed2a6016c2f41b4ae8b6ae4b8146623005a2fa13f6b0df93b6fc9e82d"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/glass/GlassPlatform.android.kt",
+      "sha256": "917897108876ea6b805d56255a2eb64faece8e4cfff09e60fbc60fae0a446aa8"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/schedule/components/WallpaperLuminance.android.kt",
+      "sha256": "5127a315e6076144db192e48d1829bb888e2346be42f9d8484a02b2c3fadfffa"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/schoolselection/web/AndroidWebConstants.kt",
+      "sha256": "948c789f98193c5a81db5c320effd5fe40e0ecf94b2e421e0684b8a102566409"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/schoolselection/web/WebCompatDelegate.kt",
+      "sha256": "0b13baf1b8e49e177f93e843fbb0e0aab71400f86f66c6d62da217f26927e213"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/schoolselection/web/WebHostRules.kt",
+      "sha256": "00e877fb070e742054baa41efe80b6f4b7d4be5e971e2c440688fd67053da203"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/schoolselection/web/WebView.android.kt",
+      "sha256": "3ed927d478f5bbbaacd78a5c3937a4d9a8d7b8f6d9cf53bd945bd7d75077c768"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/schoolselection/web/WebViewRequestInterceptor.kt",
+      "sha256": "a7e678ef9862b6d7ed713f63d2dffaab7dbd98794b74d1e843f29eb61caff7d0"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/settings/additional/LanguageSettingScreen.android.kt",
+      "sha256": "920baef0936892ad99c83ac94252b7fd6ae0eba8e609deeef368be07f13c4413"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/settings/conversion/CalendarSyncPermission.android.kt",
+      "sha256": "b6117fdee021eebe8a448efab209a98d90725d826cdfc17ecb899afc7199883c"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/settings/notification/GeneralSettingsCard.kt",
+      "sha256": "91f9eeb1c1293c45f71088d4da6ba72fa1e6b7a988b8bb0c8ce746dc093bae02"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/settings/notification/NotificationDialogs.kt",
+      "sha256": "2002f278237e06745acf766a9bf787d325956c308cb4ac89625d19cae85f34a1"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/settings/notification/NotificationSettingUtils.kt",
+      "sha256": "6585b1996e76d020a43557e73e88827e271b7f648f30d0187363af1ebeb254e0"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/settings/notification/NotificationSettingsScreen.android.kt",
+      "sha256": "2b059da26f1506f3fc6597110ec0037754dbf408a5c97508147b210c75825002"
+    },
+    {
+      "path": "shared/src/androidMain/kotlin/com/shangkeschedule/ui/theme/Theme.android.kt",
+      "sha256": "4ca1203826030d98cab75371d395165eb19639f5b95e2fa7f54bfdc4ec10c795"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/account_circle_24px.xml",
+      "sha256": "f1d9fb5a3d2fefeb827b997d9e405b0a3f411c8ccf26529debd71f1538941694"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/account_circle_filled_24px.xml",
+      "sha256": "14ff6625486588de8c2d55d228dfe5b9fa672158daead9344e8776beb6790202"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/add_24px.xml",
+      "sha256": "b0f04841ba5421305176e4ba7d5ad867c1f27fd1b4ee6b96d73a35afcae6e6c8"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/animation_24px.xml",
+      "sha256": "f7a4a72635405d7481c1c6d27bd50580980e77b1b26a566e493fe7e0cf80843e"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/archive_24px.xml",
+      "sha256": "00b9fe0883b3e97b4d8d487cbdf2742e5feae4ed08b02b5512371ead9ea31995"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/arrow_back_24px.xml",
+      "sha256": "cb4eb30600355dac441fab42d5e7702eaf9eb901a5548b5af8914d2e771a1b49"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/arrow_downward_24px.xml",
+      "sha256": "e131c9db99f9edc7469b626f9a83b00b0872520f2b6a9e687746fe032c33ed62"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/arrow_drop_down_24px.xml",
+      "sha256": "0884e9a2259adae6e9cffd349d836d1721e005d90b85289d5700efcd56349a1d"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/arrow_forward_24px.xml",
+      "sha256": "9ca90e648a89968fe3da489dba2c1295ec617b4b90b29e16eba7cf898000588c"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/blur_on_24px.xml",
+      "sha256": "2a3970a74860ed6afe3317bed55272710d7130efd71fc52b2cb8d6591418d8d7"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/build_24px.xml",
+      "sha256": "306485ab72cc618adbaaa35083ace0d200718f0ba97e0ccb7348b09ff37154ea"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/calendar_today_24px.xml",
+      "sha256": "c0b5d1b145bb8557a035b670fe824859d202b590191adccf8012fb3dd7707259"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/check_24px.xml",
+      "sha256": "a68d682d19facb4942cc737d8f7fe70e0ca791dbf6f75b862c600e1261112ae2"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/check_circle_24px.xml",
+      "sha256": "ea9d0b1ddb43b1cf26ad954271e6b11128590537abd5de22bb1c22a8554a34f5"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/chevron_right_24px.xml",
+      "sha256": "5df128a5588a61a59ecaf9dd80a3abd35dd0b8813764c2aeefb0558da8c13901"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/class_24px.xml",
+      "sha256": "04ef008b4ac2f842e7ae55c5fc5feee58e964b426407c6438f77e00dee2a65f7"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/close_24px.xml",
+      "sha256": "7de48ed746f3c08e8a4d98fdb55f0fda8196a012922080610b8b2e665002317f"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/cloud_24px.xml",
+      "sha256": "b701ea322eee9266f0db4a8c4864b74d7a79d03735496ae4b7bedbbe5074d2dc"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/code_24px.xml",
+      "sha256": "b76877bf5e95ea6553fc13a418131e7a50a7b27454658c55a6bcbdf8ad06d9c8"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/content_copy_24px.xml",
+      "sha256": "4bc06bef116633804c908f373756b31ccf14329414e33e148d57fe84dcd2f1a8"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/delete_24px.xml",
+      "sha256": "7e6271ec6668939442edc7f175e06874de1dfd904468526737f08796a9e6a67d"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/desktop_windows_24px.xml",
+      "sha256": "b9dc55483e9c73391dc7fdd1f5de90db27e7d994c1626a02519cf1e9252a819d"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/developer_mode_24px.xml",
+      "sha256": "c90a9f4465ae95cc13b8e78e037a0469830aa389f7895532a61c08d5b1537ca1"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/double_arrow_24px.xml",
+      "sha256": "8adc88439c6e4aac670c594f28fd1e955cead75e20b898aa1ba7759b7b2c3610"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/download_24px.xml",
+      "sha256": "7c15db9e971f7346770e5b43d47dbaefbec266ca6200fe7f763bc0da152164cf"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/edit_24px.xml",
+      "sha256": "6967faede8a86a55c748001eb5ee30ef2078ca2c2107be3dfd5b0eb2e5499232"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/email_24px.xml",
+      "sha256": "54f44cc966bc484886a5fad8d4fb9bf01badc9dc1f9e4b6a3c8d3f227c01b95f"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/favorite_24px.xml",
+      "sha256": "3f46fde5856dd647a23f358e81872b20b387a6b1426f972098e1d2c2bddc61bd"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/filter_list_24px.xml",
+      "sha256": "0d10768eeb8c90987b69ece979877d3828aa19cd9d9baa740546c668c29ea9c1"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/home_24px.xml",
+      "sha256": "c9ca636188e6848ec44a04599e615b2743ad405e80b04a68ad42d19c27f029b3"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/ic_launcher_foreground.webp",
+      "sha256": "55538ce2a3c8f219b6606af6b2e8273d33112de242a2a0be8711d60af237e6e6"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/image_24px.xml",
+      "sha256": "c279c4dcf9a6ac95d4cd933484b87f624eaa32b9e69184f6b70d176439596f40"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/info_24px.xml",
+      "sha256": "6002d40bc58658a2f4f69ebe071ac0629c6537b364e4f23b33a3a99471fbbf36"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/language_24px.xml",
+      "sha256": "b611f722fe2455e7192166f4898c2af9e407c6b046a5ff1cf592c9a07ab227df"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/link_24px.xml",
+      "sha256": "b2ec083c2113ae0e4e767cf979a8ab5ad23705f9d7c06c633df3ae7d38b0b394"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/list_alt_24px.xml",
+      "sha256": "af2e6fdf204f55b9169ea9b21ef04aa0b72ec44df53af13a32e3c37d62a22820"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/location_on_24px.xml",
+      "sha256": "6b05efc9438ba436dde537e8cfbab67ef55276c454fcca7d19e81e46389a5f4a"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/menu_open_24px.xml",
+      "sha256": "266ee5d95b2dbc8820d6952e20e2e8d29b858a278b1a323c07678636f3ceff82"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/more_horiz_24px.xml",
+      "sha256": "5a58708df37e6698fdcc3dc165517fa68906536bd54edc3e17b8ed7e761279a1"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/more_vert_24px.xml",
+      "sha256": "35ca522d648f3e6234570e4d9064c7ad5639ff0077d9fc9acdb6c9f3877cc40d"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/notifications_24px.xml",
+      "sha256": "96c97e7a81dd91ae81bda51af1a6e854d44f303c0d8b78e864bcc9dc914ee579"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/palette_24px.xml",
+      "sha256": "6d262f1be8995805d65a8b4cb1cfe6141bce6370972632f27b1393c8b6cb239e"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/person_24px.xml",
+      "sha256": "dc5ae3cec7f6025e09988f48bf10a8eca5a343aec35e113b98c5c5106a461e8c"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/phone_android_24px.xml",
+      "sha256": "33050b4a28329ba83612e1205412c72faebd54291bd12d48f0c635e2cf27b51c"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/refresh_24px.xml",
+      "sha256": "3c8d91706307fe42bb3d68d1c824b948687f366dfc2728a2b5e0e332eb650f7a"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/save_24px.xml",
+      "sha256": "56a8667648b1041779c545f98598c21384123fb2b0aa4f073115027b6652ffd0"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/schedule_24px.xml",
+      "sha256": "d2c77c460e23949b7e04af21542bad55dc202e91f472fe20d8714125ed2a1133"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/school_24px.xml",
+      "sha256": "d1e17db08df94bd8d64dedf43dc29c143e8bab60ccb94cd7f37454e9a9daafae"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/search_24px.xml",
+      "sha256": "ecf45cb735eb4410559ea8fdb3ccefa4dcbbfbb4be6e1569424f085cfcb2259a"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/star_24px.xml",
+      "sha256": "8fd96cfa89cf0b35120c569652229d0421c0a8d0c8621cb62ef6f62d1d0cd3d0"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/sticky_note_2_24px.xml",
+      "sha256": "11b36368699e050249ef7442fbf6363afc257509b4fd358249be024a7154b9c8"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/swap_horiz_24px.xml",
+      "sha256": "67c0303d75ed8176ddfecfa303fcc3b32033c4eb41f643af906d76dcee07fdf5"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/sync_alt_24px.xml",
+      "sha256": "b0abd1c2f7426e086af6a2be7789e139fdeae403e7fc529d272cbe71b25eed38"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/tune_24px.xml",
+      "sha256": "829e077eb30072cf73b1d8e57b4e9d853f670c66077abf02450103da5d24fdb6"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/upload_24px.xml",
+      "sha256": "e232deb26d6f69dbea3f19e4f40cb97e0e86b380d455e0f02b2d440bf2897aa1"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/view_agenda_24px.xml",
+      "sha256": "9be52659ae90efc2246cc474a543b6e45d1b60f514f563325c1f19360fb4b11e"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/view_agenda_filled_24px.xml",
+      "sha256": "15a27ea91441401ce9f2944f3338f23884faf132dd1e55a16e8ef03db56dc31c"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/view_week_24px.xml",
+      "sha256": "4754b115ae500161f3f46342b95e1024ca906bc8ec6f44625507088160e73990"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/view_week_filled_24px.xml",
+      "sha256": "fb14d0edff7201fe281f5c2d4db16332427e69abca1f1cd86977cce106211c9e"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/drawable/visibility_24px.xml",
+      "sha256": "a76a697347fa2d4837a1b0d51ece95a618d63f97f3969ef0b2dacbd89e6fe5fb"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/files/privacy_policy.md",
+      "sha256": "501f2bc05e8111510064fb4c2a137f2afb0bdf21c353690b98e8e476dfbfc703"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/files/terms_of_service.md",
+      "sha256": "c4d3a7c21c51cef37dbe109fe20639bfc35869be6abeb955cde4c57791c247d7"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/font/Lora-Regular.ttf",
+      "sha256": "3e113b2400db10ebe5aa8919cab4e6048c848f242b2cf94fba16d3dcda4e7332"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/font/Newsreader-SemiBold.ttf",
+      "sha256": "1c53cfaf2bef6f1793c1b150c72afe538773a00712d13c61375d5a89cdb2c664"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/font/Poppins-Bold.ttf",
+      "sha256": "9958c8775d8332df7e9adb4946f4958d7f3238f47d4188cf67c348d58998a5f4"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/font/Poppins-Medium.ttf",
+      "sha256": "26ace0d4908f1e21db1eb95fe3ac0105f8c4783adfc02e6b909db5e22e735676"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/font/Poppins-Regular.ttf",
+      "sha256": "9e8c31a8d4d06f2a3606313841e3e509cde750d8f79a0d26a2eda1c18012f4e9"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/font/Poppins-SemiBold.ttf",
+      "sha256": "09e222ad8d80f4e01c127d1c8c835a921240e65e50b9fcfa24f1fc0b23816fb4"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/values-en/strings.xml",
+      "sha256": "d2b095aa23d7e003435da92db8e60544431ce16543dbaa2b2a1ebd543b8b3e48"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/values-zh-rTW/strings.xml",
+      "sha256": "44824ca0d2b0fa3bbd852b92cfa04e24279afab0bc40e58c36843a5ae12fe981"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/values/languages.xml",
+      "sha256": "63653b75575273a5046815fcc2c4d5e341526a69725f33741f2440725aadadb5"
+    },
+    {
+      "path": "shared/src/commonMain/composeResources/values/strings.xml",
+      "sha256": "5aaa5e8d4bc2223f4fa91c7d60a516ddc0083977e0b03b0a5ed56ef13b5c50ed"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/App.kt",
+      "sha256": "167e3e94c2817642000c006e7c84d9f173c06a81ac358688222195013e86f1de"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/Navigation.kt",
+      "sha256": "8966a58a2d12c7a42b4ff49ab25e9d822f610d4240fd06208ac8f8158ff5ae5c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/api/AiImportClient.kt",
+      "sha256": "f048f7ba14656d1c49cfbf30ff29d9d2fedb7d896f984f18e45f35956b92578d"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/api/UpdateCheckClient.kt",
+      "sha256": "5c3e7030c5075f8fb0274cdd2b55ef45b0119b3570064b2b72e29e84a5888600"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/api/date/ApiDateImporter.kt",
+      "sha256": "083d21a223b598cde2d7561696da2bd2b5081633fa4cf019ebd2694810f48e2e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/api/webdav/WebDavClient.kt",
+      "sha256": "b39274a11de4b33de0dafb59402c8992ba8075a7fc437784dcdf82d61f616bae"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/api/webdav/WebDavConfig.kt",
+      "sha256": "37c6f542a9e5aa8e9e73cfeb761949201f051b507b36e5177ed445a667aedef4"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/codec/CourseShareCodec.kt",
+      "sha256": "fc5ece17632a23395153ff435635617bfcf74f7c927bd06f414eb79cc3a7c20d"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/codec/ThemeShareCodec.kt",
+      "sha256": "7631f9ff83fcbd859136431f61103932e1cd49ba304efc41827e5819113e6c23"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/Course.kt",
+      "sha256": "af475fed3097b03b00990e1e713bc39804a79d41f0f02c34d1ceacd097de5729"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CourseDao.kt",
+      "sha256": "ab0b04ee8a069b3b65a580389b7b835302ea274e3df373b615c6c3553547985b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CourseNote.kt",
+      "sha256": "a42791b3e9875a933e896dc261f6202c185491472b3fb0e03176329906818490"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CourseNoteDao.kt",
+      "sha256": "184747c3ab32195f9e87571e9be201e41b4de507866e5821efe987bba9c6904a"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CourseTable.kt",
+      "sha256": "92c4e5d695aa19e4e2dcaebcb0e6d4d049b076b7637997a3429b35a0b74f1324"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CourseTableConfig.kt",
+      "sha256": "505b4fd39841703f38d867857e98f9f2cb55189e1394b4d65ccaf0c297b66987"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CourseTableConfigDao.kt",
+      "sha256": "31b4a42bcbc0ea17231c72d4765a082fcd6642b0915db4abb4d6d92d0398bab9"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CourseTableDao.kt",
+      "sha256": "00a0865e032ee969d61ad3fb3393e39f25a18d8ce82826b318ba0adb644cc0d6"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CourseWeek.kt",
+      "sha256": "12212075244bb5a0902e7b284b2df8d6b4d992ec07846550b87349814c8cef7e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CourseWeekDao.kt",
+      "sha256": "b8ff9305210b0f5e7b13870ebdc83530e92be6e1893e5fba65178e46293e8c5d"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CourseWithWeeks.kt",
+      "sha256": "bd55607afbad21e8b1d8bcbaa1609b6b1e58d5ca79a16fc032984ecf7e141af2"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CurriculumCourse.kt",
+      "sha256": "28b02847aa5b83c747c71eebc108c7c297e7808ec713757ace909c35798277e4"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/CurriculumCourseDao.kt",
+      "sha256": "ab1ad11ebdbcb703cf69fc7272b65b3248aa7a22b4b85a3ac838e28be0a4f2af"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/DatabaseMigrations.kt",
+      "sha256": "f10a63ebe6f74c8d62667a2694805ff7bd352fe42ef98e57113dfc71d5406adb"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/Grade.kt",
+      "sha256": "7b3051c99718c4d5e8526a2f08ef6add635289218836728c6996e744d5042034"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/GradeDao.kt",
+      "sha256": "16905f1825c420926c92d43010d2da4b475ce2cf22700dc353c18f0c541c1189"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/MainAppDatabase.kt",
+      "sha256": "7eef65b3c9c99a591bd312da5f452ab1037a50a1e80bbe652e06b293c91fe889"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/ScheduleEvent.kt",
+      "sha256": "ef67bc42934829e331659f98db36c0569cfeef9bf48137a1a4a2961160dab5be"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/ScheduleEventDao.kt",
+      "sha256": "db7bdf74c974bbec50512911f655173414138494375a22dc014fa504c1121dfc"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/TimeSlot.kt",
+      "sha256": "50d37e955c5221ce8b24d1fe5560f29a6708205849ca1a498c274d51f6498e13"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/TimeSlotDao.kt",
+      "sha256": "32fe8f2ca98248a449a46c2d89d2d3fa3fa4a47e85eb85302d6eda0fa331fad3"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/TimeSlotScheme.kt",
+      "sha256": "3bd8e9f8a11718d07eb7460f9691049767906accebbb546b74bc33fb1ba24de5"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/TimeSlotSchemeDao.kt",
+      "sha256": "27965559b555df5ea09949d27caca908db19680d89e4df26325eb2715c9ba3be"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/TodoDao.kt",
+      "sha256": "68625f81f617d29dbecf7c8600aa2bd0abb04c6983e72f7bc1c8fbe0ee0c7d92"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/main/TodoItem.kt",
+      "sha256": "edc758a9024dc0c737603793d5a98759785625a878c969eaf02247a3722aa4bb"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/widget/WidgetAppSettings.kt",
+      "sha256": "aa0b402499703fbd19b8bc173318a1ac2f707467051e10e30d72361514f47e24"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/widget/WidgetAppSettingsDao.kt",
+      "sha256": "37b27cc5a24dfcd5aade62d67bbdb92d48719636824c2fe9ab21cdebf7ef7df0"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/widget/WidgetCourse.kt",
+      "sha256": "b6245e534c1ac6f0cc9c858dffbe5e9f7357990a6cd129ae1d8b9984fb55c871"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/widget/WidgetCourseDao.kt",
+      "sha256": "e02ec60cdcbeb5cde8fdb461729fcccec1dddce9019f9a174ae8a85712b9198f"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/db/widget/WidgetDatabase.kt",
+      "sha256": "a4104783077a66a100c0c90e341d441817a8f9bbc51189233c9cc63a231dc0f0"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/di/DataStoreModule.kt",
+      "sha256": "320d42a90036436c86ff25528044e462c31cf7def6489127419945604fc3e0eb"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/di/DatabaseModule.kt",
+      "sha256": "50743b6046d7ffed9db59ad07dc6c32ced59cc59221394c3da581f2fce746f76"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/di/PlatformServices.kt",
+      "sha256": "c137f1c4084ffe54dc3da0fc457e6b57dfac53800a27348e8cbd0d8ea945df4b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/di/SharedModule.kt",
+      "sha256": "40d2b78f36d2b810080e37c63aeff97da904aea57c9c7ada11258ad3c6baf3b2"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/logic/CoupleFreeTimeCalculator.kt",
+      "sha256": "55e4930641ac7096a1c7746f0b44cc2c33a500535ca1cdddd5e4b34e501bb308"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/AdapterSyncRecord.kt",
+      "sha256": "2e766b9412bd36b206ca14e36b95cb8c3f87edbe99868ba0ab0d542744b36571"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/AppSettingsModel.kt",
+      "sha256": "12a780400909bd8fb8c87a949ea083dfd70475a6c612fb5497544b297418582d"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/AppThemePreset.kt",
+      "sha256": "f767b38265e5f12a4b1e5ccbe6e5d5fa5aa93c6d7f504de6af6fef1f76deefee"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/CertCredential.kt",
+      "sha256": "443b9cb3e4c4e8bb4779041c21666cb93ef89e0c7161b844c8cd91d68b4c36cb"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/CourseCategoryLexicon.kt",
+      "sha256": "846832ef00468f37f30cf4c636133f94363a0927c09f61a5dec6d2c6eeb51d7a"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/CourseImportExport.kt",
+      "sha256": "703117dd54e88e79aaea457317913b89d2b819098b04043f18eef958f3ca30dc"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/CreditRequirement.kt",
+      "sha256": "18257d92a35a4efdaedd85d2fc8314b20b330f5fe4469d9137f83d805a471b0c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/MorningAlarmMode.kt",
+      "sha256": "81806c8764690049a7182e1ca344e2f6e8d9debeb0cfdadb67cda3e9a365280a"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/ScheduleGridStyle.kt",
+      "sha256": "5c14224e0bca7cd0cf2a2561d87e11d3432b24db271a05f96d5a0421207366d9"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/SchoolCategoryTab.kt",
+      "sha256": "4e4bfa0d9fe8f787520c31f5a4ba5439104d25371013296f72a17772dfac8f1c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/SchoolHistoryModel.kt",
+      "sha256": "daac9afaa023d14ae94d5b628dfebde9890dcf73a196374e77ccaec6276e0c4b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/model/StudyProgress.kt",
+      "sha256": "f025879f8d44ac3ddde40d6609002125d695d88202133ec077833698aec9a421"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/parser/EmptyClassroomParser.kt",
+      "sha256": "c73ed5c0a345a3c88a3f5cd269ef39692361d2cba0463e403770be61fca6d0fe"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/parser/ExcelScheduleParser.kt",
+      "sha256": "5b6642bbf566c9c91bc510a76429bf61f359233d0c7edd96666217c5a7e44bfc"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/parser/ImportFormat.kt",
+      "sha256": "3324bec99efc0c3aa6ad5defdb78667152e8724814c833651119d574c431b45f"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/parser/UniversalScheduleParser.kt",
+      "sha256": "c88753638b8715a6bebd86715098416454c869cd02b57778c807c330034341fa"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/ApiConfigRepository.kt",
+      "sha256": "b9779841aeab047299e9f42ee2ac88498d7ddb5bf6219829db4be2cf179492c3"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/AppSettingsRepository.kt",
+      "sha256": "10696820bae8f0213dddc1bbb1423bf95df3310aa380f376d930ac52329c42f5"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/BackupRepository.kt",
+      "sha256": "d2009fd4cee3a36ff2c22a5b3c7060763c73cf0ce72e69a64bc1b26a963fb3c3"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/CourseConversionRepository.kt",
+      "sha256": "4b04fd680210b69ce28187dc8601c227c47dd2ecd53e908aae77c11c4f4552bc"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/CourseNoteRepository.kt",
+      "sha256": "af953ca7ab7cfb4abbdb5cbbe0bbc76eeec6cb38da1d95342f53c05b69dbf1fd"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/CourseTableRepository.kt",
+      "sha256": "ed15816df6c8f65273ad82bd39cb6f4599def301865ef1d6ea58eb88e6862094"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/CurriculumRepository.kt",
+      "sha256": "b13d2202021f6035bda791e78eade6490cd660144b60429f08d276c17f35c711"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/GradeRepository.kt",
+      "sha256": "7a1b3d244521e4c4e86866d565eca84ef893c115d71d706ea52dd0bf2f19fea6"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/MorningAlarmSemesterRepository.kt",
+      "sha256": "7fd6146555552957c9f36018cfb202d39961f2ec9fddb82b7e181cc023d82fec"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/ScheduleEventRepository.kt",
+      "sha256": "0393d457bdaf9d1aa0eec6b4ab7dfbce3d7182af4d31c2177179bac859f92bc3"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/SchoolRepository.kt",
+      "sha256": "4c73d82dc64ab0582f0bf7de528865a92b5621d986cbf793a748d816ac4cf2f1"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/StyleSettingsRepository.kt",
+      "sha256": "5936408a4dcbdf10716927f3aa5a21f79ab6a217888478238224e13da3377a14"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/TimeSlotRepository.kt",
+      "sha256": "b462121f206f7b3aaa6c2ccf1083b1c5399103213c873f486d4922cf532be75f"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/TodoRepository.kt",
+      "sha256": "e7f2ba13f78c801b793462212eccd09d9ad287af389c7aaca0d43782b0773fc0"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/repository/WidgetRepository.kt",
+      "sha256": "7e045fc1622ed4e258a98204bf390d7d04228855018814c9a14dfce9ef37b95f"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/sync/WidgetDataSynchronizer.kt",
+      "sha256": "bf16e560709a484762bb8017fd4f4fb08c8d0441062e84b3ee269980ec75ef94"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/time/CalendarMath.kt",
+      "sha256": "1d3fce2504618fa66daccb7e853c33232989d90c1ef7ec73e6e201f71d0dfad0"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/data/time/CurrentDateFlow.kt",
+      "sha256": "2f10e85b83b840362afae096a841bcaa396db3291b1793d8dab7377ed3931efd"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/navigation/AppChannels.kt",
+      "sha256": "4ac721107e98b939871adba74c80cd30a65345a608fbde9cda29b6d71bfacf18"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/notification/identity/AlarmCodeBook.kt",
+      "sha256": "d0cf4a651dcd6c972f3dd4754acfdc56acc621cc00c4a01a97e3d7efed5e4174"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/notification/identity/NotificationIds.kt",
+      "sha256": "ae39357116b11f09449623aeb8cdf017beca2542855dd138806e237b208a312d"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/notification/plan/AutoModePlan.kt",
+      "sha256": "f1dfad779578672f983682763e49e8a7abc24fe5f85691dbb570a6d094eec0e1"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/notification/plan/MorningAlarmHybridPlan.kt",
+      "sha256": "a9f1ec3c8f87bb75743a9ee4fd01dea8f4e7065a69c73dce51c370f71202b254"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/notification/plan/MorningAlarmPlan.kt",
+      "sha256": "fe1608caf36fa96d9a1307a5fe5f7b1e2e69d686831b1af360484d7b1728dfb4"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/notification/plan/MorningAlarmSemesterProjection.kt",
+      "sha256": "84bef56cc75f8ab4e5da715d39d13c68d79df588ff111eddf707b3a8bc29a2ba"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/notification/plan/MorningAlarmWeeklyRisk.kt",
+      "sha256": "d068edf22d939e28d757741d561219949f0b020645b36d869cefab0eb6bac999"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/notification/plan/ReminderEngine.kt",
+      "sha256": "d44761b0e81a0353fe8d058a5e8b316ef73edf686a89442c1513846c6374ebc9"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/notification/plan/ReminderPlan.kt",
+      "sha256": "6dff41ee92e7aa23424f044ec9723c130200662bb59f20a6cfed9b0a35158b5a"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/notification/plan/WidgetRefreshEngine.kt",
+      "sha256": "f58a543b89bfdd9310f8da52c3edf781c94edb7c8329cb7f618f6df65306e7e1"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/notification/registry/MorningAlarmRegistry.kt",
+      "sha256": "651f0815153cce02909c73ae679e7736b9d8c88c0ad904a236b5c53699d75cef"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/AdapterRemoteUpdater.kt",
+      "sha256": "0e0b40b41336006eb4182c23503caff3678e4cb16f91397710d06b7a0684f2d4"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/AppExternalLinks.kt",
+      "sha256": "3f18d12a1d0b9dfe3fc0bee085fde4356c29e87e0892c46eb4bcbd5eb6aed70b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/AppLog.kt",
+      "sha256": "d54056f115df59d520e1ad2a8bb5fcab056da3d9582d1a9207824b714a2a251e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/CalendarAccountManager.kt",
+      "sha256": "9467cf75b58ce076f2cb5faa15cc473b514d01fc213aec8b6b329e5db7a0834a"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/CalendarBrandColor.kt",
+      "sha256": "202cbd8153d284e3ecf1485796f81072326725f45208babc2a7da8a2fb933ffc"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/CalendarOwnerMark.kt",
+      "sha256": "c173eada36567211505342156e6702b780624a901d250786ccef7821c169f38c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/ClipboardHelper.kt",
+      "sha256": "f785d3f3ddaefd0d02c935253442668fd7be2e13a6252ae7c509d79d48765a7f"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/ExternalTextImport.kt",
+      "sha256": "5dda1657c5c060253d120f47e6754994568710b3f7860a3433c6bd084cb9f6b8"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/FileManager.kt",
+      "sha256": "19d698372dcf3a0ba1ec3f5ac25cb104871c46af3d205a0409d879a7a7ab2ced"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/HolidayRange.kt",
+      "sha256": "5cde5e2af36a0e06b63f77f1a82a8c7d5f9f39aa99cd3288b8c0ae33d8357d18"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/HttpClientFactory.kt",
+      "sha256": "c4cc56ddf017ecee5cbb07b50a46382a6199830fb8c10a2a9aa3dcfc463dd960"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/IcsExportTool.kt",
+      "sha256": "fb7ef61bfe6a052702712eb76400c226f3f394e50d5277d72e6d43b81f884169"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/LunarCalendar.kt",
+      "sha256": "ab1b57e55d53268d389229266847eb2ee316f75665beea4c80f389c1c85eac5f"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/OemGuide.kt",
+      "sha256": "ef1cd305c2ddb16fbd8bc87010fcb807f2962fe36e5a37a22cc95697ecba4ed7"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/OfflineRepoArchive.kt",
+      "sha256": "cad4548f6f49ef96614cde05433790640dbca3d20d01535c538acba6a72dfae4"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/ResourceInitializerManager.kt",
+      "sha256": "2dc9944bfe8047ae556cef2a5f79960c83980ac0b2a42029b374722cd24c97d7"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/SecureCrypto.kt",
+      "sha256": "f8d9ea983ce11cb54a2889bca583ce22eacf6cae533a166bd1ac73dd69600b1c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/SystemInfo.kt",
+      "sha256": "ad0c14912e28b08eadede71f37f97673e3d6acf5dfddf64b769a41eeeef40af8"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/TimeTextUtils.kt",
+      "sha256": "848daf7f512095b22ff1c3f4fcf3dfcea96cccc4b16c56bbbde2978e81e09a15"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/WidgetTroubleshoot.kt",
+      "sha256": "4b4beefbea9ce7cac9b30a23b148cba141399cfea9d358cd20fdfa2d6d8b91f8"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/tool/ZipUtils.kt",
+      "sha256": "d806baaadb49ae608007323d2a015742af110e2f5f31d16fa1df6945d29cdbfe"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/adapters/AdapterStatusScreen.kt",
+      "sha256": "f189626b9ce7f3a37626d58721e6b69a4b33b0da5d52f20b2ac9db981375c2fb"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/adapters/AdapterStatusViewModel.kt",
+      "sha256": "7490603f77b7f38f2b69089db38755c27e4a473f1a218b296b389e0e3bfecfa2"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/agenda/AgendaScreen.kt",
+      "sha256": "e842f95d700a9f697548601cd73043462740455f2df15bc069b786fad8e96c4b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/agenda/AgendaViewModel.kt",
+      "sha256": "23a9bc51d62f89bb4c783c06572382125dbe957e5c12de9a8bea89b6e982fc1e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/cert/CertExamRegistry.kt",
+      "sha256": "9c0ea54c973b02c78d4e8079ba2ad6171a2aced022ee4488745a1ee7e8a1dc03"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/cert/CertExamScreen.kt",
+      "sha256": "951a03599aa9b970f8770d0ffc375978fa29c90d4e3ede957f2ef7263b337279"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/cert/CertExamViewModel.kt",
+      "sha256": "e3321eb84f79f3842e47a6d9bc474f2c50f7cacaf6c40e482d37402b858a77b5"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/AdvancedColorPicker.kt",
+      "sha256": "c87360766e5fc8e37227b4a39194617bc25ecc000e365e4fa46d065249ae4a95"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/AlphabetIndexerList.kt",
+      "sha256": "96dc32ba3548f0facc335f18db709f287da9f9f5c3fcabc05b08f9dcab78fe80"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/AppBasicComponents.kt",
+      "sha256": "6df776ad5b4b0f3916ac215c27dd998e579ed5d86c6c08294c9feb0a872219c2"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/AppHaptics.kt",
+      "sha256": "49c6a7d7285483d1c9ff26de14e9ae1f3961942dded6dedf366d65abf37ea5c7"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/AppStateCard.kt",
+      "sha256": "356cd48003edb90919761f7da17db13a92bf09306ea73b84ef86e2e65b9b5fb9"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/AppTopAppBar.kt",
+      "sha256": "a8756c4531a1d8008b1243a0ce5c7fd538243e94112195c66b8a05730173b1e9"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/CourseTablePickerDialog.kt",
+      "sha256": "dd2ae1397022d4f2c931debc6b67b68bf7731f9a5adfc9a5455d14061f94b330"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/DatePickerModal.kt",
+      "sha256": "305583e1bb603aad78c4435dcf8d6180e73c58ca23bb201aa5e219380419c5fc"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/DateRangePickerModal.kt",
+      "sha256": "1d155c791fdf32f2a65bfd030c2a3ca8a8c0f575d66a86ffe9a631570a95985a"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/ImageCropper.kt",
+      "sha256": "a4b03361079900d623a3d79f9007407b43519b28d5062c0e6f06f7f8eb41542e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/NavigationComponents.kt",
+      "sha256": "d60b9b65dac6cf43eba391e80d326778d1a09a689d128d8205adf2a4943bf51b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/NumberPicker.kt",
+      "sha256": "15444864544190a05df59dd977a5f0dea39d104adf4bbc280d3113e7fc98a617"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/ShareManager.kt",
+      "sha256": "09003444cd19e276b1fc0305d135fe0bdbc855bef2a67d8cd127e83c2b6d5eb2"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/StyleComponents.kt",
+      "sha256": "0b1fc8b09290d2abb86aa7c7f7f5743bbbd7df95902a6702d351adceb6a5a621"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/components/ToastManager.kt",
+      "sha256": "4116a7a4f19a9cfbb087ad24130049694fc9150a643537c7b855d36af31667e3"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/couple/CoupleFreeTimeScreen.kt",
+      "sha256": "32b105e9df7fdb98cc764857aa6b94cbbbf00f3405ada2446c10c2b88f70c554"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/couple/CoupleFreeTimeViewModel.kt",
+      "sha256": "0a6693af84d6fec099110f4d0e779d711407c278484a07c4e21cdee02e131ac4"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/feedback/FeedbackScreen.kt",
+      "sha256": "ae5f1267806ade0bd59f564beada447c2af5606a97962cb7fc5bbc8fa9e1eccb"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/feedback/FeedbackViewModel.kt",
+      "sha256": "76b9cfbc7becb72a4ca6de71ae044b217c7b3966222b246db9e9124d5398df10"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/glass/GlassBackdrop.kt",
+      "sha256": "d3c4e327739602637c8cbb1f042d479fab19a59620b21e210be7b0631539062c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/glass/GlassDecorations.kt",
+      "sha256": "171c066f189a0b3b44ff005e4ff8065035616a6a6e9872280c12f59630598c0d"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/glass/GlassEffectScope.kt",
+      "sha256": "9fc61ae3ca10bc7b6ffbd86e5ffbe627f12d93b230d25a8c200fc5a2abcb0ea3"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/glass/GlassInteractions.kt",
+      "sha256": "d803a5269a2224c7b0bfcef3e3417ed2c8833c768e037d1490088c9cf962902c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/glass/GlassPlatform.kt",
+      "sha256": "d2fdb1564e4e68e92a555d7b7185becf7ce0015b075acacb619ac350808d945e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/glass/GlassRefraction.kt",
+      "sha256": "3ba226b9aeae40533f58409815ce3f68d62caac9b866d15761f79f65209de929"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/glass/GlassShaders.kt",
+      "sha256": "e103895e6e8d0d52b5551af66eb5f205a51f7349effc8ed633d58a660804d8ab"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/glass/GlassSurface.kt",
+      "sha256": "cb11aa263e66d41519cccad3c9a1e7ac8eaa40f247c3d59909c4de2bb333451d"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/glass/LiquidGlassTabs.kt",
+      "sha256": "94140a71b957629406756d0d23e2235187d3929c8b268dde989b0a57dddd1067"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/grade/GradeScreen.kt",
+      "sha256": "582943f975b89a8c441a2db05f5cdd8d49fd33fbe2b5ed0d0588348d9ba87255"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/grade/GradeViewModel.kt",
+      "sha256": "2e72404644be62156b2855aa66e8f4a424d4c954a6db8028a62cba01e1f81ccb"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/note/CourseNoteScreen.kt",
+      "sha256": "c379b509fa1605fa3fdd5ae1ee5af638dc15d1dd31492da3774fedc1ac93e0d1"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/note/CourseNoteViewModel.kt",
+      "sha256": "1d44b6856cddd915d5608ee04deab35ee0f7482a38e1685632c2b725ca709796"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/ScheduleViewMode.kt",
+      "sha256": "5d979003b660c6f3c0d2f0f6c043396be5480210510fba873a307bb9e278d3cc"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/WeeklyScheduleScreen.kt",
+      "sha256": "a6813c2495e2135a56a5b13a77f0e35bafd516beeff789e881590e7cb76aa7f9"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/WeeklyScheduleViewModel.kt",
+      "sha256": "e058468c62ad2610c5b1cd02a51c91066ab22b82712b9a48c84cae23ed9cd70e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/AddScheduleGuide.kt",
+      "sha256": "3c37a691de42e8f272b3dd2513f7c6cb52fb344711c0eebd58dd2b7fac5766d9"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/CourseBlock.kt",
+      "sha256": "d300c81d963b934387a81799fe7cd37e3676cf7a16ee49c61857ab70d00fb671"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/CourseBlockColorUtil.kt",
+      "sha256": "7935f9b671a0bc0c0e315045c1b8258b021b61712e660ba2731be0174772cea4"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/CourseDetailBottomSheet.kt",
+      "sha256": "8207deb0b0c92ef4fade510c3592fea1ffc3826d6d4a6158bc8673b784f9e81c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/CourseNameLineBudget.kt",
+      "sha256": "5f15c1f5eef7dbf67d2f867d6f91c3cde7a1904da5ec6b7b690fe828ecf154d6"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/FloatingCourseBar.kt",
+      "sha256": "1bb4a52608c10ce76df320d282179fe3e6a435289afd207a629de65541b5f079"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/ScheduleGrid.kt",
+      "sha256": "c7ed8af262f80b7a71327331f4f521f80e5b53dcef4abd44e930418a81cce1df"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/ScheduleGridComponents.kt",
+      "sha256": "e2ef00e40fc5567552101f10209eb7c7727b8e6352281e6f23a14f249c70616a"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/ScheduleGridStyleComposed.kt",
+      "sha256": "86b6a2613604d34787beb3e931c10480cd69720e6c0b7cef5370e9bd591a783f"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/WallpaperLuminance.kt",
+      "sha256": "93d9138fba735e42b65ec583e67ebc245b5b9ebe2e3c8edb31ac9b3847c938a5"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/WallpaperTextColor.kt",
+      "sha256": "afd2485903fc414d1961c950c1afa833d208d82c4b3820ddd650e39bc050429e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schedule/components/WeekSelectorBottomSheet.kt",
+      "sha256": "88491290226be132109a1dc61f4ba74b3d535f26af27c8e6b5f6cba3de652630"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/list/AdapterSelectionScreen.kt",
+      "sha256": "2909e66c7d809ba49af18e54075e9ddad9c4d21a134c96a1bdbb685e6bc9dd07"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/list/SchoolListEntry.kt",
+      "sha256": "019abbe4aafa3c5b464511bf8a06da22e52e18b545eaf2c204760b2bcac1f735"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/list/SchoolSelectionListScreen.kt",
+      "sha256": "191626ee0ce8228bde657795912cfe89b0c84d127732957e12e3f0c86252373d"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/list/SchoolSelectionViewModel.kt",
+      "sha256": "d45eca038c10d4e7e4e5237558cd31862e996008d0cf785c16a478f2333083f8"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/web/AdapterErrorText.kt",
+      "sha256": "7acbe9767ece3f85c736967a7b59fdf07774cda36feb790c4840eee7fc38b902"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/web/PlatformWebSpec.kt",
+      "sha256": "afacd73e46415d83fa9b8c1a75d97dbca487a8e1ce4cd276b5fd0c4e616dafd2"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/web/WebBridgeHandler.kt",
+      "sha256": "fe2e822cdd355c93e715438c24e7e1a9199109889f4d5ccf9c94dd51ac650d29"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/web/WebBridgeProtocol.kt",
+      "sha256": "e59ac2f94ef5f6efa8a2b040e1c1803c0020dab43326c50e0ed20ba2d432dfea"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/web/WebDialogHost.kt",
+      "sha256": "5fda6b5552483c56722b474a6f6ceebc31692f84c6cc61187acddba3e2ef9e32"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/web/WebModelsAndConstants.kt",
+      "sha256": "130ae21cf3accfa6a31bcc19772adb2c3e994926d9091228637d3a09d90615ab"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/web/WebViewModel.kt",
+      "sha256": "98898f468a06c5f0a0ac6fe553ed1a93b0eeebf4dbf7ca7fabde38f859bc3886"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/schoolselection/web/WebViewScreen.kt",
+      "sha256": "45501bdc20c0563ddbe05d9960ebef2197b4604fcc735d55d9776a6b353c628d"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/AppSettingsComponents.kt",
+      "sha256": "1a5709083c19a1bdb50b222f12286a31c0a083fab60ce570a4d4fa0eac88214e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/AppSettingsViewModel.kt",
+      "sha256": "53b885b374cc0a53f936ea8f92c34a936656e54b7249ecf34c7f9891eee0f095"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/CoupleScheduleSettingsScreen.kt",
+      "sha256": "f0a091277e9c05f1fcae97dbf6052aaca4f0dc31df33a7a5be3b0d52384c54c8"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/CoupleScheduleViewModel.kt",
+      "sha256": "9f1d5884b44dfbfe39130c0c26f6be098bc96eccf15a41b11b158d2d4088e0db"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/SemesterSettingsScreen.kt",
+      "sha256": "eb1f6bde51d9c64d28f0004a025b8b681abfbd8c20ed885b6141a33be0ae5d18"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/SettingsScreen.kt",
+      "sha256": "afb269b990b300d98b1c63eedb5932e5d6d6ad5ce5fc8bb0c47a325c2679419f"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/additional/DeveloperAndIconComponents.kt",
+      "sha256": "41dec34060d97ae5144abbcf48ac061c82e6488b099dd475445734c46e80e4d4"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/additional/LanguageSettingScreen.kt",
+      "sha256": "4b5996fa195cda2365ebdbdd1db0e5671a9f6e9b25eeb3cb4331601da180531f"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/additional/LegalDocumentScreen.kt",
+      "sha256": "c791c6450587bf9177fe5f5445ea2e6be71e6066a8cda303fe1cdc5b81354c6e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/additional/MoreOptionsComponents.kt",
+      "sha256": "7b584664a49ebf476380abc5c5e4d9845f257825e529d342790815f5c707ae3b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/additional/MoreOptionsDialogs.kt",
+      "sha256": "2c2a3b9fec2ff95c29b619e79bfd685d7801bed3cb91bdda495d6253cd522320"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/additional/MoreOptionsScreen.kt",
+      "sha256": "f4eb45c7a114c1f1fbb7d26720dc8b66bd2ccaaef0ac90338b2bfd5923ec0a18"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/additional/OpenSourceLicensesScreen.kt",
+      "sha256": "24890a756955bcf1a499642058e60d9d14c2cacc014a09111b9b02bfe238a02e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/additional/WidgetTroubleshootScreen.kt",
+      "sha256": "1fbd4dc1ca227fa3b437499f5e6394b40ee4b253ca4e7502fc4f5fba826e62ed"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/additional/WidgetTroubleshootViewModel.kt",
+      "sha256": "aba59479ab28ce8d19edc6567adb26ada8cb78a34d9599ca1bb6bbaae7cdd6cc"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/appearance/AnimationSettingsScreen.kt",
+      "sha256": "387113a6ed7016ea538ce0e1008d06275f30c9e34745a8babb40fb9c5d59c7e0"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/appearance/AppearanceSettingsScreen.kt",
+      "sha256": "a0288a5efe51c50b85bb21c357d9e5411d3a02ec1612cb537f9df9080cc9a344"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/appearance/CourseColorSettingsScreen.kt",
+      "sha256": "3440b93a5ccb161216b157cdbaaf5e8b5df9f62eef88cac2f33310f627aa2f6b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/appearance/GlassBlurScreen.kt",
+      "sha256": "694db08009799df313843015236fa761745652323db419209ad34ebe0bdb592b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/appearance/NextCardSettingsScreen.kt",
+      "sha256": "2f7fdad11bef2efe8d12d56037fe973804746c813b3415e23ca9258fb8920845"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/appearance/PersonalizedDisplayScreen.kt",
+      "sha256": "f2fcc40dde7b83006e9e1e1a28790e26e3fc13a101b7de10e92ce7a96bed3f6e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/backup/BackupScreen.kt",
+      "sha256": "c0f7dc3d6c352d8e997b9e7a5257e03157873b85604c4e91e19c8755c4ad5f05"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/backup/BackupViewModel.kt",
+      "sha256": "c65b71d371f6e3ffc64a37193b329b8d118181ed4d0372f92ff49fa6754050f5"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/conversion/CalendarSyncPermission.kt",
+      "sha256": "9ec8bef5c51bd1516cf79524f57db867417d0543a7b810b0511f392607a9c602"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/conversion/CourseTableConversionDialogs.kt",
+      "sha256": "a910b6fe94f3fe194e48a881dcc8c7834689ed1803d8035f7be6a0fbacecd22a"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/conversion/CourseTableConversionScreen.kt",
+      "sha256": "21e8dc8813b2e44a4162df3db7d8423f63b29a103e8fbf7fe5f2063eb0b3aaad"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/conversion/CourseTableConversionViewModel.kt",
+      "sha256": "362800291ca9dda8e9622a6814221b22cc82406858c28817e8d14a2585b34006"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/course/AddEditCourseScreen.kt",
+      "sha256": "51682c6249d7eef03e6dad7c4790a7256fa3bab3c1cea6acf6863304dbd90594"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/course/AddEditCourseViewModel.kt",
+      "sha256": "59c0d5f3a59f8911ed5644d873204e740391dcd425b9a332e641d19668b62f92"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/course/CourseOtherSelectors.kt",
+      "sha256": "31abcf0ec69e3f246c0af8de391ac0b0de72dc9e19a9e61fbe810159baa5b698"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/course/CourseSchemeCard.kt",
+      "sha256": "0c51d447ee25ff2511a3bec54256ffca1c0ea94a7494a947396e15ebc53239db"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/course/CourseTimeDialogs.kt",
+      "sha256": "e403c72b87b9e3e449082eb281f43b710f22d9e9da0bcc53dc234a3022b7a07b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/coursemanagement/CourseInstanceListScreen.kt",
+      "sha256": "16eca9548b7f857b996757b7cf81aa32de3d51151aaffa41d5fb9ac6bd4c9190"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/coursemanagement/CourseInstanceListViewModel.kt",
+      "sha256": "385f644ab766de9152d8ff9b09790ec10c1ee4478c49e633a14c7ae92aba91c4"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/coursemanagement/CourseNameListScreen.kt",
+      "sha256": "649bba0312b2b91ddc39965e9aaac31f453e50a2b2b4fddf6dc3bb32133e5f9c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/coursemanagement/CourseNameListViewModel.kt",
+      "sha256": "f77ead7a61ff36db32265633f16e2e76be44a014176b334d8b0545ee09560acf"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/coursetables/ManageCourseTablesScreen.kt",
+      "sha256": "6c76b4d7dff67f04246c0547e8c0f67f50d31d08985dd596bb216c4813a4e1e6"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/coursetables/ManageCourseTablesViewModel.kt",
+      "sha256": "f4784c624f2745b13eac241119770630dc1fa0a4259fce892220b1435c39e979"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/import/AiImportScreen.kt",
+      "sha256": "eddf06581b02ca4d2c9ae5bbf20fb4dcf53755ee393c2563cb65af6c05c875f5"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/import/AiImportViewModel.kt",
+      "sha256": "8593e7c532f4610b55225ab5f6834448a8e20a24b86273e2d72f94b90744a0e4"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/import/ImportEntryScreen.kt",
+      "sha256": "9a3e5e6b6eba53fc1c548cf676406f25861d13670fbf84588b6e8efb5258bf01"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/import/ImportPreviewComponents.kt",
+      "sha256": "e6ee0380d2b0445fd34b4598d63136efe41ae72ce0c8f7c2837bc821cc823a13"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/import/TextImportViewModel.kt",
+      "sha256": "bc3fa72664f6af58c90bf6050a8f13f436d3e4679920031fb0266814c234319c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/notification/AdvancedSettingsCard.kt",
+      "sha256": "082efefdb72d15b6a780d73f69a3be7b5307f1f7d43f163b95582b5b90a938b0"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/notification/NotificationSettingsScreen.kt",
+      "sha256": "006f9b4e522e3790efba521ceb93778e1e2f0b70a650af6cd91aa0dd8138c027"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/notification/NotificationSettingsViewModel.kt",
+      "sha256": "38516e475dbf9dbe2f1fafa6f6b030d865489830bbac3644648dc4b9dff0a5e2"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/profile/ProfileInfoScreen.kt",
+      "sha256": "9a6047ec6e2f923164010e85f9a4cb6a9f0cb68ee1a9daa6d9557fda8d9066ac"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/quickactions/UiTextRes.kt",
+      "sha256": "71437ebce394bd0edfdd2c5f95139db5ac364f8219f58030e08df7b455906485"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/quickactions/delete/QuickDeleteScreen.kt",
+      "sha256": "fe3ad911cf41c5f5e70e592b8ca88355244e86561057ae1e54729d4ea2b1b5ad"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/quickactions/delete/QuickDeleteViewModel.kt",
+      "sha256": "42a74ebb44e1785c4b908cc7727e32519d1fc3280a18e21bc06cbf42f3acf5e0"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/quickactions/tweaks/TweakScheduleScreen.kt",
+      "sha256": "1490adae675b3450755d29f0a788f5cfdd748110a5a14b011dede022db9fda7c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/quickactions/tweaks/TweakScheduleViewModel.kt",
+      "sha256": "649c2562dc0415fafb9fe1d9eb8715c3dd17bcdf7fb6983a4507f8e460cd8ca4"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/style/SliderTrackGeometry.kt",
+      "sha256": "110b13d13ad260c41f834f22e76cb38ad89d913dd9d411781a67dffde2e43f29"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/style/StyleSettingsComponents.kt",
+      "sha256": "054f189ac962668b752404677cb84c69db7b802a83e03d236aa366cfc5aadac0"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/style/StyleSettingsViewModel.kt",
+      "sha256": "2432dc87ed36ca10648d3c5a8d94ed00506317c7fe581441e0ca37ba56738141"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/time/TimeSlotManagementScreen.kt",
+      "sha256": "ecb36c52c4c70b2dad0135aafac4d8752497e7a5212b187e704f56106bed9207"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/settings/time/TimeSlotViewModel.kt",
+      "sha256": "6f5912c4de6fbf1eeb9ce63ebaf7c2214eb22355d2ba9dc92c402ed4a1dc464e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/share/CourseShareScreen.kt",
+      "sha256": "a9d11c06d186a9802461255e70e3ce0bff177a79e2ab78ecb1981648cdc504de"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/share/CourseShareViewModel.kt",
+      "sha256": "e1951c0bfcc27b4444b951c507c32961e6a5fa7fc9c9bdd1c5849b9760ec61d9"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/share/QrCode.kt",
+      "sha256": "3f59f34b761fdba9cb489d291e0359631d91173bee84f57650126fdeb0aca6b0"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/share/ThemeShareScreen.kt",
+      "sha256": "6713f67236569bb4457d6fc4f4ec5afbfce09173cde73b8c432b7c88cade918b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/share/ThemeShareViewModel.kt",
+      "sha256": "cc55f1f42f792de0b22b1a2176a20f72b17650454b3848ee3df7b9a49b95996d"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/study/StudyProgressScreen.kt",
+      "sha256": "e5dceab4e8f3520e037bba3c740d732aaee0bfb59b9f5f6c97139cdc8ce65269"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/study/StudyProgressViewModel.kt",
+      "sha256": "bb61b0a013bb23035ff86a20c0c5fcd9d2afb8687998eeed4af9b740d7f46e83"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/AppMotion.kt",
+      "sha256": "bc1fd25680c30aefb62459b72fb67b4b22abba2f33fdde4b70bd03787b7c8645"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/AppStyle.kt",
+      "sha256": "965dfdf10502cb9068a9e12ba96e51014dd7b715e54ced13e1f97c9928e61594"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/ClaudeStyle.kt",
+      "sha256": "e435d1796ddb116f2d9171bf90fd8df6cb74967784c2e7af6f6066dedf17505e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/IosStyle.kt",
+      "sha256": "43641b69dc5ccbcb6b9399e71d7af832e174cc7d3c576ea7def087939e5ee503"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/LegacyLiquidGlass.kt",
+      "sha256": "c829bf4b19bdd0a202d1034a3510f74cca058bd9929d5b241ba886923f4b8779"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/LiquidGlass.kt",
+      "sha256": "46d6d0db6bdbc0d62cc82809af105780c1a2acd9ccf335e1364aede982090d2e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/SettingsTone.kt",
+      "sha256": "2c222cedded52d1020464a98017555bcc84e33561458609fb95f34bf42309dc9"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/SoftStyle.kt",
+      "sha256": "ebf0264fab7546ae726e20a7a933fd1a2961444a1ff9b5e6093729c163ec9d15"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/SystemInsets.kt",
+      "sha256": "bb3a72223bfb0baf24548b59220b57ed9dba648dfb7d7d65db2f0919b94d0b84"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/Theme.kt",
+      "sha256": "4ebd9fd480205319f84807ca31a0178f608932129f533917fed8ea13614ea13a"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/ThemeIndication.kt",
+      "sha256": "5da9e9651d312e4e7ed1e976e3b36a076725ad5099dc84478340a074ac0804a7"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/theme/Type.kt",
+      "sha256": "182e8c60d8983129a9c63eade888a5b33ffba0527621acd9246ae5bf508e8e48"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/today/TodayScheduleScreen.kt",
+      "sha256": "4ca5c3cfc695dcf5fa47ad623b6db02d584f836575be96300ec7ce163ee95ce8"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/ui/today/TodayScheduleViewModel.kt",
+      "sha256": "c0249a2893e5db2292b335d777dd91736fbf053132f689d438cf7d3aa9ce7834"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/widget/WidgetRoute.kt",
+      "sha256": "8e2354c514ca7fc490a8fdd9782e4a65e35fa272797399e8920b16cd0673c9b2"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/shangkeschedule/widget/WidgetRouteHandoff.kt",
+      "sha256": "c9e1ee339cbd9a7b0a0cd6ceb4cc76b2b531f857c49fb8dbca436ddac34769a3"
+    },
+    {
+      "path": "shared/src/commonMain/proto/schedule_style.proto",
+      "sha256": "a3ac0b89f9915a809d453f9805eeb32eac2310601cdbaeaf9300e61b43733305"
+    },
+    {
+      "path": "shared/src/commonMain/proto/school_index.proto",
+      "sha256": "d5e768b2b39c0927644faf11041976b915558328b906cff8f4dabdb75ead3b71"
+    },
+    {
+      "path": "shared/src/commonMain/proto/widget_snapshot.proto",
+      "sha256": "d829d6316bf7be6e8a4f7fdc3c1ab2e0460e989d202ec32b9177eaba9c87e2d2"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/MainViewController.kt",
+      "sha256": "c0091a023cea5722ce42f0bea57137214b029cffcc628d75ec812e0286803996"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/data/db/main/MainAppDatabase.ios.kt",
+      "sha256": "058325dbdab83828c731ebe9f9f819bc7220392732bd88a68fa6aeb0a6fd26a6"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/data/db/widget/WidgetDatabase.ios.kt",
+      "sha256": "feb3feaf868c828aa144e568e87f9261ef20f203a9cb1e025795d89aa2d29eff"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/data/di/PlatformServices.ios.kt",
+      "sha256": "88ccf136cd132009f7b5146798f27b4a74c2554fb6a7694f2a4e1212cc2196d3"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/tool/AppLog.ios.kt",
+      "sha256": "d0953b06e2aadaf4ac43ea71823fd8011622c4ea67f0e01306bd92dc8181048f"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/tool/ClipboardHelper.ios.kt",
+      "sha256": "25194113beba5669f2c7beaeb2f6c113e06763193b6df6934b8437889af81485"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/tool/SystemInfo.ios.kt",
+      "sha256": "a7ab76f6cd69cd99cd15e29466e6801419fc27e9fdc729e1f1ac3a06235fd676"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/tool/WidgetTroubleshoot.ios.kt",
+      "sha256": "f9fccada0cd99c8d8f28740272a28eda4bc567d185d5912d0c9361afe8a641be"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/tool/ZipUtils.ios.kt",
+      "sha256": "a1fa6f538ca76aa6472d629699c04560edb7e33b2738f92240a1c057c6e5655a"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/ui/components/ImageCropper.ios.kt",
+      "sha256": "f192be2ea1f8e6214f712c45815e9898d257b9d847cfaa2480bbd8cd8c2f48eb"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/ui/components/ShareManager.ios.kt",
+      "sha256": "5949ccac5379f9761ec283cf31bf7922f0a0490d956c9b615c3d110fc058124b"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/ui/glass/GlassPlatform.ios.kt",
+      "sha256": "b617b8e3af26d1557554fdf541dbb2db7e7d15e427f70bd228122d4edaba1e45"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/ui/schedule/components/WallpaperLuminance.ios.kt",
+      "sha256": "c4adafe2c818d6d6d94e35b2fdff2221da680ad459e62b25bfe6351625ec92ba"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/ui/settings/additional/LanguageSettingScreen.ios.kt",
+      "sha256": "5ec19d37d023b06504c87e47896dd1154eef4e38a9ce4a28e7ab1b9cd12317a3"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/ui/settings/conversion/CalendarSyncPermission.ios.kt",
+      "sha256": "5be34e9df12e5f9a85f13e3d7e1f36f812905c177875978d60ed696f632290ed"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/shangkeschedule/ui/theme/Theme.ios.kt",
+      "sha256": "124dc8c1953d96ddaf4a33609454c696f12a884e25157081aad660561e36eec1"
+    },
+    {
+      "path": "shared/src/jvmCommonMain/kotlin/com/shangkeschedule/tool/ZipUtils.jvmCommon.kt",
+      "sha256": "5a955fc0f1916f3cd5af7e2bc8649bf85941219d84ffbebee411b583085c8e34"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/data/db/main/MainAppDatabase.jvm.kt",
+      "sha256": "17a6949ec65f600ca2a51b2dc670b2265a2a41e625d870b408a9b451a372b7d0"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/data/db/widget/WidgetDatabase.jvm.kt",
+      "sha256": "e661ee62cfd9c7ae1fde632702fbd62859dd7c29db47723d442d543136c68604"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/data/di/OperatingSystem.kt",
+      "sha256": "0117b4ab21f499c7241020fb0188f29dab17b1d1124fe1702613c4d170383ca5"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/data/di/PlatformServices.jvm.kt",
+      "sha256": "61ad36db4a8b29cb116991bfffa1362d78f4613f2af8c0bd58dc6dce1f1b7961"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/data/model/JvmBasePreferences.kt",
+      "sha256": "3baabe4b9bf56482dd7e1ba880602c79105482f3db4f471b65c5d09b30f965ff"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/tool/AppLog.jvm.kt",
+      "sha256": "e46d0765b506a8f811a17cdaa5520f720c774ad305d33d0bcd7722077b2dc3ff"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/tool/CalendarAccountManager.jvm.kt",
+      "sha256": "0d89de55fa7febc5e5f9673b5f92880961a25c65267f940d553af78c67b10b6b"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/tool/ClipboardHelper.jvm.kt",
+      "sha256": "94002c3cc1e994167fd8544654441ac3ca869efd6ba6e04bead225d04796e855"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/tool/DesktopAppDirs.kt",
+      "sha256": "e429090a4c3d3c24c694e9e3c9af0962531befea9ed9699179ff582c552ddbc0"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/tool/DesktopSecretStore.kt",
+      "sha256": "72e2a71a0ab9f774cf92e5615f8be33ef0f88f21dd2e587b3bae11f4b600fe42"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/tool/FileManager.jvm.kt",
+      "sha256": "99c7512b89c545032fd9217a3ded393d6de17f6b570a8b531c3af7edc2e6d505"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/tool/SecureCrypto.jvm.kt",
+      "sha256": "87f9ec0fd64e00f44b28b60b752cdba38fcc7c3bddeacf8887983bae4f060ecb"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/tool/SystemInfo.jvm.kt",
+      "sha256": "4aedd17ab036f27cf0d8843e17078bfd75f75cd69fad2e7d15548a88b9acccfc"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/tool/WidgetTroubleshoot.jvm.kt",
+      "sha256": "59bc7b3100148c22486dbeb96dbd165d0e86fda24816dc2b6ea74e7007d06a9f"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/ui/components/ImageCropper.jvm.kt",
+      "sha256": "52b1e2f0b05c52d2c88935859a448f81897e06e5564e9454dfde52452b7dab74"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/ui/components/ShareManager.jvm.kt",
+      "sha256": "0b132e2032035901d1602b2ab01edc8d492c972afdaa02686dc99c053fc0d6a6"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/ui/glass/GlassPlatform.jvm.kt",
+      "sha256": "0468e982814643c477d3e693b6a2fa53787f870c6bd45d93d35e2939eace6310"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/ui/schedule/components/WallpaperLuminance.jvm.kt",
+      "sha256": "4add4d6fe6c28c5335af380864d943e5db7b4053e285cfbb6b07fdfd50814113"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/ui/schoolselection/web/PlatformWeb.jvm.kt",
+      "sha256": "978ea2e361eaa70c2e0c3b37c5ddb51b02e250e6dc4e9ce4e98ac4dd696251b6"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/ui/settings/additional/LanguageSettingScreen.jvm.kt",
+      "sha256": "a6c9196a646f412dce247b5b57caa1c029165cf2bebe6a59ff4c7489c45fee44"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/ui/settings/conversion/CalendarSyncPermission.jvm.kt",
+      "sha256": "20bad6a9d3078e738dc53fdb7b6cfe39275942d0f87c9b32c6266c479e7f383b"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/ui/settings/notification/NotificationSettings.jvm.kt",
+      "sha256": "f1208b32d3f8e9c571ce089ad0f793a65fb714dce2e6ee95c5d091b53ceb80b9"
+    },
+    {
+      "path": "shared/src/jvmMain/kotlin/com/shangkeschedule/ui/theme/Theme.jvm.kt",
+      "sha256": "ebc2bf9a1e8c91c6e622234b13a009038de0fd1d0df9078d9c468028bc8d359e"
+    },
+    {
+      "path": "shared/src/jvmTest/kotlin/CalendarSyncPrerequisitesTest.kt",
+      "sha256": "e1e9c602877ed52fa372a6ddd82f706d09c2dbc905a939b7f54f53bd727d062f"
+    },
+    {
+      "path": "shared/src/jvmTest/kotlin/ProjectAuditRegressionTest.kt",
+      "sha256": "e3a45566c90e865722929a94242f04d8409f72f77b3a8834c11e4d908bc1ac73"
+    },
+    {
+      "path": "shared/src/jvmTest/kotlin/com/shangkeschedule/ui/SaveSafetyRegressionTest.kt",
+      "sha256": "58477ea13374e9e75128ca09770e22fe881cdd08ed82a5424fab48952b3f7d29"
+    }
+  ]
+}

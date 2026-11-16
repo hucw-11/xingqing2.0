@@ -1,0 +1,378 @@
+package com.shangkeschedule.ui.components
+
+import com.shangkeschedule.ui.theme.appShapes
+
+import com.shangkeschedule.ui.theme.appColors
+import com.shangkeschedule.ui.theme.appSpacing
+import com.shangkeschedule.ui.theme.appType
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.a11y_switch_color_mode
+import shangkeschedule.shared.generated.resources.color_picker_label_alpha
+import shangkeschedule.shared.generated.resources.color_picker_label_hue
+import shangkeschedule.shared.generated.resources.color_picker_label_saturation
+import shangkeschedule.shared.generated.resources.color_picker_label_value
+import shangkeschedule.shared.generated.resources.color_picker_mode_input
+import shangkeschedule.shared.generated.resources.color_picker_mode_visual
+import shangkeschedule.shared.generated.resources.color_picker_title_edit
+import shangkeschedule.shared.generated.resources.color_picker_title_precise
+import shangkeschedule.shared.generated.resources.edit_24px
+import shangkeschedule.shared.generated.resources.tune_24px
+import kotlin.time.Duration.Companion.milliseconds
+
+/**
+ * 颜色选择器功能配置
+ * 默认全开，按需关闭
+ */
+data class ColorPickerConfig(
+    val showHue: Boolean = true,        // 色相
+    val showSaturation: Boolean = true, // 饱和度
+    val showValue: Boolean = true,      // 明度
+    val showAlpha: Boolean = true,      // 不透明度
+    val showHex: Boolean = true,        // 十六进制代码显示
+    val showInputMode: Boolean = true   // 是否允许切换到数字输入模式
+)
+
+private object ColorInternalUtils {
+    fun hsvToColor(h: Float, s: Float, v: Float, a: Float = 1f): Color {
+        val c = v * s
+        val x = c * (1 - kotlin.math.abs((h / 60f) % 2 - 1))
+        val m = v - c
+
+        val (rPrime, gPrime, bPrime) = when {
+            h < 60f -> Triple(c, x, 0f)
+            h < 120f -> Triple(x, c, 0f)
+            h < 180f -> Triple(0f, c, x)
+            h < 240f -> Triple(0f, x, c)
+            h < 300f -> Triple(x, 0f, c)
+            else -> Triple(c, 0f, x)
+        }
+
+        return Color(
+            red = rPrime + m,
+            green = gPrime + m,
+            blue = bPrime + m,
+            alpha = a
+        )
+    }
+
+    fun colorToHsv(color: Color): FloatArray {
+        val r = color.red
+        val g = color.green
+        val b = color.blue
+
+        val max = maxOf(r, g, b)
+        val min = minOf(r, g, b)
+        val delta = max - min
+
+        var h = 0f
+        if (delta != 0f) {
+            h = when (max) {
+                r -> ((g - b) / delta) % 6f
+                g -> ((b - r) / delta) + 2f
+                else -> ((r - g) / delta) + 4f
+            } * 60f
+            if (h < 0) h += 360f
+        }
+
+        val s = if (max == 0f) 0f else delta / max
+        val v = max
+
+        return floatArrayOf(h, s, v)
+    }
+
+    fun colorToHex(color: Color): String {
+        val argb = color.toArgb()
+        val alpha = ((argb shr 24) and 0xFF).toString(16).padStart(2, '0').uppercase()
+        val red = ((argb shr 16) and 0xFF).toString(16).padStart(2, '0').uppercase()
+        val green = ((argb shr 8) and 0xFF).toString(16).padStart(2, '0').uppercase()
+        val blue = (argb and 0xFF).toString(16).padStart(2, '0').uppercase()
+        return "#$alpha$red$green$blue"
+    }
+}
+
+@Composable
+fun AdvancedColorPicker(
+    initialColor: Color,
+    onColorChanged: (Color) -> Unit,
+    config: ColorPickerConfig = ColorPickerConfig(),
+    previewContent: @Composable (() -> Unit)? = null
+) {
+    val initialHsv = remember(initialColor) { ColorInternalUtils.colorToHsv(initialColor) }
+    var h by remember { mutableFloatStateOf(initialHsv[0]) }
+    var s by remember { mutableFloatStateOf(initialHsv[1]) }
+    var v by remember { mutableFloatStateOf(initialHsv[2]) }
+    var a by remember { mutableFloatStateOf(initialColor.alpha) }
+
+    var isUserInteracting by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialColor) {
+        if (!isUserInteracting) {
+            val currentLocalColor = ColorInternalUtils.hsvToColor(h, s, v, a)
+            if (initialColor.toArgb() != currentLocalColor.toArgb()) {
+                val hsv = ColorInternalUtils.colorToHsv(initialColor)
+
+                if (hsv[2] > 0.01f) {
+                    h = hsv[0]
+                    s = hsv[1]
+                }
+                v = hsv[2]
+                a = initialColor.alpha
+            }
+        }
+    }
+
+    var isInputMode by remember { mutableStateOf(false) }
+    val currentColor = remember(h, s, v, a) { ColorInternalUtils.hsvToColor(h, s, v, a) }
+
+    LaunchedEffect(currentColor) {
+        if (isUserInteracting) {
+            onColorChanged(currentColor)
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(appSpacing().cardInner)) {
+        previewContent?.let { Box(modifier = Modifier.fillMaxWidth().padding(bottom = appSpacing().cardGap)) { it() } }
+
+        // 标题与切换按钮
+        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+            Column {
+                Text(
+                    text = if (isInputMode) stringResource(Res.string.color_picker_title_precise)
+                    else stringResource(Res.string.color_picker_title_edit),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = appType().emphasisWeight
+                )
+                Text(
+                    text = if (isInputMode) stringResource(Res.string.color_picker_mode_input)
+                    else stringResource(Res.string.color_picker_mode_visual),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            if (config.showInputMode) {
+                IconButton(onClick = { isInputMode = !isInputMode }) {
+                    Icon(
+                        imageVector = if (isInputMode) vectorResource(Res.drawable.tune_24px) else vectorResource(Res.drawable.edit_24px),
+                        contentDescription = stringResource(Res.string.a11y_switch_color_mode)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(appSpacing().listGap))
+
+        if (!isInputMode) {
+            val updateHsv = { nh: Float, ns: Float, nv: Float, na: Float ->
+                isUserInteracting = true
+                h = nh; s = ns; v = nv; a = na
+            }
+            LaunchedEffect(isUserInteracting) {
+                if (isUserInteracting) {
+                    delay(500.milliseconds)
+                    isUserInteracting = false
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (config.showHue) {
+                    ColorLabel(stringResource(Res.string.color_picker_label_hue), "${h.toInt()}°")
+                    InternalGradientSlider(h, { updateHsv(it, s, v, a) }, 0f..360f, Brush.horizontalGradient(listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red)))
+                }
+                if (config.showSaturation) {
+                    ColorLabel(stringResource(Res.string.color_picker_label_saturation), "${(s * 100).toInt()}%")
+                    InternalGradientSlider(s, { updateHsv(h, it, v, a) }, 0f..1f, Brush.horizontalGradient(listOf(ColorInternalUtils.hsvToColor(h, 0f, v), ColorInternalUtils.hsvToColor(h, 1f, v))))
+                }
+                if (config.showValue) {
+                    ColorLabel(stringResource(Res.string.color_picker_label_value), "${(v * 100).toInt()}%")
+                    InternalGradientSlider(v, { updateHsv(h, s, it, a) }, 0f..1f, Brush.horizontalGradient(listOf(Color.Black, ColorInternalUtils.hsvToColor(h, s, 1f))))
+                }
+                if (config.showAlpha) {
+                    ColorLabel(stringResource(Res.string.color_picker_label_alpha), "${(a * 100).toInt()}%")
+                    InternalGradientSlider(a, { updateHsv(h, s, v, it) }, 0f..1f, Brush.horizontalGradient(listOf(Color.Transparent, ColorInternalUtils.hsvToColor(h, s, v, 1f))))
+                }
+            }
+        } else {
+            RgbInputSection(currentColor, config.showAlpha) { newColor ->
+                isUserInteracting = true
+                val newHsv = ColorInternalUtils.colorToHsv(newColor)
+                h = newHsv[0]; s = newHsv[1]; v = newHsv[2]
+                a = newColor.alpha
+            }
+        }
+
+        if (config.showHex) {
+            Spacer(modifier = Modifier.height(appSpacing().sectionGap))
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Surface(color = appColors().primarySoft, shape = MaterialTheme.shapes.small) {
+                    Text(text = ColorInternalUtils.colorToHex(currentColor), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp), style = MaterialTheme.typography.titleSmall, fontWeight = appType().emphasisWeight)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InternalGradientSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    range: ClosedFloatingPointRange<Float>,
+    gradient: Brush,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    // 滑块几何（v4.75.5 与 StyleSliderItem 同步修复「thumb 溢出轨道」）：
+    //
+    // 轨道有 12dp 水平内缩、4dp 垂直内缩 ⇒ 轨道高 = 32 - 8 = 24dp；
+    // thumb 外圈半径 12dp ⇒ 直径 24dp，**与轨道等高**（纵向本就齐平）。
+    //
+    // 缺陷在横向：thumb 圆心原被 clamp 到 [12dp, width-12dp]，即**恰好停在轨道两端点**上，
+    // 于是 fraction=1 时 thumb 外圈有整整 12dp 落在轨道之外（与 StyleSliderItem 同源问题：
+    // 圆心应内缩半个 thumb，而非停在边缘）。改为让圆心在内缩后的区间移动：
+    //   圆心 ∈ [12+12, width-12-12] ⇒ thumb 外缘 ∈ [12, width-12] = 轨道横向跨度，两端恰好贴合。
+    val thumbRadiusOuter = with(density) { 12.dp.toPx() }
+    val thumbRadiusInner = with(density) { 10.dp.toPx() }
+    val strokeWidthPx = with(density) { 2.dp.toPx() }
+    val trackInsetH = with(density) { 12.dp.toPx() }
+
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth().height(32.dp)
+    ) {
+        val widthPx = constraints.maxWidth.toFloat()
+        val heightPx = constraints.maxHeight.toFloat()
+        // thumb 圆心行程：轨道两端各内缩一个 thumb 外半径，保证整枚 thumb 始终落在轨道内。
+        val thumbMinX = trackInsetH + thumbRadiusOuter
+        val thumbMaxX = maxOf(thumbMinX, widthPx - trackInsetH - thumbRadiusOuter)
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+                .clip(appShapes().chipSmall)
+                .background(gradient)
+                .pointerInput(range, widthPx) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        val updateValue = { offset: Offset ->
+                            val ratio = (offset.x / widthPx).coerceIn(0f, 1f)
+                            val newValue = ratio * (range.endInclusive - range.start) + range.start
+                            onValueChange(newValue)
+                        }
+                        updateValue(down.position)
+                        drag(down.id) { change ->
+                            updateValue(change.position)
+                            if (change.positionChange() != Offset.Zero) change.consume()
+                        }
+                    }
+                }
+        )
+
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val fraction = ((value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
+            val thumbX = thumbMinX + fraction * (thumbMaxX - thumbMinX)
+            val centerY = heightPx / 2
+            drawCircle(Color.Black.copy(alpha = 0.2f), radius = thumbRadiusOuter, center = Offset(thumbX, centerY))
+            drawCircle(Color.White, radius = thumbRadiusInner, center = Offset(thumbX, centerY))
+            drawCircle(Color.Gray.copy(alpha = 0.8f), radius = thumbRadiusInner, center = Offset(thumbX, centerY), style = Stroke(width = strokeWidthPx))
+        }
+    }
+}
+
+@Composable
+private fun RgbInputSection(color: Color, showAlpha: Boolean, onColorChanged: (Color) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        RgbInputField("R", (color.red * 255).toInt(), Modifier.weight(1f)) { onColorChanged(color.copy(red = it / 255f)) }
+        RgbInputField("G", (color.green * 255).toInt(), Modifier.weight(1f)) { onColorChanged(color.copy(green = it / 255f)) }
+        RgbInputField("B", (color.blue * 255).toInt(), Modifier.weight(1f)) { onColorChanged(color.copy(blue = it / 255f)) }
+        if (showAlpha) {
+            RgbInputField("A", (color.alpha * 255).toInt(), Modifier.weight(1f)) { onColorChanged(color.copy(alpha = it / 255f)) }
+        }
+    }
+}
+
+@Composable
+private fun RgbInputField(
+    label: String,
+    value: Int,
+    modifier: Modifier,
+    onValueChange: (Int) -> Unit
+) {
+    var inputText by remember { mutableStateOf(value.toString()) }
+    LaunchedEffect(value) {
+        if (value.toString() != inputText) {
+            inputText = value.toString()
+        }
+    }
+
+    AppTextField(
+        value = inputText,
+        onValueChange = { text ->
+            if (text.isEmpty()) {
+                inputText = ""
+                onValueChange(0)
+            } else if (text.all { it.isDigit() }) {
+                val parsed = text.toIntOrNull()
+                if (parsed != null && parsed in 0..255) {
+                    inputText = text
+                    onValueChange(parsed)
+                }
+            }
+        },
+        label = label,
+        modifier = modifier,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        singleLine = true
+    )
+}
+
+@Composable
+private fun ColorLabel(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = appColors().textSecondary)
+        Text(value, style = MaterialTheme.typography.labelSmall, fontWeight = appType().emphasisWeight)
+    }
+}

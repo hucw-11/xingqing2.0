@@ -1,0 +1,367 @@
+package com.shangkeschedule.ui.settings.course
+
+import com.shangkeschedule.ui.components.AppGlassBottomSheet
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import com.shangkeschedule.data.db.main.TimeSlot
+import com.shangkeschedule.tool.TimeTextUtils
+import com.shangkeschedule.ui.components.NativeNumberPicker
+import com.shangkeschedule.ui.components.ToastManager
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
+import dev.chrisbanes.haze.HazeState
+import com.shangkeschedule.ui.theme.appSpacing
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.action_cancel
+import shangkeschedule.shared.generated.resources.action_confirm
+import shangkeschedule.shared.generated.resources.label_custom_time
+import shangkeschedule.shared.generated.resources.label_day_of_week
+import shangkeschedule.shared.generated.resources.label_end_section
+import shangkeschedule.shared.generated.resources.label_end_time
+import shangkeschedule.shared.generated.resources.label_start_section
+import shangkeschedule.shared.generated.resources.label_start_time
+import shangkeschedule.shared.generated.resources.title_select_time
+import shangkeschedule.shared.generated.resources.toast_end_time_must_be_later
+import shangkeschedule.shared.generated.resources.toast_time_invalid
+import shangkeschedule.shared.generated.resources.week_days_full_names
+import shangkeschedule.shared.generated.resources.*
+
+/** 自定义时间无法解析时的回落基准：08:00。 */
+private const val DEFAULT_TIME_MINUTES = 8 * 60
+
+/**
+ * 节次时间选择底部弹窗 (节次模式)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CourseTimePickerBottomSheet(
+    selectedDay: Int,
+    onDaySelected: (Int) -> Unit,
+    startSection: Int,
+    onStartSectionChange: (Int) -> Unit,
+    endSection: Int,
+    onEndSectionChange: (Int) -> Unit,
+    timeSlots: List<TimeSlot>,
+    onDismissRequest: () -> Unit,
+    hazeState: HazeState? = null
+) {
+    val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    var tempSelectedDay by remember { mutableIntStateOf(selectedDay) }
+    var tempStartSection by remember { mutableIntStateOf(startSection) }
+    var tempEndSection by remember { mutableIntStateOf(endSection) }
+
+    val timeInvalidText = stringResource(Res.string.toast_time_invalid)
+
+    AppGlassBottomSheet(
+        hazeState = hazeState,
+        onDismissRequest = onDismissRequest,
+        sheetState = modalBottomSheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(appSpacing().cardInner),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = stringResource(Res.string.title_select_time),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = appSpacing().cardGap)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // 星期
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = stringResource(Res.string.label_day_of_week), style = MaterialTheme.typography.titleSmall)
+                    Spacer(modifier = Modifier.height(appSpacing().listGap))
+                    DayPicker(selectedDay = tempSelectedDay, onDaySelected = { tempSelectedDay = it })
+                }
+                // 开始节次
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = stringResource(Res.string.label_start_section), style = MaterialTheme.typography.titleSmall)
+                    Spacer(modifier = Modifier.height(appSpacing().listGap))
+                    SectionPicker(selectedSection = tempStartSection, onSectionSelected = {
+                        tempStartSection = it
+                        if (it > tempEndSection) tempEndSection = it
+                    }, timeSlots = timeSlots)
+                }
+                // 结束节次
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = stringResource(Res.string.label_end_section), style = MaterialTheme.typography.titleSmall)
+                    Spacer(modifier = Modifier.height(appSpacing().listGap))
+                    SectionPicker(selectedSection = tempEndSection, onSectionSelected = { tempEndSection = it }, timeSlots = timeSlots)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(appSpacing().sectionGap))
+
+            Button(
+                onClick = {
+                    if (tempStartSection > tempEndSection) {
+                        ToastManager.show(timeInvalidText)
+                    } else {
+                        onDaySelected(tempSelectedDay)
+                        onStartSectionChange(tempStartSection)
+                        onEndSectionChange(tempEndSection)
+                        onDismissRequest()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(Res.string.action_confirm))
+            }
+        }
+    }
+}
+
+/**
+ * 自定义时间模式：4滚轮时间范围选择底部弹窗
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CustomTimeRangePickerBottomSheet(
+    initialStartTime: String,
+    initialEndTime: String,
+    onDismissRequest: () -> Unit,
+    onTimeRangeSelected: (startTime: String, endTime: String) -> Unit,
+    hazeState: HazeState? = null
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+
+    val confirmText = stringResource(Res.string.action_confirm)
+    val titleText = stringResource(Res.string.label_custom_time)
+    val startTimeLabel = stringResource(Res.string.label_start_time)
+    val endTimeLabel = stringResource(Res.string.label_end_time)
+    val endTimeInvalidText = stringResource(Res.string.toast_end_time_must_be_later)
+
+    fun parse(t: String): Pair<Int, Int> {
+        val total = TimeTextUtils.parseMinutesOfDayOrNull(t) ?: DEFAULT_TIME_MINUTES
+        return (total / 60).coerceIn(0, 23) to (total % 60).coerceIn(0, 59)
+    }
+
+    val (startH, startM) = parse(initialStartTime)
+    val (endH, endM) = parse(initialEndTime)
+
+    var sH by remember { mutableIntStateOf(startH) }
+    var sM by remember { mutableIntStateOf(startM) }
+    var eH by remember { mutableIntStateOf(endH) }
+    var eM by remember { mutableIntStateOf(endM) }
+
+    val hours = remember { (0..23).map { it.toString().padStart(2, '0') } }
+    val minutes = remember { (0..59).map { it.toString().padStart(2, '0') } }
+
+    AppGlassBottomSheet(
+        hazeState = hazeState,
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(appSpacing().cardInner),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = titleText,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = appSpacing().cardGap)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Text(
+                    text = startTimeLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Spacer(modifier = Modifier.width(48.dp))
+                Text(
+                    text = endTimeLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // 开始时间滚轮组
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    NativeNumberPicker(
+                        values = hours,
+                        // 将 Int 转换为 "08" 这样的 String 来匹配数据源
+                        selectedValue = sH.toString().padStart(2, '0'),
+                        onValueChange = { sH = it.toInt() }, // 拿到 "08" 转回 8 存入 sH
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(":", style = MaterialTheme.typography.titleMedium)
+                    NativeNumberPicker(
+                        values = minutes,
+                        selectedValue = sM.toString().padStart(2, '0'),
+                        onValueChange = { sM = it.toInt() },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Text("-", modifier = Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.titleMedium)
+
+                // 结束时间滚轮组
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    NativeNumberPicker(
+                        values = hours,
+                        selectedValue = eH.toString().padStart(2, '0'),
+                        onValueChange = { eH = it.toInt() },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(":", style = MaterialTheme.typography.titleMedium)
+                    NativeNumberPicker(
+                        values = minutes,
+                        selectedValue = eM.toString().padStart(2, '0'),
+                        onValueChange = { eM = it.toInt() },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            // 底部确认按钮
+            Spacer(modifier = Modifier.height(appSpacing().sectionGap))
+
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    val startTotal = sH * 60 + sM
+                    val endTotal = eH * 60 + eM
+
+                    if (startTotal >= endTotal) {
+                        ToastManager.show(endTimeInvalidText)
+                    } else {
+                        val startStr = "${sH.toString().padStart(2, '0')}:${sM.toString().padStart(2, '0')}"
+                        val endStr = "${eH.toString().padStart(2, '0')}:${eM.toString().padStart(2, '0')}"
+                        onTimeRangeSelected(startStr, endStr)
+                        scope.launch { sheetState.hide() }.invokeOnCompletion { onDismissRequest() }
+                    }
+                }
+            ) {
+                Text(confirmText)
+            }
+            Spacer(modifier = Modifier.height(appSpacing().cardInner))
+        }
+    }
+}
+
+/**
+ * 星期选择对话框
+ */
+@Composable
+fun DayPickerDialog(
+    selectedDay: Int,
+    onDismissRequest: () -> Unit,
+    onDaySelected: (Int) -> Unit
+) {
+    var tempSelectedDay by remember { mutableIntStateOf(selectedDay) }
+
+    Dialog(onDismissRequest = onDismissRequest) {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            Column(
+                modifier = Modifier.padding(appSpacing().cardInner),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(text = stringResource(Res.string.label_day_of_week), style = MaterialTheme.typography.titleLarge)
+                Spacer(modifier = Modifier.height(appSpacing().cardGap))
+                DayPicker(selectedDay = tempSelectedDay, onDaySelected = { tempSelectedDay = it })
+                Spacer(modifier = Modifier.height(appSpacing().cardGap))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismissRequest) { Text(stringResource(Res.string.action_cancel)) }
+                    Button(onClick = {
+                        onDaySelected(tempSelectedDay)
+                        onDismissRequest()
+                    }) { Text(stringResource(Res.string.action_confirm)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DayPicker(selectedDay: Int, onDaySelected: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val days = stringArrayResource(Res.array.week_days_full_names)
+    val selectedDayName = days.getOrNull(selectedDay - 1) ?: days.first()
+    NativeNumberPicker(
+        values = days,
+        selectedValue = selectedDayName,
+        onValueChange = { onDaySelected(days.indexOf(it) + 1) },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun SectionPicker(
+    selectedSection: Int,
+    onSectionSelected: (Int) -> Unit,
+    timeSlots: List<TimeSlot>,
+    modifier: Modifier = Modifier
+) {
+    val sortedSlots = remember(timeSlots) {
+        timeSlots.sortedBy { it.number }
+    }
+    val displayValues = sortedSlots.map { it.alias ?: it.number.toString() }
+    val currentSlot = sortedSlots.find { it.number == selectedSection } ?: sortedSlots.firstOrNull()
+    val selectedValueText = currentSlot?.let { it.alias ?: it.number.toString() } ?: ""
+
+    NativeNumberPicker(
+        values = displayValues,
+        selectedValue = selectedValueText,
+        onValueChange = { newValueText ->
+            val pickedSlot = sortedSlots.find { (it.alias ?: it.number.toString()) == newValueText }
+            pickedSlot?.let { onSectionSelected(it.number) }
+        },
+        modifier = modifier
+    )
+}

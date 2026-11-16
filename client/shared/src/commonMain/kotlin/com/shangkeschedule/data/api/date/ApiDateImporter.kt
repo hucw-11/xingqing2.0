@@ -1,0 +1,109 @@
+package com.shangkeschedule.data.api.date
+
+import com.shangkeschedule.data.repository.AppSettingsRepository
+import com.shangkeschedule.tool.AppLog
+import com.shangkeschedule.tool.HttpClientFactory
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
+import io.ktor.client.request.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlin.time.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+private const val TAG = "ApiDateImporter"
+
+@Serializable
+data class ApiResponse(
+    @SerialName("holiday")
+    val holidays: Map<String, HolidayInfo>
+)
+
+@Serializable
+data class HolidayInfo(
+    @SerialName("date")
+    val date: String,
+    @SerialName("holiday")
+    val isHoliday: Boolean
+)
+
+/**
+ * API 导入对象，基于 Ktor 3.0 实现。
+ */
+object ApiDateImporter {
+    /**
+     * 接口前缀，**不是完整 URL** —— 请求时必须在其后补年份段。
+     *
+     * R59-01：`defaultRequest { url(BASE_URL) }` + `client.get("")`
+     * 拼出的是裸路径 `.../api/holiday/year`（Ktor 实跑：无年份段），
+     * 该路径线上实测不可达（http=000），而 `.../api/holiday/year/2026`
+     * 返回 200 + 真 JSON ⇒ 联网导入功能整体失效。
+     */
+    private const val BASE_URL = "https://timor.tech/api/holiday/year"
+
+    private val client = HttpClientFactory.create(
+        enableLogging = true,
+        connectTimeout = 15_000,
+        request = 15_000
+    ) {
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                coerceInputValues = true
+            })
+        }
+
+        defaultRequest {
+            url(BASE_URL)
+            header("User-Agent", "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36")
+        }
+    }
+
+    /**
+     * 从 API 获取跳过的日期（假期），并合并进 AppSettingsRepository。
+     *
+     * 与本地已记录的手工调休 / 停课 / **用户手动设定的节假日**做并集而非整体覆盖。
+     * 合并本身在 `dataStore.edit` 内原子完成（见 `AppSettingsRepository.addSkippedDates`）：
+     * 旧实现是「读快照 → copy → 整模型写回」，既会连带重写 30+ 个无关键，
+     * 也会把期间用户手动添加的日期用这份旧快照回滚掉。
+     *
+     * @return 本次从远端取到并合并的假期日期条数（供 UI 展示成功反馈）。
+     * @throws 远端不可达 / 反序列化失败时**原样抛出**，不再吞掉 ——
+     *         旧实现在此 catch 后只写日志，使调用方 `runCatching` 恒得 Success、
+     *         UI 上表现为「转一圈什么都没发生」，用户既不知失败也不知成功其实没导入（R59-01）。
+     */
+    suspend fun importAndSaveSkippedDates(appSettingsRepository: AppSettingsRepository): Int {
+        try {
+            // R59-01：必须补年份段，否则拼出的是无年份的裸路径、线上不可达。
+            val year = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
+            val response: ApiResponse = client.get("$BASE_URL/$year").body()
+
+            val holidayDates = response.holidays.values
+                .filter { it.isHoliday }
+                .map { it.date }
+                .toSet()
+
+            appSettingsRepository.addSkippedDates(holidayDates)
+
+            val mergedCount = appSettingsRepository.getAppSettings().first().skippedDates.size
+            AppLog.w(TAG, "成功导入并合并了 ${holidayDates.size} 个假期日期（现共 $mergedCount 个跳过日期）。")
+            return holidayDates.size
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLog.e(TAG, "假期数据导入失败: ${e.message}", e)
+            // R59-01：记录日志后必须重抛，否则外层 runCatching 恒为 Success，用户无任何反馈。
+            throw e
+        }
+    }
+
+    fun close() = client.close()
+}

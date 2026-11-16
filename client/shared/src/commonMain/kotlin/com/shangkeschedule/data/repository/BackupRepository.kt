@@ -1,0 +1,1202 @@
+package com.shangkeschedule.data.repository
+
+import androidx.room3.withWriteTransaction
+import com.shangkeschedule.data.db.main.CourseNote
+import com.shangkeschedule.data.db.main.MAX_SECTIONS_LENGTH
+import com.shangkeschedule.data.db.main.CourseTable
+import com.shangkeschedule.data.db.main.CourseTableDao
+import com.shangkeschedule.data.db.main.CurriculumCourse
+import com.shangkeschedule.data.db.main.Grade
+import com.shangkeschedule.data.db.main.MainAppDatabase
+import com.shangkeschedule.data.db.main.ScheduleEvent
+import com.shangkeschedule.data.db.main.TodoItem
+import com.shangkeschedule.data.model.AppThemeMode
+import com.shangkeschedule.data.model.MorningAlarmMode
+import com.shangkeschedule.data.model.MorningAlarmWeeklyTimes
+import com.shangkeschedule.data.model.AppThemePreset
+import com.shangkeschedule.data.model.AutoControlMode
+import com.shangkeschedule.data.model.CourseImportExport
+import com.shangkeschedule.data.model.CourseImportExport.AppSettingsBackupEnvelope
+import com.shangkeschedule.data.model.CourseImportExport.CourseNoteBackupModel
+import com.shangkeschedule.data.model.CourseImportExport.CourseConfigJsonModel
+import com.shangkeschedule.data.model.CourseImportExport.CourseTableExportModel
+import com.shangkeschedule.data.model.CourseImportExport.CurriculumCourseBackupModel
+import com.shangkeschedule.data.model.CourseImportExport.GradeBackupModel
+import com.shangkeschedule.data.model.CourseImportExport.ScheduleEventBackupModel
+import com.shangkeschedule.data.model.CourseImportExport.TodoBackupModel
+import com.shangkeschedule.data.model.CourseImportExport.UserDataBackupEnvelope
+import com.shangkeschedule.data.model.CourseImportExport.NoteImageBackupModel
+import com.shangkeschedule.data.model.CreditRequirement
+import com.shangkeschedule.data.model.GpaScale
+import com.shangkeschedule.data.model.NextCardMode
+import com.shangkeschedule.data.model.RefreshRateMode
+import com.shangkeschedule.ui.theme.MotionSpeed
+import com.shangkeschedule.data.model.CourseImportExport.AppSettingsBackupModel
+import com.shangkeschedule.data.model.CourseImportExport.CourseTableImportModel
+import com.shangkeschedule.data.model.CourseImportExport.ImportCourseJsonModel
+import com.shangkeschedule.data.model.CourseImportExport.SingleTablePack
+import com.shangkeschedule.data.model.CourseImportExport.TotalAppBackupEnvelope
+import com.shangkeschedule.data.model.StartScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import com.shangkeschedule.tool.AppLog
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import okio.FileSystem
+import okio.Path
+import okio.SYSTEM
+import org.jetbrains.compose.resources.getString
+import org.koin.core.annotation.Named
+import org.koin.core.annotation.Single
+import shangkeschedule.shared.generated.resources.Res
+import shangkeschedule.shared.generated.resources.backup_err_corrupted
+import shangkeschedule.shared.generated.resources.backup_err_empty
+import shangkeschedule.shared.generated.resources.backup_err_upload_failed
+import shangkeschedule.shared.generated.resources.backup_err_version_too_new
+import shangkeschedule.shared.generated.resources.error_webdav_unconfigured
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+
+/**
+ * 模块化备份定义
+ */
+enum class BackupModule(val key: String) {
+    COURSE("course"),
+    STYLE("style"),
+    APP_SETTINGS("app_settings"),
+
+    /**
+     * 全局用户数据（待办 + 日程 + 成绩）。
+     *
+     * 新增原因：`todo_items` / `schedule_events` 是 Room 实体，但此前不属于任何备份模块，
+     * 全量备份/恢复（本地 zip 与 WebDAV 共用同一入口）完全不覆盖它们 ——
+     * 用户换机或恢复备份后，全部待办与日程丢失且无任何提示。
+     * 成绩表（`grades`）同样如此，于 v2 规范一并纳入。
+     */
+    USER_DATA("user_data")
+}
+
+/**
+ * 各模块的物理隔离载体
+ */
+data class AppBackupPackage(
+    val meta: BackupMeta,
+    val payloadMap: Map<String, ByteArray>
+)
+
+@Serializable
+data class BackupMeta(
+    val backupTimestamp: Long,
+    val appVersionCode: Int,
+    val appVersionName: String,
+    val modules: List<ModuleInfo>,
+    // 旧备份没有此字段，仍从 Backup/<key>.cbor 读取。
+    val snapshotId: String? = null
+) {
+    fun moduleRemotePath(key: String): String {
+        require(BackupModule.entries.any { it.key == key }) { "未知备份模块" }
+        val snapshot = snapshotId ?: return "Backup/$key.cbor"
+        require(Regex("[a-zA-Z0-9_-]{1,80}").matches(snapshot)) { "备份快照路径非法" }
+        return "Backup/snapshots/$snapshot/$key.cbor"
+    }
+}
+
+@Serializable
+data class ModuleInfo(
+    val key: String,
+    val schemaVersion: Int
+)
+
+private const val WEBDAV_BACKUP_DIR = "Backup"
+
+/**
+ * R1-003：样式备份的版本闸门与迁移分派（顶层函数，便于不依赖 DataStore 即可回归测试）。
+ *
+ * 原实现：
+ * ```
+ * if (envelope.appVersionCode > STYLE_SCHEMA_VERSION) return failure   // 只拦「更新」
+ * // TODO: 样式版本迁移逻辑待实现（当前版本兼容，直接使用原始字节）
+ * val migratedProtoBytes = envelope.styleProtoBytes                      // 无条件下钳
+ * ```
+ * 两个问题：
+ *  1. **TODO 悬空**：一旦 `STYLE_SCHEMA_VERSION` 升到 2 且改了 proto 结构，
+ *     v1 备份会被**原样喂进新版解析器**——不报错、样式直接错乱，且极难排查。
+ *  2. **只拦上不拦下**：`appVersionCode` 小于当前版本（含 0 / 负数 / 损坏值）时直接放行。
+ *
+ * 现改为**显式分派 + fail closed**：
+ *  - 高于当前版本 ⇒ 拒绝（备份来自更新的 App，不认识）。
+ *  - 已知历史版本 ⇒ 走对应迁移分支（当前只有 v1，迁移为空操作）。
+ *  - 未知/非法版本 ⇒ **拒绝**，而不是「原样使用」。
+ *
+ * 新增版本时的约定：在此处补一条 `when` 分支并写清迁移步骤，
+ * 同时在 `STYLE_SCHEMA_VERSION` 的注释里登记该版本的格式变更。
+ */
+internal fun migrateStyleProtoBytes(
+    appVersionCode: Int,
+    currentVersion: Int,
+    protoBytes: ByteArray
+): Result<ByteArray> {
+    if (appVersionCode > currentVersion) {
+        return Result.failure(IllegalArgumentException("STYLE_TOO_NEW:$appVersionCode"))
+    }
+    if (appVersionCode <= 0) {
+        // 非法的版本号（0 / 负数 / 解析损坏）——放行等于把任意字节喂进解析器
+        return Result.failure(IllegalArgumentException("STYLE_VERSION_INVALID:$appVersionCode"))
+    }
+    return when (appVersionCode) {
+        // v1 是目前唯一发布过的版本，proto 格式与当前一致 ⇒ 迁移为空操作。
+        1 -> Result.success(protoBytes)
+        // 未知版本：宁可拒绝，也不能原样放行。
+        else -> Result.failure(IllegalArgumentException("STYLE_VERSION_UNSUPPORTED:$appVersionCode"))
+    }
+}
+
+/**
+ * N21：备份模块的**恢复顺序**是硬约束，不得依赖备份文件里 `meta.modules` 的排列。
+ *
+ * 依赖来自外键：`CourseNote.courseId → Course.id ON DELETE CASCADE`。
+ * 「先恢复课表」必然连带删除课堂笔记，因此 **USER_DATA 必须在 COURSE 之后**，
+ * 否则笔记写入时找不到父课程行而被拒绝（或在部分实现下被静默丢弃）。
+ * APP_SETTINGS 里含 `currentCourseTableId`，同样应在课表就位之后再写。
+ *
+ * 此前两处都直接 `meta.modules.forEach`，顺序完全由备份文件决定 ——
+ * 任何一端改变列表顺序（新增模块、按字典序排序、手工编辑 JSON）都会静默丢光课堂笔记。
+ *
+ * 现改为：按 [RESTORE_ORDER] 固定顺序分发；备份里没出现的模块跳过，
+ * 多余/未知模块忽略。这样顺序由**代码**保证，而不是由文件内容约定。
+ */
+internal val RESTORE_ORDER: List<BackupModule> = listOf(
+    BackupModule.COURSE,
+    BackupModule.STYLE,
+    BackupModule.USER_DATA,
+    BackupModule.APP_SETTINGS,
+)
+
+/**
+ * 备份与恢复的中央总仓库（KMP 共享层）
+ * 职责：调度各业务模块的原子化备份与恢复，确保全软件数据的一致性与扩展性。
+ */
+@Single
+class BackupRepository(
+    @Named("AppVersionCode") private val appVersionCode: Int,
+    @Named("AppVersionName") private val appVersionName: String,
+    private val database: MainAppDatabase,
+    private val courseTableDao: CourseTableDao,
+    private val courseTableRepository: CourseTableRepository,
+    private val courseConversionRepository: CourseConversionRepository,
+    private val appSettingsRepository: AppSettingsRepository,
+    private val styleSettingsRepository: StyleSettingsRepository,
+    private val apiConfigRepository: ApiConfigRepository,
+    private val courseNoteRepository: CourseNoteRepository
+) {
+    /**
+     * 云端备份链路的互斥锁。
+     *
+     * P2-18：原先只有 `uploadFullBackupToWebDav()` 上了这把锁，
+     * `restoreFullSoftwareBackup()` **没有** ⇒ 自动同步与手动恢复可以并发：
+     * 恢复进行到一半（课表已换成备份内容、设置还没恢复）时，自动上传会把这份
+     * **半恢复状态**传到云端，覆盖掉用户唯一的完整备份 —— 属不可逆的数据损失。
+     *
+     * 现在恢复入口同样持锁：备份/恢复在云端链路这一侧严格互斥。
+     */
+    private val webDavBackupMutex = Mutex()
+
+    /**
+     * 构建全软件多模块统一内存备份包
+     */
+    suspend fun createFullSoftwareBackup(modules: List<BackupModule>): AppBackupPackage? = withContext(Dispatchers.IO) {
+        try {
+            val payloadMap = mutableMapOf<String, ByteArray>()
+            val moduleInfos = mutableListOf<ModuleInfo>()
+
+            modules.forEach { module ->
+                when (module) {
+                    BackupModule.COURSE -> {
+                        val bytes = exportAllCourseTablesCbor()
+                        if (bytes != null) {
+                            payloadMap[module.key] = bytes
+                            moduleInfos.add(ModuleInfo(module.key, CourseImportExport.COURSE_SCHEMA_VERSION))
+                        } else if (courseTableRepository.getAllCourseTables().first().isNotEmpty()) {
+                            // 有课表却导出为 null ⇒ 是异常而非「无数据」。
+                            // 原实现静默跳过，导致备份「成功」但课表模块缺失，换机恢复才发现课表全空。
+                            return@withContext null
+                        }
+                        // 确实没有任何课表时跳过该模块是正确语义
+                    }
+                    BackupModule.STYLE -> {
+                        val bytes = exportAppStyleBytes() ?: return@withContext null
+                        payloadMap[module.key] = bytes
+                        moduleInfos.add(ModuleInfo(module.key, StyleSettingsRepository.STYLE_SCHEMA_VERSION))
+                    }
+                    BackupModule.APP_SETTINGS -> {
+                        val bytes = exportAppSettingsBytes() ?: return@withContext null
+                        payloadMap[module.key] = bytes
+                        moduleInfos.add(ModuleInfo(module.key, APP_SETTINGS_SCHEMA_VERSION))
+                    }
+                    BackupModule.USER_DATA -> {
+                        val bytes = exportUserDataBytes() ?: return@withContext null
+                        payloadMap[module.key] = bytes
+                        moduleInfos.add(ModuleInfo(module.key, CourseImportExport.USER_DATA_SCHEMA_VERSION))
+                    }
+                }
+            }
+
+            if (payloadMap.isEmpty()) return@withContext null
+
+            AppBackupPackage(
+                meta = BackupMeta(
+                    backupTimestamp = Clock.System.now().toEpochMilliseconds(),
+                    appVersionCode = appVersionCode,
+                    appVersionName = appVersionName,
+                    modules = moduleInfos
+                ),
+                payloadMap = payloadMap
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 将全量应用数据上传到已配置的 WebDAV。
+     *
+     * 手动备份与后台自动同步共用此入口，保证两者生成的目录结构、元数据和模块文件完全一致。
+     * 串行锁避免自动任务与用户手动备份同时写同一批临时文件。
+     */
+    @OptIn(ExperimentalUuidApi::class)
+    suspend fun uploadFullBackupToWebDav(): Result<Unit> = webDavBackupMutex.withLock {
+        withContext(Dispatchers.IO) {
+            val client = apiConfigRepository.createWebDavClient()
+                ?: return@withContext Result.failure(IllegalStateException(getString(Res.string.error_webdav_unconfigured)))
+            val snapshotId = Uuid.random().toString()
+            val remoteDir = "$WEBDAV_BACKUP_DIR/snapshots/$snapshotId"
+            val localDir = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "shangke-backup-$snapshotId"
+            try {
+                val backupPackage = createFullSoftwareBackup(BackupModule.entries)
+                    ?: error(getString(Res.string.backup_err_empty))
+                FileSystem.SYSTEM.createDirectories(localDir)
+                // 独立代次中的模块永不覆盖旧快照，任何模块失败都不触碰正式元数据。
+                for ((key, bytes) in backupPackage.payloadMap) {
+                    val local = localDir / "$key.cbor"
+                    FileSystem.SYSTEM.write(local) { write(bytes) }
+                    check(client.uploadFile(local, "$remoteDir/$key.cbor")) {
+                        getString(Res.string.backup_err_upload_failed)
+                    }
+                }
+                val meta = backupPackage.meta.copy(snapshotId = snapshotId)
+                val metaPath = localDir / "meta.json"
+                FileSystem.SYSTEM.write(metaPath) { writeUtf8(Json.encodeToString(BackupMeta.serializer(), meta)) }
+                // 代次目录保留自己的元数据，后续覆盖入口后仍能完整恢复这一代。
+                check(client.uploadFile(metaPath, "$remoteDir/manifest.json")) {
+                    getString(Res.string.backup_err_upload_failed)
+                }
+                check(client.uploadFile(metaPath, "$remoteDir/meta.json")) {
+                    getString(Res.string.backup_err_upload_failed)
+                }
+                // 唯一提交点：服务端原子 MOVE 元数据，旧快照保留供回退。
+                check(client.moveFile("$remoteDir/meta.json", "$WEBDAV_BACKUP_DIR/meta.json")) {
+                    getString(Res.string.backup_err_upload_failed)
+                }
+                Result.success(Unit)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.e(TAG, "云端备份上传失败，保留上一份快照", e)
+                Result.failure(e)
+            } finally {
+                // 请求可能已提交但响应丢失，不能据此删除远端代次；仅清理本机临时明文。
+                runCatching { FileSystem.SYSTEM.deleteRecursively(localDir) }
+                client.close()
+            }
+        }
+    }
+
+    /** 下载与恢复共用一次锁；调用方不再嵌套获取不可重入的 Mutex。 */
+    suspend fun restoreFullSoftwareBackup(backupPackage: AppBackupPackage): Result<Unit> =
+        restoreFullSoftwareBackup { backupPackage }
+
+    suspend fun restoreFullSoftwareBackup(loadBackup: suspend () -> AppBackupPackage): Result<Unit> =
+        webDavBackupMutex.withLock {
+            try {
+                restoreFullSoftwareBackupLocked(loadBackup())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    private suspend fun restoreFullSoftwareBackupLocked(
+        backupPackage: AppBackupPackage
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            backupPackage.meta.modules.forEach { info ->
+                when (info.key) {
+                    BackupModule.COURSE.key -> {
+                        if (info.schemaVersion > CourseImportExport.COURSE_SCHEMA_VERSION) {
+                            return@withContext Result.failure(IllegalStateException(getString(Res.string.backup_err_version_too_new)))
+                        }
+                    }
+                    BackupModule.STYLE.key -> {
+                        if (info.schemaVersion > StyleSettingsRepository.STYLE_SCHEMA_VERSION) {
+                            return@withContext Result.failure(IllegalStateException(getString(Res.string.backup_err_version_too_new)))
+                        }
+                    }
+                    BackupModule.APP_SETTINGS.key -> {
+                        if (info.schemaVersion > APP_SETTINGS_SCHEMA_VERSION) {
+                            return@withContext Result.failure(IllegalStateException(getString(Res.string.backup_err_version_too_new)))
+                        }
+                    }
+                    BackupModule.USER_DATA.key -> {
+                        if (info.schemaVersion > CourseImportExport.USER_DATA_SCHEMA_VERSION) {
+                            return@withContext Result.failure(IllegalStateException(getString(Res.string.backup_err_version_too_new)))
+                        }
+                    }
+                }
+            }
+            val courseSnapshot = exportAllCourseTablesCbor()
+            val styleSnapshot = exportAppStyleBytes()
+            val appSettingsSnapshot = exportAppSettingsBytes()
+            val userDataSnapshot = exportUserDataBytes()
+            check(styleSnapshot != null && appSettingsSnapshot != null && userDataSnapshot != null) {
+                "无法创建恢复前的完整快照，已保留本机数据"
+            }
+
+            try {
+                // N21：按固定顺序分发，不看备份文件里 modules 的排列（见 RESTORE_ORDER）。
+                // 备份里没有的模块自然跳过，未知模块忽略。
+                val presentKeys = backupPackage.meta.modules.map { it.key }.toSet()
+                for (module in RESTORE_ORDER) {
+                    if (module.key !in presentKeys) continue
+                    val data = backupPackage.payloadMap[module.key] ?: continue
+                    val result = when (module) {
+                        BackupModule.COURSE -> restoreAllCourseTablesCbor(data)
+                        BackupModule.STYLE -> restoreAppStyleBytes(data)
+                        BackupModule.APP_SETTINGS -> restoreAppSettingsBytes(data)
+                        BackupModule.USER_DATA -> restoreUserDataBytes(data)
+                    }
+                    if (result.isFailure) {
+                        throw result.exceptionOrNull()
+                            ?: IllegalStateException("备份模块恢复失败：${module.key}")
+                    }
+                }
+                Result.success(Unit)
+            } catch (e: Throwable) {
+                // 跨 Room/DataStore 无法由单一数据库事务覆盖，因此在恢复前建立四份快照；
+                // 任一模块失败时按快照反向恢复，尽量回到恢复前的完整状态。
+                //
+                // P2-12：这里的顺序是**硬约束**，不是随手写的 ——
+                // CourseNote.courseId 外键指向 Course.id 且 onDelete = CASCADE，
+                // 所以「先恢复课表」必然把课堂笔记连带删除，**必须随后由 USER_DATA 补回**。
+                // 若 USER_DATA 回滚失败或快照为 null，笔记就永久丢失。
+                // 此前四个 runCatching 的结果全部被丢弃 ⇒ 笔记丢失时上层只看到
+                // 原始异常，完全不知道「回滚没救回来」。
+                // 现改为：逐项记录成败，任一失败都随原始异常一并上报。
+                val rollbackFailures = mutableListOf<String>()
+                suspend fun rollbackStep(name: String, snapshot: ByteArray?, restore: suspend (ByteArray) -> Result<Unit>) {
+                    if (snapshot == null) {
+                        rollbackFailures += "$name 无快照可回滚"
+                        return
+                    }
+                    runCatching { restore(snapshot).getOrThrow() }
+                        .onFailure { rollbackFailures += "$name 回滚失败：${it.message ?: it::class.simpleName}" }
+                }
+                rollbackStep("课表", courseSnapshot) { restoreAllCourseTablesCbor(it) }
+                rollbackStep("样式", styleSnapshot) { restoreAppStyleBytes(it) }
+                rollbackStep("应用设置", appSettingsSnapshot) { restoreAppSettingsBytes(it) }
+                // USER_DATA 必须最后恢复：它要写回依赖课表/课程行的课堂笔记（见上方 P2-12 说明）
+                rollbackStep("用户数据(含课堂笔记)", userDataSnapshot) { restoreUserDataBytes(it) }
+
+                if (rollbackFailures.isEmpty()) {
+                    Result.failure(e)
+                } else {
+                    Result.failure(
+                        IllegalStateException(
+                            "恢复失败且回滚不完整：" + rollbackFailures.joinToString("；"),
+                            e
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // 1. 课表核心业务通道
+
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun exportAllCourseTablesCbor(): ByteArray? = withContext(Dispatchers.IO) {
+        try {
+            val allTablesFromDb = courseTableRepository.getAllCourseTables().first()
+            if (allTablesFromDb.isEmpty()) return@withContext null
+            val appSettings = appSettingsRepository.getAppSettingsOnce()
+
+            // P2-14：此前用 `mapNotNull`，而 `exportCourseTableToJson` 在「无课程且无配置」时
+            // 按设计返回 null（表示「这张表没有可导出的内容」）⇒ 该课表被**静默丢弃**。
+            // 用户后果：一张刚建好、还没加课的空课表，此后再也不会进入任何一次备份；
+            // 一旦本地数据丢失，恢复回来时这张课表**根本不存在**，且全程无任何提示。
+            // 修法：不再丢弃。改为显式构造一个「空内容」的包（课程/时段/配置皆空），
+            // 让空课表也随备份走；只有在 pack.tableData 真的构造不出来时才跳过，
+            // 并把被跳过的课表名收集起来打进返回值之外的可观测信息（见 skipped 打印）。
+            val skipped = mutableListOf<String>()
+            val tablePacks = allTablesFromDb.map { table ->
+                val exportModel = courseConversionRepository.exportCourseTableToJson(table.id)
+                if (exportModel == null) {
+                    // 空课表：构造一个合法的空内容包，而不是丢掉这张表。
+                    // CourseTableExportModel.config 是**非空** CourseConfigJsonModel（全字段有默认值），
+                    // 故用默认构造即可表达「这张表还没有任何设置」。
+                    skipped += table.name
+                    SingleTablePack(
+                        tableId = table.id,
+                        tableName = table.name,
+                        createdAt = table.createdAt,
+                        tableData = CourseTableExportModel(
+                            courses = emptyList(),
+                            timeSlots = emptyList(),
+                            config = CourseConfigJsonModel(),
+                            timeSlotSchemes = emptyList()
+                        ),
+                        isCouple = table.isCouple,
+                        pairedCourseTableId = table.pairedCourseTableId
+                    )
+                } else {
+                    SingleTablePack(
+                        tableId = table.id,
+                        tableName = table.name,
+                        createdAt = table.createdAt,
+                        tableData = exportModel,
+                        isCouple = table.isCouple,
+                        pairedCourseTableId = table.pairedCourseTableId
+                    )
+                }
+            }
+            if (skipped.isNotEmpty()) {
+                // 不静默：明确告知这些课表本身没有可导出内容，仍会以空课表形式进入备份
+                AppLog.w(TAG, "${skipped.size} 张空课表（无课程且无配置）将以空内容一并备份：${skipped.joinToString("、")}")
+            }
+
+            val envelope = TotalAppBackupEnvelope(
+                backupTimestamp = Clock.System.now().toEpochMilliseconds(),
+                appVersionCode = CourseImportExport.COURSE_SCHEMA_VERSION,
+                currentCourseTableId = appSettings.currentCourseTableId,
+                allTables = tablePacks
+            )
+
+            CourseImportExport.cbor.encodeToByteArray(TotalAppBackupEnvelope.serializer(), envelope)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun restoreAllCourseTablesCbor(cborBytes: ByteArray): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            if (cborBytes.isEmpty()) {
+                return@withContext Result.failure(IllegalArgumentException(getString(Res.string.backup_err_empty)))
+            }
+
+            val envelope = try {
+                CourseImportExport.cbor.decodeFromByteArray(TotalAppBackupEnvelope.serializer(), cborBytes)
+            } catch (_: Exception) {
+                return@withContext Result.failure(IllegalStateException(getString(Res.string.backup_err_corrupted)))
+            }
+
+            if (envelope.appVersionCode > CourseImportExport.COURSE_SCHEMA_VERSION) {
+                return@withContext Result.failure(IllegalStateException(getString(Res.string.backup_err_version_too_new)))
+            }
+
+            // 完整性校验：allTables 为空的备份（内容为空、或被截断但恰好仍可解码）会让下方
+            // 「清空现有课表」删光用户所有课表却什么都不插入，且全程返回成功。
+            if (envelope.allTables.isEmpty()) {
+                return@withContext Result.failure(
+                    IllegalStateException(getString(Res.string.backup_err_corrupted))
+                )
+            }
+
+            // 事务保护：先备份当前所有课表到内存，恢复失败时可回滚
+            //
+            // P2-14（同源第二处）：此前用 mapNotNull，空课表（无课程且无配置 ⇒
+            // exportCourseTableToJson 按设计返回 null）**不进快照** ⇒
+            // 一旦恢复失败，回滚时这张课表无从恢复，等于被这次恢复「顺手删掉」。
+            // 现改为：空课表也进快照（内容为空），保证回滚能把它还原回来。
+            val currentTables = courseTableRepository.getAllCourseTables().first()
+            val backupSnapshot = currentTables.mapNotNull { table ->
+                val exportModel = courseConversionRepository.exportCourseTableToJson(table.id)
+                    ?: CourseTableExportModel(
+                        courses = emptyList(),
+                        timeSlots = emptyList(),
+                        config = CourseConfigJsonModel(),
+                        timeSlotSchemes = emptyList()
+                    )
+                Triple(table.id, table.name, table.createdAt) to exportModel
+            }.toMap()
+            val backupCurrentTableId = appSettingsRepository.getAppSettingsOnce().currentCourseTableId
+
+            val backupTargetTableId = envelope.currentCourseTableId
+            val finalTableId = if (envelope.allTables.any { it.tableId == backupTargetTableId }) {
+                backupTargetTableId
+            } else {
+                envelope.allTables.firstOrNull()?.tableId ?: ""
+            }
+
+            try {
+                // 真事务：清空现有课表 + 导入备份课表整体原子化。
+                // 内部 importCourseTableFromJson 的写事务会通过 TransactionScope.withNestedTransaction
+                // 以 savepoint 形式 join 本事务；任一步失败即整体回滚，不留半恢复状态。
+                // 内存快照回滚保留为兜底防线（例如嵌套不可用的极端场景）。
+                database.withWriteTransaction {
+                    // 清空现有课表
+                    currentTables.forEach { courseTableDao.delete(it) }
+
+                    // 导入备份中的课表
+                    envelope.allTables.forEach { pack ->
+                        courseTableDao.insert(
+                            CourseTable(
+                                pack.tableId, pack.tableName, pack.createdAt,
+                                pack.isCouple, pack.pairedCourseTableId
+                            )
+                        )
+                        val importModel = CourseTableImportModel(
+                            timeSlotSchemes = pack.tableData.timeSlotSchemes,
+                            courses = pack.tableData.courses.map {
+                                ImportCourseJsonModel(
+                                    id = it.id,
+                                    name = it.name,
+                                    teacher = it.teacher,
+                                    position = it.position,
+                                    day = it.day,
+                                    startSection = it.startSection,
+                                    endSection = it.endSection,
+                                    weeks = it.weeks,
+                                    isCustomTime = it.isCustomTime,
+                                    customStartTime = it.customStartTime,
+                                    customEndTime = it.customEndTime,
+                                    color = it.color,
+                                    remark = it.remark,
+                                    credit = it.credit,
+                                    assessmentMethod = it.assessmentMethod,
+                                    isLab = it.isLab
+                                )
+                            },
+                            timeSlots = pack.tableData.timeSlots,
+                            config = pack.tableData.config
+                        )
+                        courseConversionRepository.importCourseTableFromJson(pack.tableId, importModel, restoreMode = true)
+                    }
+                }
+
+                // 恢复「当前课表」指向（DataStore 写入不在 Room 事务范围内，放在事务成功后执行）
+                val currentSettings = appSettingsRepository.getAppSettingsOnce()
+                appSettingsRepository.insertOrUpdateAppSettings(currentSettings.copy(currentCourseTableId = finalTableId))
+
+                Result.success(Unit)
+            } catch (e: Exception) {
+                // 回滚：恢复备份的课表。回滚本身也可能失败（例如失败源于同一个脏数据），
+                // 因此包一层 try/catch，避免回滚异常覆盖原始异常并把用户留在半恢复状态。
+                try {
+                    backupSnapshot.forEach { (tableInfo, exportModel) ->
+                        // P2-13：回滚快照里的课表**很可能仍然存在于库中** ——
+                        // 失败点通常就在上面的 `database.withWriteTransaction` 内部，
+                        // 而 Room 事务失败会整体回滚、课表行原样还在。
+                        // 此前此处无条件 `insert`，必然撞主键冲突（ABORT），
+                        // 回滚在第一步就中断、后续课表与设置全部没恢复，
+                        // 且异常被下方 `catch (_: Exception)` 整个吞掉 ⇒ 静默半恢复。
+                        // 现改为：存在则跳过 insert（数据已由事务回滚保留），
+                        // 仅补写该课表的子表数据；不存在才整条插入。
+                        // R40-04：判据此前取自**删除前的内存快照** currentTables，
+                        // 对循环中任意 tableInfo 恒为 true ⇒ INSERT 分支不可达。
+                        // 事务内失败时跳过 INSERT 恰好正确（Room 已整体回滚），
+                        // 但失败发生在事务**提交之后**（:653-654 的 DataStore 写入可因磁盘满 /
+                        // IO 错误抛异常）时，库里已没有该课表行 ⇒ 跳过 INSERT 导致后续
+                        // importCourseTableFromJson 插入的 Course 外键指向不存在的行 ⇒ 外键失败，
+                        // 最终是「课表已换、设置未换」的半恢复。
+                        // 修法：回滚时**查库**（删除前快照只用于取元信息），不再用快照判存在。
+                        val alreadyExists = courseTableDao.getCourseTableById(tableInfo.first) != null
+                        if (!alreadyExists) {
+                            // 回滚快照来自当前库，直接复用其情侣课表标记
+                            val original = currentTables.firstOrNull { it.id == tableInfo.first }
+                            courseTableDao.insert(
+                                CourseTable(
+                                    tableInfo.first, tableInfo.second, tableInfo.third,
+                                    original?.isCouple ?: false, original?.pairedCourseTableId
+                                )
+                            )
+                        }
+                        courseConversionRepository.importCourseTableFromJson(tableInfo.first, CourseTableImportModel(
+                            courses = exportModel.courses.map {
+                                ImportCourseJsonModel(
+                                    id = it.id,
+                                    name = it.name,
+                                    teacher = it.teacher,
+                                    position = it.position,
+                                    day = it.day,
+                                    startSection = it.startSection,
+                                    endSection = it.endSection,
+                                    weeks = it.weeks,
+                                    isCustomTime = it.isCustomTime,
+                                    customStartTime = it.customStartTime,
+                                    customEndTime = it.customEndTime,
+                                    color = it.color,
+                                    remark = it.remark,
+                                    credit = it.credit,
+                                    assessmentMethod = it.assessmentMethod,
+                                    isLab = it.isLab
+                                )
+                            },
+                            timeSlots = exportModel.timeSlots,
+                            config = exportModel.config,
+                            timeSlotSchemes = exportModel.timeSlotSchemes
+                        ), restoreMode = true)
+                    }
+                    val settings = appSettingsRepository.getAppSettingsOnce()
+                    appSettingsRepository.insertOrUpdateAppSettings(settings.copy(currentCourseTableId = backupCurrentTableId))
+                } catch (rollbackError: Exception) {
+                    // P2-13：回滚失败不能**静默**。
+                    // 此前 `catch (_: Exception) {}` 把二次异常整个吞掉，
+                    // 上层只看到 Result.failure(原始异常) ⇒ 用户与维护者都看不到
+                    // 「回滚也没成功」这一关键事实，排查时误判为「已回滚」。
+                    // 做法：把原始异常作为 cause 附上回滚异常，一并返回给上层。
+                    return@withContext Result.failure(
+                        IllegalStateException(
+                            (rollbackError.message ?: rollbackError::class.simpleName ?: "") +
+                                "（回滚失败）",
+                            e
+                        )
+                    )
+                }
+                Result.failure(e)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // 2. 个性化样式核心业务通道
+
+    /**
+     * 导出样式独立通道
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun exportAppStyleBytes(): ByteArray? = withContext(Dispatchers.IO) {
+        try {
+            val rawProtoBytes = styleSettingsRepository.exportRawStyleBytes()
+            val envelope = StyleBackupEnvelope(
+                backupTimestamp = Clock.System.now().toEpochMilliseconds(),
+                appVersionCode = StyleSettingsRepository.STYLE_SCHEMA_VERSION,
+                styleProtoBytes = rawProtoBytes
+            )
+            CourseImportExport.cbor.encodeToByteArray(StyleBackupEnvelope.serializer(), envelope)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 样式恢复独立通道
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun restoreAppStyleBytes(styleBytes: ByteArray): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            if (styleBytes.isEmpty()) {
+                return@withContext Result.failure(IllegalArgumentException(getString(Res.string.backup_err_empty)))
+            }
+
+            val envelope = try {
+                CourseImportExport.cbor.decodeFromByteArray(StyleBackupEnvelope.serializer(), styleBytes)
+            } catch (_: Exception) {
+                return@withContext Result.failure(IllegalStateException(getString(Res.string.backup_err_corrupted)))
+            }
+
+            // R1-003：版本闸门与迁移交由 migrateStyleProtoBytes（显式分派 + fail closed），
+            // 不再是「只拦更新、其余一律原样使用」。
+            val migratedProtoBytes = migrateStyleProtoBytes(
+                envelope.appVersionCode,
+                StyleSettingsRepository.STYLE_SCHEMA_VERSION,
+                envelope.styleProtoBytes
+            ).getOrElse { err ->
+                AppLog.w(TAG, "样式备份版本闸门拒绝: ${err.message}")
+                return@withContext Result.failure(
+                    IllegalStateException(getString(Res.string.backup_err_version_too_new))
+                )
+            }
+            styleSettingsRepository.restoreRawStyleBytes(migratedProtoBytes)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // 3. 应用设置备份通道
+
+    companion object {
+        /**
+         * 应用设置备份规范版本。
+         * v2：新增个人信息（昵称/学校/学院/专业/年级/签名/头像）与 5 项此前未备份的设置。
+         * v3：新增早八闹钟（开关 + 提前量）；旧 v2 备份缺字段 ⇒ 解码为 null ⇒ 保留设备现值，
+         *     故恢复链路向前兼容，无需迁移旧数据。
+         * v4：新增培养方案学分要求、绩点制、两个常驻通知开关（下一节课 / 考试倒计时）；
+         *     同样全可空，旧备份恢复时保留设备现值。
+         * v4 的可选扩展：早八模式和每周时间；旧版可忽略未知字段。
+         */
+        const val APP_SETTINGS_SCHEMA_VERSION = 4
+    }
+
+    /**
+     * 导出应用设置为 CBOR 字节
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun exportAppSettingsBytes(): ByteArray? = withContext(Dispatchers.IO) {
+        try {
+            val settings = appSettingsRepository.getAppSettingsOnce()
+            val backupModel = AppSettingsBackupModel(
+                currentCourseTableId = settings.currentCourseTableId,
+                reminderEnabled = settings.reminderEnabled,
+                remindBeforeMinutes = settings.remindBeforeMinutes,
+                skippedDates = settings.skippedDates,
+                autoModeEnabled = settings.autoModeEnabled,
+                autoControlMode = settings.autoControlMode.name,
+                compatWearableSync = settings.compatWearableSync,
+                showNonCurrentWeekCourses = settings.showNonCurrentWeekCourses,
+                startScreen = settings.startScreen.name,
+                themeMode = settings.themeMode.name,
+                themePreset = settings.themePreset.name,
+                developerModeEnabled = settings.developerModeEnabled,
+                coupleScheduleEnabled = settings.coupleScheduleEnabled,
+                coupleShowTimeRanges = settings.coupleShowTimeRanges,
+                selfCourseColorIndex = settings.selfCourseColorIndex,
+                crushCourseColorIndex = settings.crushCourseColorIndex,
+                scheduleViewMode = settings.scheduleViewMode.name,
+                glassBlurRadiusDp = settings.glassBlurRadiusDp,
+                glassRefractionEnabled = settings.glassRefractionEnabled,
+                glassRefractionHeightDp = settings.glassRefractionHeightDp,
+                glassRefractionAmountDp = settings.glassRefractionAmountDp,
+                glassRefractionDispersion = settings.glassRefractionDispersion,
+                glassRefractionDepthEffect = settings.glassRefractionDepthEffect,
+                animationStyle = settings.animationStyle.name,
+                disabledAnimationGroups = settings.disabledAnimationGroups.map { it.name }.toSet(),
+                // v2：此前未纳入备份、换机恢复即丢的字段
+                dynamicIslandEnabled = settings.dynamicIslandEnabled,
+                reduceMotionEnabled = settings.reduceMotionEnabled,
+                motionSpeed = settings.motionSpeed.name,
+                nextCardMode = settings.nextCardMode.name,
+                refreshRateMode = settings.refreshRateMode.name,
+                profileNickname = settings.profileNickname,
+                profileSchool = settings.profileSchool,
+                profileCollege = settings.profileCollege,
+                profileMajor = settings.profileMajor,
+                profileGrade = settings.profileGrade,
+                profileSignature = settings.profileSignature,
+                profileAvatarPath = settings.profileAvatarPath,
+                morningAlarmEnabled = settings.morningAlarmEnabled,
+                morningAlarmLeadMinutes = settings.morningAlarmLeadMinutes,
+                morningAlarmMode = settings.morningAlarmMode.name,
+                morningAlarmWeeklyTimes = MorningAlarmWeeklyTimes.normalize(settings.morningAlarmWeeklyTimes),
+                // v4：学业要求 / 绩点制 / 常驻通知开关
+                creditRequirements = CreditRequirement.encode(settings.creditRequirements),
+                gpaScale = settings.gpaScale.name,
+                nextClassNotificationEnabled = settings.nextClassNotificationEnabled,
+                examCountdownReminderEnabled = settings.examCountdownReminderEnabled
+            )
+            val envelope = AppSettingsBackupEnvelope(
+                backupTimestamp = Clock.System.now().toEpochMilliseconds(),
+                appVersionCode = APP_SETTINGS_SCHEMA_VERSION,
+                settings = backupModel
+            )
+            CourseImportExport.cbor.encodeToByteArray(AppSettingsBackupEnvelope.serializer(), envelope)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 从 CBOR 字节恢复应用设置
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun restoreAppSettingsBytes(settingsBytes: ByteArray): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            if (settingsBytes.isEmpty()) {
+                return@withContext Result.failure(IllegalArgumentException(getString(Res.string.backup_err_empty)))
+            }
+
+            val envelope = try {
+                CourseImportExport.cbor.decodeFromByteArray(AppSettingsBackupEnvelope.serializer(), settingsBytes)
+            } catch (_: Exception) {
+                return@withContext Result.failure(IllegalStateException(getString(Res.string.backup_err_corrupted)))
+            }
+
+            if (envelope.appVersionCode > APP_SETTINGS_SCHEMA_VERSION) {
+                return@withContext Result.failure(IllegalStateException(getString(Res.string.backup_err_version_too_new)))
+            }
+
+            val bm = envelope.settings
+            val currentSettings = appSettingsRepository.getAppSettingsOnce()
+
+            // 指针有效性校验（E10）：备份里的 currentCourseTableId 可能在本机不存在 ——
+            // 例如 WebDAV 部分恢复时 course 模块下载失败被跳过、而 app_settings 恢复成功。
+            // 直接采用会让 App 指向不存在的课表 → 界面显示空课表，用户只看到「部分模块恢复」警告，
+            // 无从定位原因。
+            val validTableIds = courseTableRepository.getAllCourseTables().first().map { it.id }.toSet()
+            val resolvedCurrentTableId = bm.currentCourseTableId.takeIf { it.isNotBlank() && it in validTableIds }
+                ?: currentSettings.currentCourseTableId.takeIf { it in validTableIds }
+                ?: validTableIds.firstOrNull().orEmpty()
+
+            val restoredSettings = currentSettings.copy(
+                currentCourseTableId = resolvedCurrentTableId,
+                reminderEnabled = bm.reminderEnabled,
+                remindBeforeMinutes = bm.remindBeforeMinutes,
+                skippedDates = bm.skippedDates,
+                autoModeEnabled = bm.autoModeEnabled,
+                autoControlMode = runCatching { AutoControlMode.valueOf(bm.autoControlMode) }.getOrNull() ?: currentSettings.autoControlMode,
+                compatWearableSync = bm.compatWearableSync,
+                showNonCurrentWeekCourses = bm.showNonCurrentWeekCourses,
+                startScreen = runCatching { StartScreen.valueOf(bm.startScreen) }.getOrNull() ?: currentSettings.startScreen,
+                themeMode = runCatching { AppThemeMode.valueOf(bm.themeMode) }.getOrNull() ?: currentSettings.themeMode,
+                // 主题预设走 fromString 而非 valueOf：旧备份里可能存着已删除的取值
+                // （ORIGINAL / SLEEPY / TIMETABLE / AIRY），valueOf 会解析失败并静默退回设备现值
+                themePreset = bm.themePreset?.let { AppThemePreset.fromString(it) } ?: currentSettings.themePreset,
+                developerModeEnabled = bm.developerModeEnabled,
+                coupleScheduleEnabled = bm.coupleScheduleEnabled,
+                coupleShowTimeRanges = bm.coupleShowTimeRanges ?: currentSettings.coupleShowTimeRanges,
+                selfCourseColorIndex = bm.selfCourseColorIndex,
+                crushCourseColorIndex = bm.crushCourseColorIndex,
+                scheduleViewMode = runCatching { com.shangkeschedule.ui.schedule.ScheduleViewMode.valueOf(bm.scheduleViewMode) }.getOrNull() ?: currentSettings.scheduleViewMode,
+                // 可空字段：v3.25.0 之前的备份没有该字段 ⇒ 解码为 null ⇒ 保留设备现值，
+                // 不被旧默认值 4dp 静默重置（App 现默认 8dp）
+                glassBlurRadiusDp = bm.glassBlurRadiusDp?.coerceIn(0f, 24f) ?: currentSettings.glassBlurRadiusDp,
+                // 折射可空字段：旧备份解码为 null ⇒ 保留设备现值，不被默认值静默重置
+                glassRefractionEnabled = bm.glassRefractionEnabled ?: currentSettings.glassRefractionEnabled,
+                glassRefractionHeightDp = bm.glassRefractionHeightDp ?: currentSettings.glassRefractionHeightDp,
+                glassRefractionAmountDp = bm.glassRefractionAmountDp ?: currentSettings.glassRefractionAmountDp,
+                glassRefractionDispersion = bm.glassRefractionDispersion ?: currentSettings.glassRefractionDispersion,
+                glassRefractionDepthEffect = bm.glassRefractionDepthEffect ?: currentSettings.glassRefractionDepthEffect,
+                animationStyle = runCatching { com.shangkeschedule.ui.theme.AnimationStyle.valueOf(bm.animationStyle) }.getOrNull() ?: currentSettings.animationStyle,
+                // R45-01：`?.` 兜底 —— 旧备份缺该字段时保留设备现值，
+                // 而不是被兜底写入空集（= 所有动画分组全部视为开启）。
+                disabledAnimationGroups = bm.disabledAnimationGroups
+                    ?.mapNotNull { runCatching { com.shangkeschedule.ui.theme.AnimationGroup.valueOf(it) }.getOrNull() }
+                    ?.toSet()
+                    ?: currentSettings.disabledAnimationGroups,
+                // v2 可空字段：旧备份解码为 null ⇒ 保留设备现值（避免被 ""/false 默认值静默清空）
+                dynamicIslandEnabled = bm.dynamicIslandEnabled ?: currentSettings.dynamicIslandEnabled,
+                reduceMotionEnabled = bm.reduceMotionEnabled ?: currentSettings.reduceMotionEnabled,
+                motionSpeed = bm.motionSpeed?.let { runCatching { MotionSpeed.valueOf(it) }.getOrNull() }
+                    ?: currentSettings.motionSpeed,
+                nextCardMode = bm.nextCardMode?.let { runCatching { NextCardMode.valueOf(it) }.getOrNull() }
+                    ?: currentSettings.nextCardMode,
+                refreshRateMode = bm.refreshRateMode?.let { runCatching { RefreshRateMode.valueOf(it) }.getOrNull() }
+                    ?: currentSettings.refreshRateMode,
+                profileNickname = bm.profileNickname ?: currentSettings.profileNickname,
+                profileSchool = bm.profileSchool ?: currentSettings.profileSchool,
+                profileCollege = bm.profileCollege ?: currentSettings.profileCollege,
+                profileMajor = bm.profileMajor ?: currentSettings.profileMajor,
+                profileGrade = bm.profileGrade ?: currentSettings.profileGrade,
+                profileSignature = bm.profileSignature ?: currentSettings.profileSignature,
+                profileAvatarPath = bm.profileAvatarPath ?: currentSettings.profileAvatarPath,
+                // v3 可空字段：旧备份 ⇒ null ⇒ 保留设备现值
+                morningAlarmEnabled = bm.morningAlarmEnabled ?: currentSettings.morningAlarmEnabled,
+                morningAlarmLeadMinutes = (bm.morningAlarmLeadMinutes ?: currentSettings.morningAlarmLeadMinutes)
+                    .coerceIn(0, 180),
+                morningAlarmMode = MorningAlarmMode.parseOrNull(bm.morningAlarmMode) ?: currentSettings.morningAlarmMode,
+                morningAlarmWeeklyTimes = bm.morningAlarmWeeklyTimes?.let(MorningAlarmWeeklyTimes::normalize)
+                    ?: currentSettings.morningAlarmWeeklyTimes,
+                // v4 可空字段：旧备份 ⇒ null ⇒ 保留设备现值
+                creditRequirements = bm.creditRequirements?.let { raw -> CreditRequirement.decode(raw) }
+                    ?: currentSettings.creditRequirements,
+                gpaScale = bm.gpaScale?.let { runCatching { GpaScale.valueOf(it) }.getOrNull() }
+                    ?: currentSettings.gpaScale,
+                nextClassNotificationEnabled = bm.nextClassNotificationEnabled
+                    ?: currentSettings.nextClassNotificationEnabled,
+                examCountdownReminderEnabled = bm.examCountdownReminderEnabled
+                    ?: currentSettings.examCountdownReminderEnabled
+            )
+            // P2-21：此前这批「insertOrUpdateAppSettings 未覆盖的键」是**逐字段**调 setter，
+            // 每个 setter 各自一个 dataStore.edit 事务（合计 8 次）⇒ 中途失败即留下**半恢复**设置
+            //（个人信息换了、闹钟没换、绩点制还是旧的），而恢复流程只报一个笼统的失败。
+            // 现改为：主键组与补充键组各自**单次事务**写完。
+            appSettingsRepository.insertOrUpdateAppSettings(restoredSettings)
+            // 补写 insertOrUpdateAppSettings 未覆盖的键：该函数只一次性写回 31 个键，
+            // 个人信息、早八闹钟、学业要求、绩点制与两个常驻通知开关不在其中 ——
+            // 若只靠上面这行，这些字段会「算对了但没落盘」，表现为恢复后设置没生效。
+            // 现由 updateSupplementalSettingsAtomically 在**一个事务**内写齐，
+            // 避免出现「一半新一半旧」的设置。
+            appSettingsRepository.updateSupplementalSettingsAtomically(restoredSettings)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // 4. 全局用户数据（待办 / 日程 / 成绩）备份通道
+
+    /**
+     * 导出全部待办、日程与成绩为 CBOR 字节。
+     *
+     * 这三张表是全局数据（不随课表切换），故与课表模块分开、单独作为一个备份模块。
+     * 即使无任何数据也返回**有效信封**（而非 null），以保证「备份包含该模块」语义明确 ——
+     * 用户可能确实没有待办，此时空列表就是正确快照。
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun exportUserDataBytes(): ByteArray? = withContext(Dispatchers.IO) {
+        try {
+            val todos = database.todoDao().getAllTodosOnce().map {
+                TodoBackupModel(
+                    id = it.id, date = it.date, title = it.title, note = it.note,
+                    time = it.time, done = it.done, sortOrder = it.sortOrder,
+                    createdAt = it.createdAt, updatedAt = it.updatedAt
+                )
+            }
+            val events = database.scheduleEventDao().getAllEventsOnce().map {
+                ScheduleEventBackupModel(
+                    id = it.id, date = it.date, title = it.title, category = it.category,
+                    isAllDay = it.isAllDay, startTime = it.startTime, endTime = it.endTime,
+                    location = it.location, note = it.note, done = it.done,
+                    createdAt = it.createdAt, updatedAt = it.updatedAt
+                )
+            }
+            val grades = database.gradeDao().getAllGradesOnce().map {
+                GradeBackupModel(
+                    id = it.id, semester = it.semester, courseName = it.courseName,
+                    credit = it.credit, scoreText = it.scoreText, scoreValue = it.scoreValue,
+                    gradePoint = it.gradePoint,
+                    category = it.category, isRetake = it.isRetake, note = it.note,
+                    source = it.source, createdAt = it.createdAt, updatedAt = it.updatedAt
+                )
+            }
+            val images = linkedMapOf<String, NoteImageBackupModel>()
+            val imageKeys = mutableMapOf<String, String>()
+            var imageBytes = 0L
+            val notes = database.courseNoteDao().getAllNotesOnce().map { note ->
+                val imageRefs = note.imagePaths?.split('\n')?.filter { it.isNotBlank() }?.map { rawPath ->
+                    val path = rawPath.trim()
+                    imageKeys.getOrPut(path) {
+                        val bytes = courseNoteRepository.readImage(path) ?: error("笔记附件缺失，备份已中止")
+                        imageBytes += bytes.size
+                        require(bytes.size <= MAX_NOTE_IMAGE_BYTES && imageBytes <= MAX_NOTE_IMAGES_BYTES) {
+                            "笔记附件超过备份容量上限"
+                        }
+                        val key = "image-${images.size}"
+                        images[key] = NoteImageBackupModel(bytes)
+                        key
+                    }
+                }?.joinToString("\n")
+                CourseNoteBackupModel(
+                    id = note.id, courseId = note.courseId, date = note.date, sections = note.sections,
+                    title = note.title, content = note.content, imagePaths = imageRefs,
+                    createdAt = note.createdAt, updatedAt = note.updatedAt
+                )
+            }
+            // v4（2026-10-07）：培养方案课程清单。此前不在备份里，换机后「应修 / 已修 / 未修」全丢
+            val curriculumCourses = database.curriculumCourseDao().getAllOnce().map {
+                CurriculumCourseBackupModel(
+                    id = it.id, courseName = it.courseName, category = it.category,
+                    credit = it.credit, suggestedTerm = it.suggestedTerm, source = it.source,
+                    createdAt = it.createdAt, updatedAt = it.updatedAt
+                )
+            }
+            val envelope = UserDataBackupEnvelope(
+                backupTimestamp = Clock.System.now().toEpochMilliseconds(),
+                appVersionCode = CourseImportExport.USER_DATA_SCHEMA_VERSION,
+                todos = todos,
+                events = events,
+                grades = grades,
+                notes = notes,
+                curriculumCourses = curriculumCourses,
+                noteImages = images
+            )
+            CourseImportExport.cbor.encodeToByteArray(UserDataBackupEnvelope.serializer(), envelope)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLog.e(TAG, "用户数据备份失败", e)
+            null
+        }
+    }
+
+    /**
+     * 从 CBOR 字节恢复待办、日程与成绩。
+     *
+     * 采用**快照替换**语义（同一事务内先清空再插入），与课表模块的恢复语义保持一致，
+     * 避免旧数据残留导致「恢复到某个时间点」的结果不准确。
+     *
+     * 例外：`grades` 字段在旧 v1 备份中不存在（解码为 null），此时**整表不动** ——
+     * 否则用老备份恢复会把用户新录入的成绩静默清空。
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun restoreUserDataBytes(bytes: ByteArray): Result<Unit> = withContext(Dispatchers.IO) {
+        val writtenImages = mutableListOf<String>()
+        var committed = false
+        try {
+            if (bytes.isEmpty()) {
+                return@withContext Result.failure(IllegalArgumentException(getString(Res.string.backup_err_empty)))
+            }
+
+            val envelope = try {
+                CourseImportExport.cbor.decodeFromByteArray(UserDataBackupEnvelope.serializer(), bytes)
+            } catch (_: Exception) {
+                return@withContext Result.failure(IllegalStateException(getString(Res.string.backup_err_corrupted)))
+            }
+
+            if (envelope.appVersionCode > CourseImportExport.USER_DATA_SCHEMA_VERSION) {
+                return@withContext Result.failure(IllegalStateException(getString(Res.string.backup_err_version_too_new)))
+            }
+
+            val imagePaths = mutableMapOf<String, String>()
+            require(envelope.appVersionCode < 5 || envelope.noteImages != null ||
+                envelope.notes.orEmpty().none { !it.imagePaths.isNullOrBlank() }) { "笔记附件缺失" }
+            envelope.noteImages?.let { images ->
+                require(images.size <= 10000 && images.values.sumOf { it.bytes.size.toLong() } <= MAX_NOTE_IMAGES_BYTES) {
+                    "笔记附件超过备份容量上限"
+                }
+                require(images.all { (key, image) ->
+                    Regex("image-[0-9]+").matches(key) && image.bytes.size <= MAX_NOTE_IMAGE_BYTES
+                }) { "笔记附件格式非法" }
+                val referenced = envelope.notes.orEmpty().flatMap { it.imagePaths?.split('\n').orEmpty() }
+                    .filter { it.isNotBlank() }.toSet()
+                require(referenced.all { it in images }) { "笔记附件缺失" }
+                for (key in referenced) {
+                    val saved = courseNoteRepository.saveImage("restore", images.getValue(key).bytes)
+                        ?: error("笔记附件恢复失败")
+                    writtenImages += saved
+                    imagePaths[key] = saved
+                }
+            }
+
+            database.withWriteTransaction {
+                database.todoDao().deleteAllTodos()
+                database.scheduleEventDao().deleteAllEvents()
+
+                if (envelope.todos.isNotEmpty()) {
+                    database.todoDao().insertAll(
+                        envelope.todos.map {
+                            TodoItem(
+                                id = it.id, date = it.date, title = it.title, note = it.note,
+                                time = it.time, done = it.done, sortOrder = it.sortOrder,
+                                createdAt = it.createdAt, updatedAt = it.updatedAt
+                            )
+                        }
+                    )
+                }
+                if (envelope.events.isNotEmpty()) {
+                    database.scheduleEventDao().insertAll(
+                        envelope.events.map {
+                            ScheduleEvent(
+                                id = it.id, date = it.date, title = it.title, category = it.category,
+                                isAllDay = it.isAllDay, startTime = it.startTime, endTime = it.endTime,
+                                location = it.location, note = it.note, done = it.done,
+                                createdAt = it.createdAt, updatedAt = it.updatedAt
+                            )
+                        }
+                    )
+                }
+                // 课堂笔记：同样仅在备份带了该字段（v3+）时才替换。
+                // 额外按「课程仍存在」过滤：course_notes → courses 是 CASCADE 外键，
+                // 直接插入孤儿笔记会外键失败，导致整次恢复回滚。
+                val restoredNotes = envelope.notes
+                if (restoredNotes != null) {
+                    val existingCourseIds = database.courseDao().getAllCourseIdsOnce().toHashSet()
+                    // R40-06：**先过滤再删**。旧顺序是 deleteAll() → filter ⇒ 备份里的笔记
+                    // 若全部指向不存在的课程（CASCADE 外键孤儿），过滤后为空、insertAll 不执行，
+                    // 而本机笔记已被整表清空且无法回填，函数却返回 Result.success。
+                    // 用户表现：恢复一次「成功」，课堂笔记全部消失且没有任何提示。
+                    val insertableNotes = restoredNotes
+                        .filter { it.courseId in existingCourseIds }
+                        .map {
+                            CourseNote(
+                                id = it.id, courseId = it.courseId, date = it.date,
+                                // R68-01：恢复侧对 sections 做长度钳制。
+                                // 备份文件可被构造或损坏，若在此处原样灌入超长值，
+                                // 就绕过了 UI 输入框与 VM 的两层上限（报告已指出「只改输入框不够」）。
+                                // 与写入侧同一常量，口径一致。
+                                sections = it.sections
+                                    ?.take(MAX_SECTIONS_LENGTH)
+                                    ?.trim()
+                                    ?.takeIf { s -> s.isNotEmpty() },
+                                title = it.title, content = it.content,
+                                imagePaths = if (envelope.noteImages != null) {
+                                    it.imagePaths?.split('\n')?.filter { ref -> ref.isNotBlank() }
+                                        ?.map { ref -> imagePaths.getValue(ref) }?.joinToString("\n")
+                                } else courseNoteRepository.retainOwnedImages(it.imagePaths),
+                                createdAt = it.createdAt, updatedAt = it.updatedAt
+                            )
+                        }
+                    // 备份**确实带了笔记**却一条都插不进去 ⇒ 本机笔记原样保留（不做替换）。
+                    // 备份本身就没有笔记（restoredNotes 为空）⇒ 按「以备份为准」语义清空，保持原行为。
+                    val replaceLocal = insertableNotes.isNotEmpty() || restoredNotes.isEmpty()
+                    if (replaceLocal) {
+                        // R40-06：删除与插入必须原子。本函数整体不是 Room @Transaction（异常由
+                        // 外层 try/catch 收成 Result），裸奔的 deleteAll + insertAll 一旦插入
+                        // 失败，本机笔记就真的没了 —— 且与「课表已恢复、设置未恢复」同样不可自愈。
+                        database.withWriteTransaction {
+                            database.courseNoteDao().deleteAll()
+                            if (insertableNotes.isNotEmpty()) {
+                                database.courseNoteDao().insertAll(insertableNotes)
+                            }
+                        }
+                    }
+                }
+                // 成绩：仅在备份确实带了该字段时才替换（v1 老备份为 null ⇒ 保持本机成绩不变）
+                val restoredGrades = envelope.grades
+                if (restoredGrades != null) {
+                    database.gradeDao().deleteAll()
+                    if (restoredGrades.isNotEmpty()) {
+                        database.gradeDao().insertAll(
+                            restoredGrades.map {
+                                Grade(
+                                    id = it.id, semester = it.semester, courseName = it.courseName,
+                                    credit = it.credit, scoreText = it.scoreText, scoreValue = it.scoreValue,
+                                    gradePoint = it.gradePoint,
+                                    category = it.category, isRetake = it.isRetake, note = it.note,
+                                    source = it.source, createdAt = it.createdAt, updatedAt = it.updatedAt
+                                )
+                            }
+                        )
+                    }
+                }
+                // 培养方案课程：同样仅在备份带了该字段（v4+）时才替换（老备份为 null ⇒ 保持本机清单不变）
+                val restoredCurriculum = envelope.curriculumCourses
+                if (restoredCurriculum != null) {
+                    database.curriculumCourseDao().deleteAll()
+                    if (restoredCurriculum.isNotEmpty()) {
+                        database.curriculumCourseDao().insertAll(
+                            restoredCurriculum.map {
+                                CurriculumCourse(
+                                    id = it.id, courseName = it.courseName, category = it.category,
+                                    credit = it.credit, suggestedTerm = it.suggestedTerm,
+                                    source = it.source,
+                                    createdAt = it.createdAt, updatedAt = it.updatedAt
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+            committed = true
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            // R40-11：CancellationException 是**协程取消**信号，不是业务失败。
+            // 被 `catch (e: Exception)` 吞掉并包成 Result.failure 后，结构化并发被破坏 ——
+            // 已取消的恢复协程不会中止后续挂起调用，可能在用户已离开后继续写库。
+            // 必须原样重抛。
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            if (!committed && writtenImages.isNotEmpty()) {
+                courseNoteRepository.deleteImages(writtenImages.joinToString("\n"))
+            }
+        }
+    }
+}
+
+/** 日志模块标签（P2-15：备份链路的异常不再静默吞掉）。 */
+private const val TAG = "BackupRepository"
+
+private const val MAX_NOTE_IMAGE_BYTES = 16 * 1024 * 1024
+private const val MAX_NOTE_IMAGES_BYTES = 96L * 1024 * 1024
