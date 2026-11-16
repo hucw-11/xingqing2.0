@@ -20,9 +20,15 @@ import com.shangkeschedule.data.di.AppStorage
         ScheduleEvent::class,
         Grade::class,
         CurriculumCourse::class,
-        CourseNote::class
+        CourseNote::class,
+        DiaryEntry::class,
+        MoodRecord::class,
+        DiaryTag::class,
+        DiaryTagCrossRef::class,
+        MoodTagCrossRef::class,
+        DiaryAttachment::class
     ],
-    version = 16,
+    version = 17,
     autoMigrations = [
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5, spec = MainAppDatabase.RemoveAppSettingsSpec::class)
@@ -46,6 +52,10 @@ abstract class MainAppDatabase : RoomDatabase() {
     abstract fun gradeDao(): GradeDao
     abstract fun curriculumCourseDao(): CurriculumCourseDao
     abstract fun courseNoteDao(): CourseNoteDao
+    abstract fun diaryDao(): DiaryDao
+    abstract fun moodDao(): MoodDao
+    abstract fun diaryTagDao(): DiaryTagDao
+    abstract fun diaryAttachmentDao(): DiaryAttachmentDao
 
     companion object {
         fun getDatabase(appStorage: AppStorage): MainAppDatabase {

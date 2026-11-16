@@ -4,8 +4,12 @@ import androidx.lifecycle.ViewModelStore
 import com.shangkeschedule.data.db.main.MainAppDatabase
 import com.shangkeschedule.data.model.StartScreen
 import com.shangkeschedule.data.repository.AppSettingsRepository
+import com.shangkeschedule.data.repository.DiaryRepository
+import com.shangkeschedule.data.repository.DiaryTagRepository
+import com.shangkeschedule.data.repository.MoodRepository
 import com.shangkeschedule.tool.DesktopAppDirs
 import com.shangkeschedule.ui.agenda.AgendaViewModel
+import com.shangkeschedule.ui.diary.DiaryViewModel
 import com.shangkeschedule.ui.settings.SettingsViewModel
 import java.awt.GraphicsEnvironment
 import java.io.File
@@ -30,6 +34,11 @@ class DesktopStartupTest {
             val settings = dependencies.koin.get<SettingsViewModel>()
             viewModels.put("settings", settings)
             viewModels.put("agenda", dependencies.koin.get<AgendaViewModel>())
+            // 日记模块依赖：DAO、仓库与 ViewModel 必须都能从真实容器取到
+            dependencies.koin.get<DiaryRepository>()
+            dependencies.koin.get<MoodRepository>()
+            dependencies.koin.get<DiaryTagRepository>()
+            viewModels.put("diary", dependencies.koin.get<DiaryViewModel>())
             val stored = withTimeout(30_000) {
                 dependencies.koin.get<AppSettingsRepository>().getAppSettingsOnce()
             }

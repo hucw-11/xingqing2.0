@@ -64,6 +64,7 @@ jobs:
             client/shared/build/test-results/**
             client/androidApp/build/reports/**
             client/androidApp/build/outputs/logs/**
+            client/shared/schemas/**
           if-no-files-found: warn
           retention-days: 7
 

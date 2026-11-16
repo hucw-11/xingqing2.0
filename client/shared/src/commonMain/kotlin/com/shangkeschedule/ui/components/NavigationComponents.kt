@@ -92,9 +92,11 @@ import shangkeschedule.shared.generated.resources.account_circle_24px
 import shangkeschedule.shared.generated.resources.account_circle_filled_24px
 import shangkeschedule.shared.generated.resources.calendar_today_24px
 import shangkeschedule.shared.generated.resources.nav_course_schedule
+import shangkeschedule.shared.generated.resources.nav_diary
 import shangkeschedule.shared.generated.resources.nav_schedule
 import shangkeschedule.shared.generated.resources.nav_settings
 import shangkeschedule.shared.generated.resources.nav_today
+import shangkeschedule.shared.generated.resources.sticky_note_2_24px
 import shangkeschedule.shared.generated.resources.view_agenda_24px
 import shangkeschedule.shared.generated.resources.view_agenda_filled_24px
 import shangkeschedule.shared.generated.resources.view_week_24px
@@ -157,6 +159,12 @@ fun AdaptiveNavigationScaffold(
             destination = Destination.Schedule,
             selectedIcon = vectorResource(Res.drawable.calendar_today_24px),
             unselectedIcon = vectorResource(Res.drawable.calendar_today_24px)
+        ),
+        NavItemData(
+            label = stringResource(Res.string.nav_diary),
+            destination = Destination.Diary,
+            selectedIcon = vectorResource(Res.drawable.sticky_note_2_24px),
+            unselectedIcon = vectorResource(Res.drawable.sticky_note_2_24px)
         ),
         NavItemData(
             label = stringResource(Res.string.nav_settings),

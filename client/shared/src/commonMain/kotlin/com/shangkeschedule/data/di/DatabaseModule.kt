@@ -51,6 +51,18 @@ class DatabaseModule {
     fun provideCourseNoteDao(db: MainAppDatabase): CourseNoteDao = db.courseNoteDao()
 
     @Factory
+    fun provideDiaryDao(db: MainAppDatabase): DiaryDao = db.diaryDao()
+
+    @Factory
+    fun provideMoodDao(db: MainAppDatabase): MoodDao = db.moodDao()
+
+    @Factory
+    fun provideDiaryTagDao(db: MainAppDatabase): DiaryTagDao = db.diaryTagDao()
+
+    @Factory
+    fun provideDiaryAttachmentDao(db: MainAppDatabase): DiaryAttachmentDao = db.diaryAttachmentDao()
+
+    @Factory
     fun provideScheduleEventDao(db: MainAppDatabase): ScheduleEventDao = db.scheduleEventDao()
 
     @Factory

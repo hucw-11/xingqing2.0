@@ -555,6 +555,160 @@ val MIGRATION_15_16 = object : Migration(15, 16) {
     }
 }
 
+/**
+ * 数据库版本 16 迁移到 版本 17（P3 图文日记与心情记录）。
+ *
+ * 只新增表与索引，不改动课程、节次、日程、待办、成绩、笔记等既有数据：
+ * - `diary_entries`：日记正文（Markdown 原文）、发生时刻/时区、草稿标记、逻辑删除；
+ * - `mood_records`：五档评分；`diaryId` 可空且对非空值唯一（一篇日记最多一条关联心情）；
+ * - `diary_tags`：自定义标签，`normalizedName` 唯一；
+ * - `diary_tag_cross_ref` / `mood_tag_cross_ref`：日记与独立心情的标签关联；
+ * - `diary_attachments`：图片附件的相对路径、媒体类型、大小与内容哈希。
+ *
+ * 与既有迁移同样的硬要求：建表语句必须与实体逐列对齐（列名、可空性、外键与索引名一致），
+ * 否则 Room 迁移后的 TableInfo 校验失败，应用启动即闪退。本迁移全部为新表，不带 DEFAULT。
+ */
+val MIGRATION_16_17 = object : Migration(16, 17) {
+    override suspend fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `diary_entries` (
+                `id` TEXT NOT NULL,
+                `title` TEXT,
+                `markdown` TEXT NOT NULL,
+                `occurredAt` INTEGER NOT NULL,
+                `timeZoneId` TEXT NOT NULL,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                `isDraft` INTEGER NOT NULL,
+                `deletedAt` INTEGER,
+                PRIMARY KEY(`id`)
+            )
+            """
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_diary_entries_occurredAt` ON `diary_entries` (`occurredAt`)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_diary_entries_updatedAt` ON `diary_entries` (`updatedAt`)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_diary_entries_isDraft` ON `diary_entries` (`isDraft`)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_diary_entries_deletedAt` ON `diary_entries` (`deletedAt`)"
+        )
+
+        connection.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `mood_records` (
+                `id` TEXT NOT NULL,
+                `diaryId` TEXT,
+                `score` INTEGER NOT NULL,
+                `scaleVersion` INTEGER NOT NULL,
+                `occurredAt` INTEGER NOT NULL,
+                `timeZoneId` TEXT NOT NULL,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                `deletedAt` INTEGER,
+                PRIMARY KEY(`id`),
+                FOREIGN KEY(`diaryId`) REFERENCES `diary_entries`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_mood_records_diaryId` ON `mood_records` (`diaryId`)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_mood_records_occurredAt` ON `mood_records` (`occurredAt`)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_mood_records_deletedAt` ON `mood_records` (`deletedAt`)"
+        )
+
+        connection.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `diary_tags` (
+                `id` TEXT NOT NULL,
+                `name` TEXT NOT NULL,
+                `normalizedName` TEXT NOT NULL,
+                `color` INTEGER,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                `deletedAt` INTEGER,
+                PRIMARY KEY(`id`)
+            )
+            """
+        )
+        connection.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_diary_tags_normalizedName` ON `diary_tags` (`normalizedName`)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_diary_tags_deletedAt` ON `diary_tags` (`deletedAt`)"
+        )
+
+        connection.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `diary_tag_cross_ref` (
+                `diaryId` TEXT NOT NULL,
+                `tagId` TEXT NOT NULL,
+                PRIMARY KEY(`diaryId`, `tagId`),
+                FOREIGN KEY(`diaryId`) REFERENCES `diary_entries`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`tagId`) REFERENCES `diary_tags`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_diary_tag_cross_ref_diaryId` ON `diary_tag_cross_ref` (`diaryId`)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_diary_tag_cross_ref_tagId` ON `diary_tag_cross_ref` (`tagId`)"
+        )
+
+        connection.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `mood_tag_cross_ref` (
+                `moodId` TEXT NOT NULL,
+                `tagId` TEXT NOT NULL,
+                PRIMARY KEY(`moodId`, `tagId`),
+                FOREIGN KEY(`moodId`) REFERENCES `mood_records`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`tagId`) REFERENCES `diary_tags`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_mood_tag_cross_ref_moodId` ON `mood_tag_cross_ref` (`moodId`)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_mood_tag_cross_ref_tagId` ON `mood_tag_cross_ref` (`tagId`)"
+        )
+
+        connection.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `diary_attachments` (
+                `id` TEXT NOT NULL,
+                `diaryId` TEXT NOT NULL,
+                `relativePath` TEXT NOT NULL,
+                `mimeType` TEXT NOT NULL,
+                `byteSize` INTEGER NOT NULL,
+                `sha256` TEXT NOT NULL,
+                `sortOrder` INTEGER NOT NULL,
+                `createdAt` INTEGER NOT NULL,
+                `deletedAt` INTEGER,
+                PRIMARY KEY(`id`),
+                FOREIGN KEY(`diaryId`) REFERENCES `diary_entries`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_diary_attachments_diaryId` ON `diary_attachments` (`diaryId`)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_diary_attachments_deletedAt` ON `diary_attachments` (`deletedAt`)"
+        )
+    }
+}
+
 // 【集中管理所有迁移对象】
 //
 // 迁移链完整性（2026-10-03 巡检第 8 轮取证，勿删）：
@@ -585,4 +739,5 @@ val ALL_MIGRATIONS = arrayOf(
     MIGRATION_13_14,
     MIGRATION_14_15,
     MIGRATION_15_16,
+    MIGRATION_16_17,
 )

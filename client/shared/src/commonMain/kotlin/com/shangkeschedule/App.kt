@@ -75,6 +75,9 @@ import com.shangkeschedule.ui.cert.CertExamScreen
 import com.shangkeschedule.ui.adapters.AdapterStatusScreen
 import com.shangkeschedule.ui.grade.GradeScreen
 import com.shangkeschedule.ui.note.CourseNoteScreen
+import com.shangkeschedule.ui.diary.DiaryDetailScreen
+import com.shangkeschedule.ui.diary.DiaryEditorScreen
+import com.shangkeschedule.ui.diary.DiaryScreen
 import com.shangkeschedule.ui.share.CourseShareScreen
 import com.shangkeschedule.ui.share.ThemeShareScreen
 import com.shangkeschedule.ui.study.StudyProgressScreen
@@ -620,6 +623,16 @@ fun ScreenContent(
             courseName = targetDest.courseName,
             sectionLabel = targetDest.sectionLabel,
             onBack = onBack
+        )
+        Destination.Diary -> DiaryScreen(onNavigate = onNavigate, onBack = onBack)
+        is Destination.DiaryEditor -> DiaryEditorScreen(
+            entryId = targetDest.entryId,
+            onBack = onBack
+        )
+        is Destination.DiaryDetail -> DiaryDetailScreen(
+            entryId = targetDest.entryId,
+            onBack = onBack,
+            onEdit = { onNavigate(Destination.DiaryEditor(targetDest.entryId)) }
         )
         Destination.CourseShare -> CourseShareScreen(onBack = onBack)
         Destination.ThemeShare -> ThemeShareScreen(onBack = onBack)

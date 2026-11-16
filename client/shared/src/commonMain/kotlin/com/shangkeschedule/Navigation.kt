@@ -31,6 +31,8 @@ sealed interface Destination : NavKey {
     @Serializable data object TodaySchedule : MainDestination
     /** 「日程」页：月历 + 当日课程/自建日程时间轴 */
     @Serializable data object Schedule : MainDestination
+    /** 「日记」页：图文日记、草稿与独立心情时间线。 */
+    @Serializable data object Diary : MainDestination
 
     // --- 二级功能页面 ---
     @Serializable
@@ -118,6 +120,14 @@ sealed interface Destination : NavKey {
         val courseName: String,
         val sectionLabel: String = ""
     ) : Destination
+
+    /** 日记编辑页；[entryId] 为 null 时新建。 */
+    @Serializable
+    data class DiaryEditor(val entryId: String? = null) : Destination
+
+    /** 日记详情页。 */
+    @Serializable
+    data class DiaryDetail(val entryId: String) : Destination
 
     /**
      * 课表分享页（v4.66.0）：把一张课表压成自包含分享串（`SK1:` 前缀 + CRC 校验）
@@ -287,6 +297,7 @@ val navSerializersModule = SerializersModule {
         subclass(Destination.Settings::class)
         subclass(Destination.TodaySchedule::class)
         subclass(Destination.Schedule::class)
+        subclass(Destination.Diary::class)
 
         // 普通功能页面
         subclass(Destination.TimeSlotSettings::class)
@@ -320,6 +331,8 @@ val navSerializersModule = SerializersModule {
         subclass(Destination.AdapterStatus::class)
         subclass(Destination.StudyProgress::class)
         subclass(Destination.CourseNote::class)
+        subclass(Destination.DiaryEditor::class)
+        subclass(Destination.DiaryDetail::class)
         subclass(Destination.CourseShare::class)
         subclass(Destination.ThemeShare::class)
 subclass(Destination.WidgetTroubleshoot::class)

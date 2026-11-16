@@ -40,6 +40,10 @@ kotlinxDateTime = "0.8.0"
 # 二维码（课表分享串），MIT，纯 Kotlin KMP：jvm / android / ios / js / wasm
 qrcodeKotlin = "4.5.0"
 
+# Markdown 解析（日记正文），Apache-2.0，JetBrains 官方 CommonMark 解析器，
+# 纯 Kotlin（JVM / Android / iOS / JS），不依赖 Compose；渲染由 ui/diary 自绘。
+markdown = "0.7.18"
+
 # 依赖注入 (DI) & 工具库
 koin = "4.2.2"
 koin-plugin = "1.1.0"
@@ -69,6 +73,9 @@ haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 
 # 二维码生成（课表分享串）
 qrcode-kotlin = { module = "io.github.g0dkar:qrcode-kotlin", version.ref = "qrcodeKotlin" }
+
+# Markdown 解析（日记）
+jetbrains-markdown = { module = "org.jetbrains:markdown", version.ref = "markdown" }
 
 # Kotlin & 通用测试
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }

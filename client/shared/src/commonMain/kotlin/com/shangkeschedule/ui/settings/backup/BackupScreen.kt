@@ -63,6 +63,7 @@ import shangkeschedule.shared.generated.resources.action_cancel
 import shangkeschedule.shared.generated.resources.action_confirm
 import shangkeschedule.shared.generated.resources.action_reset
 import shangkeschedule.shared.generated.resources.arrow_back_24px
+import shangkeschedule.shared.generated.resources.backup_scope_diary_note
 import shangkeschedule.shared.generated.resources.backup_target_local_zip
 import shangkeschedule.shared.generated.resources.backup_target_webdav
 import shangkeschedule.shared.generated.resources.cloud_24px
@@ -239,6 +240,13 @@ fun BackupScreen(
                     onClick = { showRestoreTargetDialog = true }
                 )
             }
+
+            Text(
+                text = stringResource(Res.string.backup_scope_diary_note),
+                modifier = Modifier.padding(horizontal = appSpacing().cardInner),
+                style = MaterialTheme.typography.bodySmall,
+                color = appColors().textSecondary
+            )
 
             CardGroup(title = stringResource(Res.string.section_service_config)) {
                 MenuActionItem(

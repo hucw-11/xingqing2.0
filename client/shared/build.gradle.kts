@@ -116,6 +116,9 @@ kotlin {
                 // 二维码生成（课表分享串 → 二维码；MIT，纯 Kotlin KMP，无传递依赖）
                 implementation(libs.qrcode.kotlin)
 
+                // Markdown 解析（日记正文；Apache-2.0，JetBrains 官方 CommonMark 解析器）
+                implementation(libs.jetbrains.markdown)
+
                 // Ktor 核心网络库
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.logging)
