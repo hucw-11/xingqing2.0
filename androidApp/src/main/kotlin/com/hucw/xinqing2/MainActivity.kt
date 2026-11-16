@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.hucw.xinqing2.data.security.AndroidCredentialStore
+import com.hucw.xinqing2.time.AndroidTimeProvider
 import java.io.File
 
 class MainActivity : ComponentActivity() {
@@ -14,6 +15,7 @@ class MainActivity : ComponentActivity() {
         val config = AppConfig(
             databasePath = File(dataDir, "xinqing.db").absolutePath,
             credentialStore = AndroidCredentialStore(applicationContext),
+            timeProvider = AndroidTimeProvider(),
         )
 
         setContent {

@@ -5,6 +5,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.hucw.xinqing2.data.security.WindowsCredentialStore
+import com.hucw.xinqing2.time.DesktopTimeProvider
 import java.io.File
 
 fun main() {
@@ -16,6 +17,7 @@ fun main() {
     val config = AppConfig(
         databasePath = File(dataDir, "xinqing.db").absolutePath,
         credentialStore = WindowsCredentialStore(dataDir.toPath()),
+        timeProvider = DesktopTimeProvider(),
     )
 
     application {

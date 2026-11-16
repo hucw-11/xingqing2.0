@@ -28,10 +28,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.hucw.xinqing2.data.db.AppMetaRepository
+import com.hucw.xinqing2.data.db.ScheduleRepository
 import com.hucw.xinqing2.data.db.XinqingDatabase
 import com.hucw.xinqing2.data.security.CredentialStore
+import com.hucw.xinqing2.time.TimeProvider
 import com.hucw.xinqing2.ui.Destination
 import com.hucw.xinqing2.ui.screens.PlaceholderScreen
+import com.hucw.xinqing2.ui.screens.SettingsScreen
 import com.hucw.xinqing2.ui.screens.TodayScreen
 import com.hucw.xinqing2.ui.theme.XinqingTheme
 
@@ -48,8 +51,14 @@ fun App(config: AppConfig) {
             DisposableEffect(handle) {
                 onDispose { handle.close() }
             }
-            val repository = remember(handle) { AppMetaRepository(handle.connection) }
-            XinqingShell(repository, config.credentialStore)
+            val appMetaRepository = remember(handle) { AppMetaRepository(handle.connection) }
+            val scheduleRepository = remember(handle) { ScheduleRepository(handle.connection) }
+            XinqingShell(
+                scheduleRepository = scheduleRepository,
+                appMetaRepository = appMetaRepository,
+                credentialStore = config.credentialStore,
+                timeProvider = config.timeProvider,
+            )
         }
     }
 }
@@ -78,8 +87,10 @@ private fun DatabaseErrorScreen(error: Throwable?) {
 
 @Composable
 private fun XinqingShell(
-    repository: AppMetaRepository,
+    scheduleRepository: ScheduleRepository,
+    appMetaRepository: AppMetaRepository,
     credentialStore: CredentialStore,
+    timeProvider: TimeProvider,
 ) {
     var destination by remember { mutableStateOf(Destination.TODAY) }
 
@@ -92,13 +103,25 @@ private fun XinqingShell(
                     onSelect = { destination = it },
                 )
                 Box(Modifier.weight(1f).fillMaxHeight()) {
-                    ScreenContent(destination, repository, credentialStore)
+                    ScreenContent(
+                        destination,
+                        scheduleRepository,
+                        appMetaRepository,
+                        credentialStore,
+                        timeProvider,
+                    )
                 }
             }
         } else {
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f).fillMaxWidth()) {
-                    ScreenContent(destination, repository, credentialStore)
+                    ScreenContent(
+                        destination,
+                        scheduleRepository,
+                        appMetaRepository,
+                        credentialStore,
+                        timeProvider,
+                    )
                 }
                 MobileNavigation(
                     selected = destination,
@@ -112,11 +135,14 @@ private fun XinqingShell(
 @Composable
 private fun ScreenContent(
     destination: Destination,
-    repository: AppMetaRepository,
+    scheduleRepository: ScheduleRepository,
+    appMetaRepository: AppMetaRepository,
     credentialStore: CredentialStore,
+    timeProvider: TimeProvider,
 ) {
     when (destination) {
-        Destination.TODAY -> TodayScreen(repository, credentialStore)
+        Destination.TODAY -> TodayScreen(scheduleRepository, timeProvider)
+        Destination.SETTINGS -> SettingsScreen(appMetaRepository, credentialStore)
         else -> PlaceholderScreen(destination)
     }
 }
