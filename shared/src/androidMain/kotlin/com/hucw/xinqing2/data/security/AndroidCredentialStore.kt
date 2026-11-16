@@ -39,7 +39,7 @@ class AndroidCredentialStore(context: Context) : CredentialStore {
 
     private fun secretKey(): SecretKey {
         val keyStore = KeyStore.getInstance(ANDROID_KEY_STORE).apply {
-            load(null as java.io.InputStream?)
+            load(null as KeyStore.LoadStoreParameter?)
         }
         val existing = keyStore.getEntry(
             KEY_ALIAS,
