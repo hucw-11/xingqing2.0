@@ -6,6 +6,8 @@
 
 来源：[client/UPSTREAM.md](client/UPSTREAM.md)。路线：[纠偏方案](docs/复用路线纠偏方案.md)。
 
+0.3.0已通过双端CI并完成Android固定签名，等待用户体验验收：[下载位置、校验值及测试步骤](docs/验收-0.3.0-上课底座.md)。
+
 ## 当前批次
 
 - Android：包名 com.hucw.xinqing2，版本 0.3.0 / code 3，内部源码包名保留上游。
