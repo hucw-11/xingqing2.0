@@ -153,8 +153,7 @@ class ExamCountdownNotifier(private val context: Context) {
                 .setOnlyAlertOnce(true)
                 .setContentIntent(openAppIntent())
                 .build()
-            NotificationManagerCompat.from(context)
-                .notify(NotificationIds.EXAM_COUNTDOWN_ID, notification)
+            NotificationPermission.post(context, NotificationIds.EXAM_COUNTDOWN_ID, notification)
         }.onFailure { Log.e(TAG, "投递考试倒计时提醒失败", it) }
     }
 

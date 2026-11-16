@@ -60,7 +60,7 @@ object MorningAlarmWriteStatusReporter {
                 .setAutoCancel(true)
                 .setContentIntent(intent)
                 .build()
-            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+            NotificationPermission.post(context, NOTIFICATION_ID, notification)
         }.onFailure { Log.w(TAG, "无法显示早八闹钟状态通知", it) }
     }
 

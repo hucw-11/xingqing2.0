@@ -1,9 +1,12 @@
 package com.shangkeschedule.service.notification.notify
 
 import android.Manifest
+import android.app.Notification
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
 /**
@@ -21,6 +24,18 @@ import androidx.core.content.ContextCompat
  * 不能写成 `checkSelfPermission(...) == GRANTED` 就直接返回——那样低版本会被判成无权限。
  */
 object NotificationPermission {
+
+    /** 权限检查与投递之间仍可能被撤权；只捕获权限异常，其余错误由调用方记录。 */
+    fun post(context: Context, id: Int, notification: Notification): Boolean {
+        if (!canPost(context)) return false
+        return try {
+            NotificationManagerCompat.from(context).notify(id, notification)
+            true
+        } catch (denied: SecurityException) {
+            Log.w("NotificationPermission", "通知权限已撤回，跳过投递", denied)
+            false
+        }
+    }
 
     /** @return true 表示当前可以投递通知。 */
     fun canPost(context: Context): Boolean {

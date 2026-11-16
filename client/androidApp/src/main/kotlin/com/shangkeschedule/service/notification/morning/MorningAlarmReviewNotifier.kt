@@ -34,7 +34,7 @@ internal object MorningAlarmReviewNotifier {
                 .setAutoCancel(true)
                 .setContentIntent(intent)
                 .build()
-            NotificationManagerCompat.from(context).notify(ID, notice)
+            NotificationPermission.post(context, ID, notice)
         }.onFailure { Log.w("MorningAlarmReview", "早八闹钟核对通知发送失败", it) }
     }
 

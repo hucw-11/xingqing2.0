@@ -153,8 +153,7 @@ class NextClassNotifier(private val context: Context) {
                     disableIntent()
                 )
             if (requestChip) applyChip(builder, chipText)
-            NotificationManagerCompat.from(context)
-                .notify(NotificationIds.NEXT_CLASS_PERSISTENT_ID, builder.build())
+            NotificationPermission.post(context, NotificationIds.NEXT_CLASS_PERSISTENT_ID, builder.build())
         }.onFailure { Log.e(TAG, "投递「下一节课」常驻通知失败", it) }
     }
 

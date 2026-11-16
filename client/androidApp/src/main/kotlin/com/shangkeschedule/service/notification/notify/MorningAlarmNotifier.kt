@@ -49,7 +49,7 @@ object MorningAlarmNotifier {
                 .setAutoCancel(true)
                 .setContentIntent(contentIntent(context))
                 .build()
-            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+            NotificationPermission.post(context, NOTIFICATION_ID, notification)
         }.onFailure { Log.e(TAG, "投递早八降级提醒失败", it) }
     }
 

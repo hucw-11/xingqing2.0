@@ -75,7 +75,7 @@ class CourseReminderNotifier(private val context: Context) {
         return runCatching {
             NotificationChannels.ensureAll(context)
             val notification = build(course, notificationId, compatWearableSync)
-            NotificationManagerCompat.from(context).notify(notificationId, notification)
+            if (!NotificationPermission.post(context, notificationId, notification)) return@runCatching null
             // 登记以便后续重排/停用时回收（修复旧实现「通知永不清理」缺陷）
             registry.register(occurrenceKey, notificationId)
             notificationId
