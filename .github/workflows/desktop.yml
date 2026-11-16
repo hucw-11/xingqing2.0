@@ -1,0 +1,47 @@
+name: Desktop CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Run tests and build desktop app image
+        run: .\gradlew.bat :shared:jvmTest :desktopApp:createDistributable --stacktrace --no-daemon
+
+      - name: Check desktop product
+        shell: pwsh
+        run: |
+          $exe = "desktopApp/build/compose/binaries/main/app/Xinqing2/Xinqing2.exe"
+          if (-not (Test-Path -LiteralPath $exe)) {
+            throw "未找到桌面产物：$exe"
+          }
+          Get-Item -LiteralPath $exe | Format-List Name, Length, LastWriteTime
+
+      - name: Archive desktop product
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "desktopApp/build/compose/binaries/main/app/Xinqing2/*" -DestinationPath "xinqing2-desktop.zip"
+
+      - name: Upload desktop product
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: xinqing2-desktop
+          path: xinqing2-desktop.zip
+          retention-days: 7
