@@ -27,12 +27,22 @@ dependencies {
     implementation(project.dependencies.platform(libs.koin.bom))
     implementation(libs.koin.core)
     implementation(libs.koin.compose)
+    implementation(libs.koin.annotations)
 
     implementation(compose.desktop.currentOs)
     implementation(libs.kotlinx.coroutines.swing)
     add(preview.implementationConfigurationName, libs.compose.ui.tooling.preview)
     add(preview.implementationConfigurationName, libs.compose.material3)
     add(preview.implementationConfigurationName, libs.kotlinx.datetime)
+    testImplementation(kotlin("test-junit"))
+    testImplementation(libs.androidx.lifecycle.viewmodel.compose)
+    testImplementation(libs.androidx.room3.runtime)
+}
+
+tasks.withType<Test>().configureEach {
+    // 无窗口测试真实启动依赖图，不访问用户的 APPDATA。
+    systemProperty("java.awt.headless", "true")
+    systemProperty("xinqing.dataDir", layout.buildDirectory.dir("startup-test-data").get().asFile.absolutePath)
 }
 
 

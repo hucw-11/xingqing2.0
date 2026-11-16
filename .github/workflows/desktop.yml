@@ -27,12 +27,24 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
 
       - name: Verify source preservation and product identity
         run: ../scripts/check-client-source.ps1
 
       - name: Build desktop app image without launching GUI
-        run: .\gradlew.bat :desktopApp:createDistributable -PuseMirror=false --stacktrace --no-daemon --console=plain
+        run: .\gradlew.bat :desktopApp:test :desktopApp:createDistributable -PuseMirror=false --stacktrace --no-daemon --console=plain
+
+      - name: Upload headless startup test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: desktop-startup-test-reports
+          path: |
+            client/desktopApp/build/reports/tests/**
+            client/desktopApp/build/test-results/**
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Check desktop product
         shell: pwsh

@@ -18,8 +18,10 @@ object DesktopAppDirs {
     /** 应用数据根目录（不存在则创建）。 */
     val root: File by lazy {
         val userHome = System.getProperty("user.home")
+        // 支持独立配置目录；无界面启动回归测试用它隔离真实用户资料。
+        val explicitRoot = System.getProperty("xinqing.dataDir")?.takeIf { it.isNotBlank() }
 
-        val dir = when (OperatingSystem.current) {
+        val dir = if (explicitRoot != null) File(explicitRoot) else when (OperatingSystem.current) {
             OperatingSystem.WINDOWS -> {
                 val appData = System.getenv("APPDATA") ?: "$userHome/AppData/Roaming"
                 File(appData, FOLDER_NAME)
