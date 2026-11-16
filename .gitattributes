@@ -1,0 +1,2 @@
+# Linux CI must execute the imported Gradle wrapper without Windows CRLF.
+/client/gradlew text eol=lf
