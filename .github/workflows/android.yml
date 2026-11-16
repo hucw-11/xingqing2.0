@@ -22,10 +22,42 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Run unit tests, lint and build unsigned APK
+      - name: Diagnostics
         run: |
           chmod +x ./gradlew
-          ./gradlew :shared:jvmTest :androidApp:lintDebug :androidApp:assembleDebug --stacktrace --no-daemon
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          ls "${ANDROID_HOME}/platforms" || true
+          ./gradlew --version
+
+      - name: Shared JVM tests
+        run: |
+          set -o pipefail
+          ./gradlew :shared:jvmTest --stacktrace --no-daemon --console=plain 2>&1 | tee shared-test.log
+
+      - name: Build unsigned debug APK
+        run: |
+          set -o pipefail
+          ./gradlew :androidApp:assembleDebug --stacktrace --no-daemon --console=plain 2>&1 | tee apk.log
+
+      - name: Lint
+        run: |
+          set -o pipefail
+          ./gradlew :androidApp:lintDebug --stacktrace --no-daemon --console=plain 2>&1 | tee lint.log
+
+      - name: Publish failure logs
+        if: failure()
+        run: |
+          {
+            echo "## Android CI failure"
+            for f in shared-test.log apk.log lint.log; do
+              if [ -f "$f" ]; then
+                echo "### $f"
+                echo '```text'
+                tail -n 200 "$f"
+                echo '```'
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Collect unsigned APK and apksigner
         run: |
