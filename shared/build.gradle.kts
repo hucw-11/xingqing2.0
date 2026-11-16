@@ -31,6 +31,7 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(libs.androidx.sqlite)
+            implementation(libs.kotlinx.datetime)
         }
 
         androidMain.dependencies {

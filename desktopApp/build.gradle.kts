@@ -22,7 +22,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Exe, TargetFormat.Msi)
             packageName = "Xinqing2"
-            packageVersion = "0.1.0"
+            packageVersion = "0.2.0"
             description = "心晴 2.0"
             vendor = "hucw"
         }
