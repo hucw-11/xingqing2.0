@@ -5,11 +5,21 @@ import org.koin.core.KoinApplication
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.KoinApplication as KoinApplicationConfig
 import org.koin.core.annotation.Module
+import org.koin.core.annotation.Named
+import org.koin.core.annotation.Single
 import org.koin.plugin.module.dsl.startKoin
 
 @Module(includes = [SharedModule::class])
 @ComponentScan("com.shangkeschedule")
-class DesktopModule
+class DesktopModule {
+    @Single
+    @Named("AppVersionCode")
+    fun provideAppVersionCode(): Int = DesktopBuildInfo.VERSION_CODE
+
+    @Single
+    @Named("AppVersionName")
+    fun provideAppVersionName(): String = DesktopBuildInfo.VERSION_NAME
+}
 
 @KoinApplicationConfig(modules = [DesktopModule::class])
 class DesktopAppConfig

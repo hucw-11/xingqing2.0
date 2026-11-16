@@ -66,6 +66,37 @@ val appVersionName: String = providers.fileContents(
     raw
 }.get()
 
+// 桌面端没有 Android PackageManager；依赖容器所需版本由同一构建配置生成。
+val appVersionCode = providers.fileContents(
+    layout.projectDirectory.file("../androidApp/build.gradle.kts")
+).asText.map { text ->
+    Regex("^\\s*versionCode\\s*=\\s*(\\d+)", RegexOption.MULTILINE)
+        .find(text)?.groupValues?.get(1)?.toInt()
+        ?: error("desktopApp: 无法解析 versionCode")
+}.get()
+val versionSourceDirectory = layout.buildDirectory.dir("generated/xinqingVersion/kotlin")
+val generateDesktopBuildInfo = tasks.register("generateDesktopBuildInfo") {
+    val releaseName = appVersionName
+    val releaseCode = appVersionCode
+    val outputDirectory = versionSourceDirectory
+    inputs.property("versionName", releaseName)
+    inputs.property("versionCode", releaseCode)
+    outputs.dir(outputDirectory)
+    doLast {
+        val output = outputDirectory.get().file("com/shangkeschedule/DesktopBuildInfo.kt").asFile
+        output.parentFile.mkdirs()
+        output.writeText(
+            "package com.shangkeschedule\n\n" +
+                "internal object DesktopBuildInfo {\n" +
+                "    const val VERSION_NAME = \"$releaseName\"\n" +
+                "    const val VERSION_CODE = $releaseCode\n" +
+                "}\n"
+        )
+    }
+}
+kotlin.sourceSets.named("main") { kotlin.srcDir(versionSourceDirectory) }
+tasks.named("compileKotlin") { dependsOn(generateDesktopBuildInfo) }
+
 // 保留既有诊断命令的入口别名；打包入口始终为正式 App。
 val previewMainClass = providers.gradleProperty("previewMainClass").map { requested ->
     val name = requested.removePrefix("com.shangkeschedule.")

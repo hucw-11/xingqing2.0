@@ -40,5 +40,6 @@ class DesktopStartupTest {
             dependencies.koin.get<MainAppDatabase>().close()
             dependencies.close()
         }
+        Unit
     }
 }
